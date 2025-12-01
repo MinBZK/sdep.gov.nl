@@ -1,0 +1,80 @@
+#
+# See ./env for environment variables (is used by default)
+#
+
+volumes:
+  postgres_data:
+
+services:
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
+      POSTGRES_USER: ${POSTGRES_SUPER_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPER_PASSWORD}
+    container_name: ${POSTGRES_CONTAINER_NAME}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init-keycloak.sql:/docker-entrypoint-initdb.d/init-keycloak.sql
+      - ./postgres/init-sdep.sql:/docker-entrypoint-initdb.d/init-sdep.sql
+      - ./test-data:/test-data:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPER_USER} -d ${POSTGRES_DB_NAME}"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    container_name: ${KEYCLOAK_CONTAINER_NAME}
+    ports:
+      - "${KEYCLOAK_PORT}:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_DB_URL: ${KC_DB_URL}
+      KC_DB: ${KC_DB}
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_HOSTNAME_STRICT_HTTPS: ${KC_HOSTNAME_STRICT_HTTPS}
+      KC_HOSTNAME_STRICT: ${KC_HOSTNAME_STRICT}
+      KC_HTTP_ENABLED: ${KC_HTTP_ENABLED}
+    command: start
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      network: host
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 10.10.12.5
+    image: ${BACKEND_IMAGE_NAME}:${BACKEND_IMAGE_VERSION:-latest}
+    container_name: ${BACKEND_CONTAINER_NAME}
+    ports:
+      - "${BACKEND_PORT}:8000"
+    environment:
+      # IMAGE_TAG: ${IMAGE_TAG:-undefined}
+      KEYCLOAK_BASE_URL: ${BACKEND_KEYCLOAK_BASE_URL}
+      POSTGRES_HOST: ${POSTGRES_CONTAINER_NAME}
+      POSTGRES_PORT: 5432
+      POSTGRES_DB_NAME: ${POSTGRES_DB_NAME}
+      POSTGRES_DB_USER: ${POSTGRES_DB_USER}
+      POSTGRES_DB_PASSWORD: ${POSTGRES_DB_PASSWORD}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy

@@ -1,0 +1,29 @@
+image: harbor-gn2.cicd.s15m.nl/ictu-devops/k8s-toolbox:0.4.0
+
+default:
+ interruptible: true
+
+stages:
+  - typecheck
+  - build
+
+variables:
+  # Harbor
+  HARBOR_REG: "harbor-gn2.cicd.s15m.nl"
+  HARBOR_REPO: "ictu-devops"
+
+  # Clusters (Test, Prod)
+  TEST: overheid-test3
+  PROD: overheid-prod4
+
+  # Namespaces (tst, acc, pre, prd)
+  TST: ictu-devops-tst
+  ACC: ictu-devops-acc
+  PRE: ictu-devops-pre
+  PRD: ictu-devops-prd
+
+before_script:
+  - echo "Started by ${GITLAB_USER_LOGIN} at $(date +%Y-%m-%d'-'%H-%M-%S)"
+
+include:
+  - local: "backend/.gitlab-ci.yml"

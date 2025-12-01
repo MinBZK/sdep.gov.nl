@@ -1,0 +1,85 @@
+"""API v0 sub-application implementation."""
+
+import json
+
+from fastapi import FastAPI
+from fastapi.responses import Response
+
+from app.api.common.openapi import create_custom_openapi
+from app.config import settings
+from app.schemas.validation import HTTPValidationError
+
+# Create sub-application (v0)
+app_v0 = FastAPI(
+    title="Short Term Rental (STR) - Single Digital Entry Point (SDEP)",
+    description="SDEP is a gateway for the electronic transmission of data between online short-term rental platforms and competent authorities, ensuring timely, reliable and efficient data sharing processes.\n\n- [Github (open source)](https://github.com/MinBZK/sdep.gov.nl)\n\n- [EU legislation](https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng)\n\n- [STR Application Profile (STR-AP)](https://semiceu.github.io/STR-AP/releases/1.0.1/)\n\n- [STR prototype v0.0.65](https://eu-str.sdep-pilot.eu/swagger/index.html)\n\nContact:\n\n- [boris.dijkmans@rijksoverheid.nl](mailto:boris.dijkmans@rijksoverheid.nl)",
+    version=f"{settings.DTAP}-{settings.IMAGE_TAG}",
+    root_path="/api/v0",
+    responses={
+        422: {
+            "model": HTTPValidationError,
+            "description": "Validation Error",
+        },
+    },
+)
+
+# Override openapi method to apply custom modifications (alphabetical sorting)
+app_v0.openapi = create_custom_openapi(app_v0)
+
+# Register exception handlers for app_v0
+# This is needed for tests that use app_v0 directly
+from app.exceptions import (  # noqa: E402
+    AuthenticationError,
+    AuthorizationError,
+    BusinessLogicError,
+    InvalidTokenError,
+    ResourceNotFoundError,
+    ValidationError,
+)
+from app.exceptions.handlers import (  # noqa: E402
+    app_validation_exception_handler,
+    authentication_exception_handler,
+    authorization_exception_handler,
+    business_logic_exception_handler,
+    general_exception_handler,
+    http_exception_handler,
+    resource_not_found_exception_handler,
+    validation_exception_handler,
+)
+from fastapi import HTTPException  # noqa: E402
+from fastapi.exceptions import RequestValidationError  # noqa: E402
+
+# Order matters: more specific handlers should be registered before general ones
+app_v0.add_exception_handler(HTTPException, http_exception_handler)
+app_v0.add_exception_handler(RequestValidationError, validation_exception_handler)
+app_v0.add_exception_handler(ValidationError, app_validation_exception_handler)
+app_v0.add_exception_handler(BusinessLogicError, business_logic_exception_handler)
+app_v0.add_exception_handler(ResourceNotFoundError, resource_not_found_exception_handler)
+app_v0.add_exception_handler(AuthenticationError, authentication_exception_handler)
+app_v0.add_exception_handler(AuthorizationError, authorization_exception_handler)
+app_v0.add_exception_handler(InvalidTokenError, authentication_exception_handler)
+app_v0.add_exception_handler(Exception, general_exception_handler)  # Catch-all
+
+# Register routers from common
+from app.api.common.routers import auth, ca_activitydata, health, ping, str_activitydata, str_areas  # noqa: E402
+
+# Sort alphabetically
+app_v0.include_router(auth.router, prefix="/auth")
+app_v0.include_router(ca_activitydata.router, prefix="")
+app_v0.include_router(health.router, prefix="")
+app_v0.include_router(ping.router, prefix="")
+app_v0.include_router(str_activitydata.router, prefix="")
+app_v0.include_router(str_areas.router, prefix="")
+
+
+# Custom OpenAPI endpoint with pretty-printed JSON
+@app_v0.get("/openapi.json", include_in_schema=False)
+async def get_openapi_json():
+    """Return the OpenAPI schema as pretty-printed JSON."""
+    return Response(
+        content=json.dumps(app_v0.openapi(), indent=2, ensure_ascii=False),
+        media_type="application/json",
+    )
+
+
+__all__ = ["app_v0"]
