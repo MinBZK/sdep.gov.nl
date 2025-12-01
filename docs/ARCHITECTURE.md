@@ -6,7 +6,7 @@ This document describes the SDEP architecture, including layering principles, da
 - [Runtime](#runtime)
     - [API (FastAPI)](#api-fastapi)
   - [Schemas (Pydantic)](#schemas-pydantic)
-  - [Services](#services)
+  - [Services (business logic)](#services-business-logic)
   - [CRUD (data access)](#crud-data-access)
   - [Models (SQLAlchemy ORM)](#models-sqlalchemy-orm)
   - [Database (PostgreSQL)](#database-postgresql)
@@ -107,7 +107,7 @@ Patterns:
 - Field validation with constraints
 - Lower camelCase for API contracts
 
-### Services
+### Services (business logic)
 
 Location: [`backend/app/services/`](../backend/app/services/)
 
