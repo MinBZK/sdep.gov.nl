@@ -43,6 +43,11 @@ cd backend
 make test
 ```
 
+**Explore all options**
+```
+make
+```
+
 ## Background
 
 SDEP is required by EU legislation.
