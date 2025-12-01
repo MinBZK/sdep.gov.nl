@@ -11,25 +11,31 @@ Overview:
 - [Main functionality](#main-functionality)
 - [Documentation](#documentation)
 
+
 ## Quick start
 
-Run local (fullstack):
+Run locally (fullstack):
+
+- Press Authorize.
+- Use client credentials from [client.yaml](./keycloak/client.yaml).
+
 ```
 make up
 ```
 
-Test local (fullstack):
+
+Test locally (fullstack):
 ```
 make test
 ```
 
-Run local (backend only):
+Run locally (backend only):
 ```
 cd backend
 make up
 ```
 
-Test local (backend only):
+Test locally (backend only):
 ```
 cd backend
 make test
