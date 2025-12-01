@@ -3,16 +3,17 @@
 This document describes the SDEP architecture, including layering principles, data flows, and architectural decisions.
 
 - [Overview](#overview)
-- [Runtime](#runtime)
+- [Layers](#layers)
+- [Runtime layers](#runtime-layers)
     - [API (FastAPI)](#api-fastapi)
   - [Schemas (Pydantic)](#schemas-pydantic)
   - [Services (business logic)](#services-business-logic)
   - [CRUD (data access)](#crud-data-access)
   - [Models (SQLAlchemy ORM)](#models-sqlalchemy-orm)
   - [Database (PostgreSQL)](#database-postgresql)
-- [Development time](#development-time)
+- [Development time layers](#development-time-layers)
   - [Test](#test)
-- [Deployment time](#deployment-time)
+- [Deployment time layers](#deployment-time-layers)
   - [Alembic (database migrations)](#alembic-database-migrations)
 - [Data flow](#data-flow)
   - [Request flow (top-down)](#request-flow-top-down)
@@ -24,7 +25,7 @@ This document describes the SDEP architecture, including layering principles, da
   - [Models layer](#models-layer)
   - [Database layer](#database-layer)
 - [Security](#security)
-  - [Security architecture](#security-architecture)
+  - [Client credentials grants](#client-credentials-grants)
   - [Defense in-depth](#defense-in-depth)
   - [Authentication \& authorization](#authentication-authorization)
 - [Standards](#standards)
@@ -50,15 +51,71 @@ SDEP is an online transactional processing (OLTP) application with straight tran
 - Single concurrency for platform or competent authority
 - Single delivery without versioning
 
+## Layers
+
 SDEP follows a **layered architecture** pattern
 
 - Distinct layers
 - Separation of concerns (each layer has specific responsibilities and dependencies)
 - Data flows from top to bottom (one direction)
 
-![](./Architecture.svg)
+```
+┌─────────────────────────────────────────────────┐
+│  API Layer (FastAPI)                            │
+│  - HTTP request/response handling               │
+│  - Transaction demarcation                      │
+│  - OpenAPI/Swagger documentation                │
+│  - Input validation via Pydantic schemas        │
+└─────────────────────────────────────────────────┘
+                     ↓ Depends on
+┌─────────────────────────────────────────────────┐
+│  Schemas Layer (Pydantic)                       │
+│  - (De)serialize JSON                           │
+│  - Validate input/output                        │
+│  - Transform ORM models to schemas              │
+└─────────────────────────────────────────────────┘
+                     ↓ Depends on
+┌─────────────────────────────────────────────────┐
+│  Services Layer (Business Logic)                │
+│  - Business logic implementation                │
+│  - Optimized queries                            │
+│  - Transaction management with savepoints       │
+└─────────────────────────────────────────────────┘
+                     ↓ Depends on
+┌─────────────────────────────────────────────────┐
+│  CRUD Layer (Data Access)                       │
+│  - Data access (get & flush)                    │
+│  - Basic CRUD operations                        │
+│  - Pagination support                           │
+└─────────────────────────────────────────────────┘
+                     ↓ Depends on
+┌─────────────────────────────────────────────────┐
+│  Models Layer (SQLAlchemy ORM)                  │
+│  - Domain model definition                      │
+│  - Attribute constraints                        │
+│  - Class constraints                            │
+│  - Relationship mapping                         │
+└─────────────────────────────────────────────────┘
+                     ↓ Depends on
+┌─────────────────────────────────────────────────┐
+│  Database Layer (PostgreSQL)                    │
+│  - PostgreSQL 17.6                              │
+│  - Psycopg2 adapter                             │
+└─────────────────────────────────────────────────┘
+```
 
-## Runtime
+SDEP is deployed on the [Logius Standaard Platform](https://www.logius.nl/onze-dienstverlening/infrastructuur/standaard-platform).
+
+This platform runs Kubernetes clusters for Test and Production, and amonsgt others is leveraged:
+
+- Nginx reverse proxy (SSL-offloading)
+- CNPG operator (PostgreSQL management)
+- Daily backup/restore
+- Etc.
+
+Deployment details are out of scope for this repo, but can be inquired via SDEP NLD.
+
+## Runtime layers
 
 The following layers are active during runtime:
 
@@ -99,7 +156,7 @@ Responsibilities:
 Technology:
 
 - Pydantic for data validation
-- ConfigDict with `from_attributes=True` for ORM conversion
+- ConfigDict wsdep.gov.nl/ith `from_attributes=True` for ORM conversion
 
 Patterns:
 
@@ -202,7 +259,7 @@ Technology:
 - Psycopg2 adapter
 - CNPG (Cloud Native PostgreSQL) operator for Kubernetes
 
-## Development time
+## Development time layers
 
 The following components are used during development only:
 
@@ -224,7 +281,7 @@ Technology:
 - factory_boy for test fixtures
 - Transaction rollback pattern (no database recreation)
 
-## Deployment time
+## Deployment time layers
 
 The following components are used during deployment only:
 
@@ -328,9 +385,9 @@ SDEP enforces business rules at multiple layers (defense in-depth):
 
 ## Security
 
-The SDEP API is secured by **client credentials grants** for trusted machine-to-machine (M2M) clients, a.k.a. **oAuth2 with JWT**
+### Client credentials grants
 
-### Security architecture
+The SDEP API is secured by **client credentials grants** for trusted machine-to-machine (M2M) clients, a.k.a. **oAuth2 with JWT**
 
 - The **oAuth resource server** is the application itself (the API)
   - The resource server protects resources such as areas and rental activity data
