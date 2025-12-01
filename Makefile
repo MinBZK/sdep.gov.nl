@@ -282,9 +282,9 @@ test: up ## Test all and stay up (up, test)
 	echo "" && \
 	echo "════════════════════════════════════════════" && \
 	echo "GRAND TOTAL - All Tests:" && \
-	echo "  Test Suites:   $$GRAND_TOTAL" && \
-	echo "  Tests Passed:  $$GRAND_PASSED ✅" && \
-	echo "  Tests Failed:  $$GRAND_FAILED ❌" && \
+	echo "  Test suites:	$$GRAND_TOTAL" && \
+	echo "  Tests passed:	$$GRAND_PASSED ✅" && \
+	echo "  Tests failed: $$GRAND_FAILED ❌" && \
 	echo "════════════════════════════════════════════" && \
 	if [ -s $$FAILED_TESTS_FILE ]; then \
 		echo "" && \

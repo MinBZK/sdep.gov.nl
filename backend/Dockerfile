@@ -4,7 +4,7 @@
 
 # -- Stage 1 - prepare
 
-FROM harbor-gn2.cicd.s15m.nl/docker-hub-proxy/library/python:3.13-slim AS builder
+FROM python:3.13-slim AS builder
 LABEL "maintainer"="ICTU DevOps"
 
 # Fix https://stackoverflow.com/questions/69692842/error-message-error0308010cdigital-envelope-routinesunsupported
@@ -60,7 +60,7 @@ RUN pyright
 
 # -- Stage 2 - package (final image with build artifacts and without source code)
 
-FROM harbor-gn2.cicd.s15m.nl/docker-hub-proxy/library/python:3.13-slim
+FROM library/python:3.13-slim
 
 # Pass IMAGE_TAG (injected from build environment/pipeline)
 ARG IMAGE_TAG
