@@ -9,15 +9,11 @@ For architectural concepts, layers, and data flows, see [ARCHITECTURE.md](./ARCH
 .
 ├── backend/              # Python backend application
 ├── docs/                 # Documentation
-│   ├── Architecture.excalidraw  # Architecture diagram (source)
-│   ├── Architecture.png         # Architecture diagram (rendered)
-│   ├── ARCHITECTURE.md          # Architecture documentation
-│   ├── Classes.drawio           # UML class diagram (source)
-│   ├── Classes.svg              # UML class diagram (rendered)
-│   └── STRUCTURE.md             # This file
+│   ├── ARCHITECTURE.md   # Architecture documentation
+│   ├── Classes.drawio    # UML class diagram (source)
+│   ├── Classes.svg       # UML class diagram (rendered)
+│   └── CODE.md           # This file
 ├── keycloak/             # Keycloak IAM configuration
-├── AGENTS.md             # AI agent instructions
-├── CLAUDE.md             # Claude-specific configuration
 ├── docker-compose.yml    # Local development environment
 ├── Makefile              # Project automation
 └── README.md             # Project overview
@@ -32,7 +28,7 @@ For architectural concepts, layers, and data flows, see [ARCHITECTURE.md](./ARCH
   - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - Architecture documentation
   - [`Classes.drawio`](./Classes.drawio) - UML class diagram source
   - [`Classes.svg`](./Classes.svg) - UML class diagram rendered
-  - `STRUCTURE.md` - This file
+  - `CODE.md` - This file
 - [`keycloak/`](../keycloak/) - Keycloak IAM server configuration
 - [`AGENTS.md`](../AGENTS.md) - Development rules and AI agent instructions
 - [`CLAUDE.md`](../CLAUDE.md) - Claude-specific configuration

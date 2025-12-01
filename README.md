@@ -6,36 +6,38 @@ SDEP Netherlands:
 
 Overview:
 
-- [Quick start](#quick-start)
+- [Quick start (local workstation)](#quick-start-local-workstation)
 - [Background](#background)
 - [Main functionality](#main-functionality)
 - [Documentation](#documentation)
 
+## Quick start (local workstation)
 
-## Quick start
-
-Run locally (fullstack):
-
-- Press Authorize.
-- Use client credentials from [client.yaml](./keycloak/client.yaml).
-
+**Run SDEP fullstack** (incl. local infra)
 ```
 make up
 ```
 
+For testing purposes, explore the Backend API docs (Swagger UI):
 
-Test locally (fullstack):
+- In the Swagger UII, select Authorize
+- Enter client credentials (`id`, `secret` from [client.yaml](./keycloak/client.yaml)
+- Select Authorize again
+- Swagger will obtain a bearer token "under the hood" (by acting on the `token/` endpoint)
+- Result: you can start testing the other endpoints
+
+**Run SDEP fullstack tests**
 ```
 make test
 ```
 
-Run locally (backend only):
+**Run only SDEP backend** (without local infra)
 ```
 cd backend
 make up
 ```
 
-Test locally (backend only):
+**Run only SDEP backend tests**
 ```
 cd backend
 make test
@@ -48,8 +50,6 @@ SDEP is required by EU legislation.
 https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng
 
 ## Main functionality
-
-SDEP main functionality is:
 
 - To **ingest regulated areas** from competent authorities (CA)
 - To **ingest rental activity data** from short-term rental platforms (STR)

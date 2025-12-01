@@ -255,7 +255,7 @@ Location: External to application
 
 Technology:
 
-- PostgreSQL 15.7
+- PostgreSQL 17.6
 - Psycopg2 adapter
 - CNPG (Cloud Native PostgreSQL) operator for Kubernetes
 
@@ -523,7 +523,7 @@ uv run alembic revision --autogenerate -m "Description"
 - **Framework**: FastAPI + Uvicorn
 - **ORM**: SQLAlchemy 2.0+ (async)
 - **Validation**: Pydantic
-- **Database**: PostgreSQL 15.7 + Psycopg2
+- **Database**: PostgreSQL 17.6 + Psycopg2
 - **Migrations**: Alembic
 - **Testing**: pytest + factory_boy
 - **Code quality**: ruff (linting/formatting) + pyright (type checking)
