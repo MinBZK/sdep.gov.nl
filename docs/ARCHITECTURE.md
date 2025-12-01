@@ -113,7 +113,7 @@ This platform runs Kubernetes clusters for Test and Production, and amonsgt othe
 - Daily backup/restore
 - Etc.
 
-Deployment details are out of scope for this repo, but can be inquired via SDEP NLD.
+*Deployment is futher out of scope of this repo, but details can be inquired via SDEP NLD.*
 
 ## Runtime layers
 
