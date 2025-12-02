@@ -23,12 +23,15 @@ router = APIRouter(tags=["str"])
     response_model=AreasListResponse,
     status_code=status.HTTP_200_OK,
     summary="Get areas (areaId, competent authority, creation timestamp)",
-    description="Get areas in context of the current SDEP/member state. By default, returns all areas(unlimited). Use optional pagination parameters to limit results.",
+    description="Get areas in context of the current SDEP/member state. By default, returns all areas(unlimited). Use optional pagination parameters to limit results. Requires 'sdep_str' and 'sdep_read' roles.",
     operation_id="getAreas",
     responses={
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
+        },
+        "403": {
+            "description": "Forbidden - Missing required 'sdep_str' or 'sdep_read' role",
         },
     },
 )
@@ -43,6 +46,9 @@ async def get_areas(
     """
     Get areas in context of the current SDEP/member state.
 
+    Authorization:
+    - Requires valid bearer token with "sdep_str" and "sdep_read" roles in realm_access
+
     Returns a list of areas, each containing:
     - areaId: Area unique identifier (enables retrieval of area shapefile)
     - competentAuthorityId: Competent authority (id) who submitted the area
@@ -53,6 +59,22 @@ async def get_areas(
     - offset: Number of records to skip (default: 0)
     - limit: Maximum number of records to return (default: no limit, max: 1000)
     """
+    # Authorization check: Verify user has "sdep_str" and "sdep_read" roles
+    realm_access = token_payload.get("realm_access", {})
+    roles = realm_access.get("roles", [])
+
+    if "sdep_str" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_str' role required",
+        )
+
+    if "sdep_read" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_read' role required",
+        )
+
     # Call business service
     areas_data = await area.get_areas(session, offset=offset, limit=limit)
 
@@ -76,12 +98,15 @@ async def get_areas(
     response_model=AreasCountResponse,
     status_code=status.HTTP_200_OK,
     summary="Get area count",
-    description="Get the total count of areas in context of the current SDEP/member state",
+    description="Get the total count of areas in context of the current SDEP/member state. Requires 'sdep_str' and 'sdep_read' roles.",
     operation_id="countAreas",
     responses={
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
+        },
+        "403": {
+            "description": "Forbidden - Missing required 'sdep_str' or 'sdep_read' role",
         },
     },
 )
@@ -92,9 +117,28 @@ async def count_areas(
     """
     Count all areas in context of the current SDEP/member state.
 
+    Authorization:
+    - Requires valid bearer token with "sdep_str" and "sdep_read" roles in realm_access
+
     Returns:
     - count: Total number of areas
     """
+    # Authorization check: Verify user has "sdep_str" and "sdep_read" roles
+    realm_access = token_payload.get("realm_access", {})
+    roles = realm_access.get("roles", [])
+
+    if "sdep_str" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_str' role required",
+        )
+
+    if "sdep_read" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_read' role required",
+        )
+
     # Call business service
     total_count = await area.count_areas(session)
 
@@ -106,7 +150,7 @@ async def count_areas(
     response_class=Response,
     status_code=status.HTTP_200_OK,
     summary="Get area data (shapefile)",
-    description="Get area data (shapefile) based on areaId",
+    description="Get area data (shapefile) based on areaId. Requires 'sdep_str' and 'sdep_read' roles.",
     operation_id="getAreaData",
     responses={
         "200": {
@@ -116,6 +160,9 @@ async def count_areas(
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
+        },
+        "403": {
+            "description": "Forbidden - Missing required 'sdep_str' or 'sdep_read' role",
         },
         "404": {
             "description": "Area not found",
@@ -130,8 +177,27 @@ async def get_area_data(
     """
     Get area data for a specific area.
 
+    Authorization:
+    - Requires valid bearer token with "sdep_str" and "sdep_read" roles in realm_access
+
     Returns raw binary area data.
     """
+    # Authorization check: Verify user has "sdep_str" and "sdep_read" roles
+    realm_access = token_payload.get("realm_access", {})
+    roles = realm_access.get("roles", [])
+
+    if "sdep_str" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_str' role required",
+        )
+
+    if "sdep_read" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_read' role required",
+        )
+
     # Call business service with area_id string
     area_data = await area.get_area_by_area_id(session, areaId)
 

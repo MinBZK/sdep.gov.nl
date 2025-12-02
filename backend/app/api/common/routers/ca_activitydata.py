@@ -25,7 +25,7 @@ router = APIRouter(tags=["ca"])
     response_model=ActivityDataListResponse,
     status_code=status.HTTP_200_OK,
     summary="Get activity data for competent authority",
-    description="Get activity data for a competent authority. By default, returns all activity data (unlimited). Use optional pagination parameters to limit results. Requires 'sdep_ca' role. Competent authority ID is extracted from the JWT token.",
+    description="Get activity data for a competent authority. By default, returns all activity data (unlimited). Use optional pagination parameters to limit results. Requires 'sdep_ca' and 'sdep_read' roles. Competent authority ID is extracted from the JWT token.",
     operation_id="getActivityDataByCompetentAuthority",
     responses={
         "401": {
@@ -33,7 +33,7 @@ router = APIRouter(tags=["ca"])
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_ca' role",
+            "description": "Forbidden - Missing required 'sdep_ca' or 'sdep_read' role",
         },
     },
 )
@@ -49,7 +49,7 @@ async def get_activity_data(
     Get activity data for a competent authority.
 
     Authorization:
-    - Requires valid bearer token with "sdep_ca" role in realm_access
+    - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
     - Competent authority ID is extracted from token's "client_id" claim
 
     Returns a list of activity data, each containing:
@@ -68,7 +68,7 @@ async def get_activity_data(
     - offset: Number of records to skip (default: 0)
     - limit: Maximum number of records to return (default: no limit, max: 1000)
     """
-    # Authorization check: Verify user has "sdep_ca" role
+    # Authorization check: Verify user has "sdep_ca" and "sdep_read" roles
     realm_access = token_payload.get("realm_access", {})
     roles = realm_access.get("roles", [])
 
@@ -76,6 +76,12 @@ async def get_activity_data(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: 'sdep_ca' role required",
+        )
+
+    if "sdep_read" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_read' role required",
         )
 
     # Extract competent authority ID from token's client_id claim
@@ -127,7 +133,7 @@ async def get_activity_data(
     response_model=ActivityDataCountResponse,
     status_code=status.HTTP_200_OK,
     summary="Get activity data count for competent authority",
-    description="Get the total count of activity data records for a competent authority. Requires 'sdep_ca' role. Competent authority ID is extracted from the JWT token.",
+    description="Get the total count of activity data records for a competent authority. Requires 'sdep_ca' and 'sdep_read' roles. Competent authority ID is extracted from the JWT token.",
     operation_id="countActivityData",
     responses={
         "401": {
@@ -135,7 +141,7 @@ async def get_activity_data(
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_ca' role",
+            "description": "Forbidden - Missing required 'sdep_ca' or 'sdep_read' role",
         },
     },
 )
@@ -147,13 +153,13 @@ async def count_activity_data(
     Count activity data records for a competent authority.
 
     Authorization:
-    - Requires valid bearer token with "sdep_ca" role in realm_access
+    - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
     - Competent authority ID is extracted from token's "client_id" claim
 
     Returns:
     - count: Total number of activity data records for the given competent authority
     """
-    # Authorization check: Verify user has "sdep_ca" role
+    # Authorization check: Verify user has "sdep_ca" and "sdep_read" roles
     realm_access = token_payload.get("realm_access", {})
     roles = realm_access.get("roles", [])
 
@@ -161,6 +167,12 @@ async def count_activity_data(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: 'sdep_ca' role required",
+        )
+
+    if "sdep_read" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_read' role required",
         )
 
     # Extract competent authority ID from token's client_id claim

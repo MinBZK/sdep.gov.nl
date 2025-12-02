@@ -17,7 +17,12 @@ from test.fixtures.factories import AreaFactory, CompetentAuthorityFactory
 
 def mock_verify_bearer_token() -> dict[str, Any]:
     """Mock token verification for testing."""
-    return {"sub": "test_user"}
+    return {
+        "sub": "test_user",
+        "realm_access": {
+            "roles": ["sdep_str", "sdep_read"]
+        }
+    }
 
 
 @pytest.mark.database

@@ -36,7 +36,7 @@ router = APIRouter(tags=["str"])
     "/str/activity-data",
     status_code=status.HTTP_201_CREATED,
     summary="Submit activity data",
-    description="Submit a list of rental activity data. All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Requires 'sdep_str' role. Platform ID and name are extracted from the JWT token.",
+    description="Submit a list of rental activity data. All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Requires 'sdep_str' and 'sdep_write' roles. Platform ID and name are extracted from the JWT token.",
     operation_id="postActivityData",
     responses={
         "201": {
@@ -50,7 +50,7 @@ router = APIRouter(tags=["str"])
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_str' role",
+            "description": "Forbidden - Missing required 'sdep_str' or 'sdep_write' role",
         },
         "409": {
             "description": "Conflict - Duplicate activity data (same URL and temporal dates) or constraint violation",
@@ -77,7 +77,7 @@ async def post_activity_data(
     - Service performs no validation (already validated by Pydantic)
 
     Authorization:
-    - Requires valid bearer token with "sdep_str" role in realm_access
+    - Requires valid bearer token with "sdep_str" and "sdep_write" roles in realm_access
     - Platform ID is extracted from token's "client_id" claim
     - Platform name is extracted from token's "client_name" claim
 
@@ -107,7 +107,7 @@ async def post_activity_data(
         HTTPException 500: Internal server error
     """
 
-    # Authorization check: Verify user has "sdep_str" role
+    # Authorization check: Verify user has "sdep_str" and "sdep_write" roles
     realm_access = token_payload.get("realm_access", {})
     roles = realm_access.get("roles", [])
 
@@ -115,6 +115,12 @@ async def post_activity_data(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: 'sdep_str' role required",
+        )
+
+    if "sdep_write" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_write' role required",
         )
 
     # Extract platform ID and name from token
