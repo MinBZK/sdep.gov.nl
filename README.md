@@ -13,6 +13,12 @@ Overview:
 
 ## Quick start (local workstation)
 
+**Pre-requistes**
+
+- Docker installed
+- "yq" installed
+
+
 **Run SDEP fullstack** (incl. local infra)
 ```
 make up
