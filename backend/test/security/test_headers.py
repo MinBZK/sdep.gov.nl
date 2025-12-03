@@ -4,9 +4,8 @@ Tests XSS protection, output encoding, and OWASP security headers compliance.
 """
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-
 from app.main import app
+from httpx import ASGITransport, AsyncClient
 
 
 @pytest.mark.asyncio
@@ -159,9 +158,15 @@ class TestSecurityHeadersMiddleware:
                 response = await client.get(endpoint)
 
                 # All endpoints should have at minimum these headers
-                assert "X-Frame-Options" in response.headers, f"Missing X-Frame-Options on {endpoint}"
-                assert "X-Content-Type-Options" in response.headers, f"Missing X-Content-Type-Options on {endpoint}"
-                assert "Content-Security-Policy" in response.headers, f"Missing CSP on {endpoint}"
+                assert "X-Frame-Options" in response.headers, (
+                    f"Missing X-Frame-Options on {endpoint}"
+                )
+                assert "X-Content-Type-Options" in response.headers, (
+                    f"Missing X-Content-Type-Options on {endpoint}"
+                )
+                assert "Content-Security-Policy" in response.headers, (
+                    f"Missing CSP on {endpoint}"
+                )
 
     async def test_csp_form_action_restricted(self):
         """Test that CSP restricts form submission targets."""
@@ -250,7 +255,9 @@ class TestOWASPSecurityHeaders:
             ]
 
             for header in required_headers:
-                assert header in response.headers, f"Missing OWASP recommended header: {header}"
+                assert header in response.headers, (
+                    f"Missing OWASP recommended header: {header}"
+                )
 
     async def test_security_headers_values_are_secure(self):
         """Test that security header values are set to secure defaults."""

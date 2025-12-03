@@ -3,9 +3,19 @@
 import json
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, TypeDecorator, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    TypeDecorator,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import Mapped, composite, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, composite, mapped_column, relationship
 
 from app.db.config import Base
 from app.models.address import Address
@@ -148,7 +158,6 @@ class ActivityData(Base):
     platform: Mapped["Platform"] = relationship(
         "Platform", back_populates="activity_data"
     )  # Zero to many to one (mandatory)
-
 
     def __repr__(self) -> str:
         """String representation of ActivityData."""

@@ -137,7 +137,9 @@ async def count(session: AsyncSession) -> int:
     return result.scalar_one()
 
 
-async def get_all(session: AsyncSession, offset: int = 0, limit: int | None = None) -> list[Area]:
+async def get_all(
+    session: AsyncSession, offset: int = 0, limit: int | None = None
+) -> list[Area]:
     """
     Get areas with pagination.
 
@@ -173,9 +175,7 @@ async def get_by_id(session: AsyncSession, area_id: int) -> Area | None:
     return result.scalar_one_or_none()
 
 
-async def get_by_area_id(
-    session: AsyncSession, area_id: str
-) -> Area | None:
+async def get_by_area_id(session: AsyncSession, area_id: str) -> Area | None:
     """
     Get an area by area_id (unique identifier).
 
@@ -192,7 +192,10 @@ async def get_by_area_id(
 
 
 async def get_by_competent_authority_id(
-    session: AsyncSession, competent_authority_id: int, offset: int = 0, limit: int | None = None
+    session: AsyncSession,
+    competent_authority_id: int,
+    offset: int = 0,
+    limit: int | None = None,
 ) -> list[Area]:
     """
     Get areas by competent authority id (foreign key) with pagination.

@@ -8,11 +8,21 @@ from pydantic import BaseModel, Field
 class ErrorDetail(BaseModel):
     """Detail of a single error."""
 
-    loc: list[str] = Field(default_factory=list, description="Location of the error (e.g., field path)")
+    loc: list[str] = Field(
+        default_factory=list, description="Location of the error (e.g., field path)"
+    )
     msg: str = Field(..., description="Human-readable error message")
     type: str = Field(..., description="Error type identifier")
 
-    model_config = {"json_schema_extra": {"example": {"loc": ["body", "url"], "msg": "URL must be unique", "type": "duplicate_error"}}}
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "loc": ["body", "url"],
+                "msg": "URL must be unique",
+                "type": "duplicate_error",
+            }
+        }
+    }
 
 
 class ErrorResponse(BaseModel):
@@ -26,7 +36,9 @@ class ErrorResponse(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "detail": [{"loc": [], "msg": "Resource not found", "type": "not_found_error"}],
+                "detail": [
+                    {"loc": [], "msg": "Resource not found", "type": "not_found_error"}
+                ],
                 "timestamp": "2025-01-15T14:22:15Z",
                 "path": "/api/v0/str/areas/123",
                 "status_code": 404,

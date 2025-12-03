@@ -6,7 +6,8 @@ from collections.abc import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import URL, event, text
+from app.db.config import Base
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -14,12 +15,9 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.config import settings
-from app.db.config import Base
-
 
 @pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+def event_loop() -> Generator[asyncio.AbstractEventLoop]:
     """Create an instance of the default event loop for the test session."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
@@ -27,7 +25,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def async_engine() -> AsyncGenerator[AsyncEngine, None]:
+async def async_engine() -> AsyncGenerator[AsyncEngine]:
     """
     Create a test database engine.
 
@@ -83,7 +81,9 @@ async def async_engine() -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_session(async_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+async def async_session(
+    async_engine: AsyncEngine,
+) -> AsyncGenerator[AsyncSession]:
     """
     Create database session for testing with transaction rollback.
 
@@ -124,7 +124,7 @@ async def async_session(async_engine: AsyncEngine) -> AsyncGenerator[AsyncSessio
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session(async_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(async_engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
     """
     Create database session for testing with transaction rollback.
 

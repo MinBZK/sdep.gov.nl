@@ -38,9 +38,16 @@ router = APIRouter(tags=["ca"])
     },
 )
 async def get_activity_data(
-    offset: Annotated[int, Query(ge=0, description="Number of records to skip (default: 0)")] = 0,
+    offset: Annotated[
+        int, Query(ge=0, description="Number of records to skip (default: 0)")
+    ] = 0,
     limit: Annotated[
-        int | None, Query(ge=1, le=1000, description="Maximum number of records to return (default: unlimited, max: 1000 when specified)")
+        int | None,
+        Query(
+            ge=1,
+            le=1000,
+            description="Maximum number of records to return (default: unlimited, max: 1000 when specified)",
+        ),
     ] = None,
     session: AsyncSession = Depends(get_async_db_read_only),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
@@ -95,7 +102,10 @@ async def get_activity_data(
 
     # Call business service with competent authority ID from token
     activity_data_list = await activity_data.get_activity_data_list(
-        session, competent_authority_id=competent_authority_id, offset=offset, limit=limit
+        session,
+        competent_authority_id=competent_authority_id,
+        offset=offset,
+        limit=limit,
     )
 
     # Transform to API response format

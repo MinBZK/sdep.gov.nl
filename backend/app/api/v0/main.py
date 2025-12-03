@@ -28,6 +28,9 @@ app_v0.openapi = create_custom_openapi(app_v0)
 
 # Register exception handlers for app_v0
 # This is needed for tests that use app_v0 directly
+from fastapi import HTTPException  # noqa: E402
+from fastapi.exceptions import RequestValidationError  # noqa: E402
+
 from app.exceptions import (  # noqa: E402
     AuthenticationError,
     AuthorizationError,
@@ -46,22 +49,29 @@ from app.exceptions.handlers import (  # noqa: E402
     resource_not_found_exception_handler,
     validation_exception_handler,
 )
-from fastapi import HTTPException  # noqa: E402
-from fastapi.exceptions import RequestValidationError  # noqa: E402
 
 # Order matters: more specific handlers should be registered before general ones
 app_v0.add_exception_handler(HTTPException, http_exception_handler)
 app_v0.add_exception_handler(RequestValidationError, validation_exception_handler)
 app_v0.add_exception_handler(ValidationError, app_validation_exception_handler)
 app_v0.add_exception_handler(BusinessLogicError, business_logic_exception_handler)
-app_v0.add_exception_handler(ResourceNotFoundError, resource_not_found_exception_handler)
+app_v0.add_exception_handler(
+    ResourceNotFoundError, resource_not_found_exception_handler
+)
 app_v0.add_exception_handler(AuthenticationError, authentication_exception_handler)
 app_v0.add_exception_handler(AuthorizationError, authorization_exception_handler)
 app_v0.add_exception_handler(InvalidTokenError, authentication_exception_handler)
 app_v0.add_exception_handler(Exception, general_exception_handler)  # Catch-all
 
 # Register routers from common
-from app.api.common.routers import auth, ca_activitydata, health, ping, str_activitydata, str_areas  # noqa: E402
+from app.api.common.routers import (
+    auth,
+    ca_activitydata,
+    health,
+    ping,
+    str_activitydata,
+    str_areas,
+)
 
 # Sort alphabetically
 app_v0.include_router(auth.router, prefix="/auth")

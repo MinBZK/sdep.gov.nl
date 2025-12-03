@@ -6,7 +6,7 @@ import httpx
 from fastapi import APIRouter, Form, HTTPException, Request, status
 
 from app.config import settings
-from app.schemas.auth import TokenRequest, TokenResponse
+from app.schemas.auth import TokenResponse
 
 router = APIRouter(tags=["auth"])
 
@@ -20,13 +20,13 @@ router = APIRouter(tags=["auth"])
 )
 async def post_auth_token(
     request: Request,
-    client_id: str | None = Form(
-        None, description="Client ID for M2M authentication"
-    ),
+    client_id: str | None = Form(None, description="Client ID for M2M authentication"),
     client_secret: str | None = Form(
         None, description="Client secret for M2M authentication"
     ),
-    grant_type: str | None = Form(None, description="OAuth2 grant type (client_credentials)"),
+    grant_type: str | None = Form(
+        None, description="OAuth2 grant type (client_credentials)"
+    ),
 ) -> TokenResponse:
     """Issue a bearer token for M2M authentication by forwarding the request to Keycloak
 

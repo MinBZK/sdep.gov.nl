@@ -4,14 +4,19 @@ from typing import Any
 
 import pytest
 import pytest_asyncio
+from app.api.v0.main import app_v0
+from app.db.config import get_async_db_read_only
+from app.security import verify_bearer_token
 from fastapi import status
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v0.main import app_v0
-from app.db.config import get_async_db_read_only
-from app.security import verify_bearer_token
-from test.fixtures.factories import ActivityDataFactory, AreaFactory, CompetentAuthorityFactory, PlatformFactory
+from test.fixtures.factories import (
+    ActivityDataFactory,
+    AreaFactory,
+    CompetentAuthorityFactory,
+    PlatformFactory,
+)
 
 
 def mock_verify_bearer_token() -> dict[str, Any]:
@@ -20,9 +25,7 @@ def mock_verify_bearer_token() -> dict[str, Any]:
         "sub": "test_user",
         "client_id": "0363",  # Competent authority ID for Gemeente Amsterdam
         "client_name": "Gemeente Amsterdam",
-        "realm_access": {
-            "roles": ["sdep_ca", "sdep_read"]
-        }
+        "realm_access": {"roles": ["sdep_ca", "sdep_read"]},
     }
 
 
@@ -69,12 +72,12 @@ class TestCAActivityDataAPI:
         ca_amsterdam = await CompetentAuthorityFactory.create_async(
             async_session,
             competent_authority_id="0363",
-            competent_authority_name="Gemeente Amsterdam"
+            competent_authority_name="Gemeente Amsterdam",
         )
         ca_denhaag = await CompetentAuthorityFactory.create_async(
             async_session,
             competent_authority_id="0518",
-            competent_authority_name="Gemeente Den Haag"
+            competent_authority_name="Gemeente Den Haag",
         )
 
         # Create areas
@@ -83,26 +86,22 @@ class TestCAActivityDataAPI:
             area_id="0363",
             competent_authority_id=ca_amsterdam.id,
             filename="amsterdam.geojson",
-            filedata=b"amsterdam_data"
+            filedata=b"amsterdam_data",
         )
         area_denhaag = await AreaFactory.create_async(
             async_session,
             area_id="0518",
             competent_authority_id=ca_denhaag.id,
             filename="denhaag.geojson",
-            filedata=b"denhaag_data"
+            filedata=b"denhaag_data",
         )
 
         # Create platforms
         platform_str01 = await PlatformFactory.create_async(
-            async_session,
-            platform_id="str01",
-            platform_name="Platform 01"
+            async_session, platform_id="str01", platform_name="Platform 01"
         )
         platform_str02 = await PlatformFactory.create_async(
-            async_session,
-            platform_id="str02",
-            platform_name="Platform 02"
+            async_session, platform_id="str02", platform_name="Platform 02"
         )
 
         # Create activity data for Amsterdam
@@ -113,7 +112,7 @@ class TestCAActivityDataAPI:
                 url=f"http://example.com/amsterdam-{i}",
                 area_id=area_amsterdam.id,
                 registration_number=f"REG-AMS-{i:03d}",
-                platform_id=platform_str01.id
+                platform_id=platform_str01.id,
             )
             activities_amsterdam.append(activity)
 
@@ -125,7 +124,7 @@ class TestCAActivityDataAPI:
                 url=f"http://example.com/denhaag-{i}",
                 area_id=area_denhaag.id,
                 registration_number=f"REG-DH-{i:03d}",
-                platform_id=platform_str02.id
+                platform_id=platform_str02.id,
             )
             activities_denhaag.append(activity)
 
@@ -387,26 +386,24 @@ class TestCAActivityDataAPI:
         ca = await CompetentAuthorityFactory.create_async(
             async_session,
             competent_authority_id="0363",
-            competent_authority_name="Gemeente Amsterdam"
+            competent_authority_name="Gemeente Amsterdam",
         )
         area = await AreaFactory.create_async(
             async_session,
             area_id="0363",
             competent_authority_id=ca.id,
             filename="amsterdam.geojson",
-            filedata=b"amsterdam_data"
+            filedata=b"amsterdam_data",
         )
         platform = await PlatformFactory.create_async(
-            async_session,
-            platform_id="str01",
-            platform_name="Platform 01"
+            async_session, platform_id="str01", platform_name="Platform 01"
         )
         await ActivityDataFactory.create_async(
             async_session,
             url="http://example.com/listing-1",
             area_id=area.id,
             registration_number="REG-001",
-            platform_id=platform.id
+            platform_id=platform.id,
         )
 
         async with AsyncClient(
@@ -491,7 +488,7 @@ class TestCAActivityDataAPI:
             # Act
             response = await client.get(
                 "/ca/activity-data/count",
-                headers={"Authorization": "Bearer invalid_token"}
+                headers={"Authorization": "Bearer invalid_token"},
             )
 
         # Assert
@@ -501,6 +498,7 @@ class TestCAActivityDataAPI:
         self, async_session: AsyncSession, test_data
     ):
         """Test GET /ca/activity-data without 'sdep_ca' role returns 403 Forbidden."""
+
         # Override token verification with mock that doesn't have 'sdep_ca' role
         def mock_token_without_ca_role() -> dict[str, Any]:
             return {
@@ -509,7 +507,7 @@ class TestCAActivityDataAPI:
                 "client_name": "Gemeente Amsterdam",
                 "realm_access": {
                     "roles": ["sdep_read"]  # Missing 'sdep_ca' role
-                }
+                },
             }
 
         app_v0.dependency_overrides[verify_bearer_token] = mock_token_without_ca_role
@@ -542,13 +540,12 @@ class TestCAActivityDataAPI:
         self, async_session: AsyncSession, test_data
     ):
         """Test GET /ca/activity-data without 'client_id' claim returns 401 Unauthorized."""
+
         # Override token verification with mock that doesn't have 'client_id' claim
         def mock_token_without_client_id() -> dict[str, Any]:
             return {
                 "sub": "test_user",
-                "realm_access": {
-                    "roles": ["sdep_ca", "sdep_read"]
-                }
+                "realm_access": {"roles": ["sdep_ca", "sdep_read"]},
                 # Missing 'client_id' claim
             }
 
@@ -582,6 +579,7 @@ class TestCAActivityDataAPI:
         self, async_session: AsyncSession, test_data
     ):
         """Test GET /ca/activity-data/count without 'sdep_ca' role returns 403 Forbidden."""
+
         # Override token verification with mock that doesn't have 'sdep_ca' role
         def mock_token_without_ca_role() -> dict[str, Any]:
             return {
@@ -590,7 +588,7 @@ class TestCAActivityDataAPI:
                 "client_name": "Gemeente Amsterdam",
                 "realm_access": {
                     "roles": ["sdep_read"]  # Missing 'sdep_ca' role
-                }
+                },
             }
 
         app_v0.dependency_overrides[verify_bearer_token] = mock_token_without_ca_role
@@ -623,13 +621,12 @@ class TestCAActivityDataAPI:
         self, async_session: AsyncSession, test_data
     ):
         """Test GET /ca/activity-data/count without 'client_id' claim returns 401 Unauthorized."""
+
         # Override token verification with mock that doesn't have 'client_id' claim
         def mock_token_without_client_id() -> dict[str, Any]:
             return {
                 "sub": "test_user",
-                "realm_access": {
-                    "roles": ["sdep_ca", "sdep_read"]
-                }
+                "realm_access": {"roles": ["sdep_ca", "sdep_read"]},
                 # Missing 'client_id' claim
             }
 

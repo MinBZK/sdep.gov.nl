@@ -200,7 +200,9 @@ class ActivityDataRequest(BaseModel):
         """Validate area_id is lowercase alphanumeric with dashes."""
         allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
         if not all(c in allowed_chars for c in v):
-            raise ValueError("Area ID must contain only lowercase alphanumeric characters and dashes")
+            raise ValueError(
+                "Area ID must contain only lowercase alphanumeric characters and dashes"
+            )
         return v
 
     number_of_guests: int = Field(
@@ -313,7 +315,9 @@ class ActivityDataListRequest(BaseModel):
             List of dictionaries with flattened structure, each containing normalized metadata
         """
         return [
-            activity.to_service_dict(platform_id=platform_id, platform_name=platform_name)
+            activity.to_service_dict(
+                platform_id=platform_id, platform_name=platform_name
+            )
             for activity in self.activities
         ]
 
@@ -329,8 +333,12 @@ class AddressResponse(BaseModel):
     street: str = Field(..., description="Street name")  # Attribute
     number: int = Field(..., description="House number")  # Attribute
     letter: str | None = Field(None, description="House letter (optional)")  # Attribute
-    addition: str | None = Field(None, description="House addition (optional)")  # Attribute
-    postalCode: str = Field(..., alias="postalCode", description="Postal code")  # Attribute
+    addition: str | None = Field(
+        None, description="House addition (optional)"
+    )  # Attribute
+    postalCode: str = Field(
+        ..., alias="postalCode", description="Postal code"
+    )  # Attribute
     city: str = Field(..., description="City name")  # Attribute
 
 
@@ -343,7 +351,9 @@ class TemporalResponse(BaseModel):
     )
 
     startDatetime: datetime = Field(
-        ..., alias="startDatetime", description="Start date and time of the rental activity"
+        ...,
+        alias="startDatetime",
+        description="Start date and time of the rental activity",
     )  # Attribute
     endDatetime: datetime = Field(
         ..., alias="endDatetime", description="End date and time of the rental activity"
@@ -362,17 +372,31 @@ class ActivityDataResponse(BaseModel):
     url: str = Field(..., description="URL of the advertisement")  # Attribute
     address: AddressResponse = Field(..., description="Address composite")  # Composite
     registrationNumber: str = Field(
-        ..., alias="registrationNumber", description="Registration number for the address"
+        ...,
+        alias="registrationNumber",
+        description="Registration number for the address",
     )  # Attribute
-    areaId: str = Field(..., alias="areaId", description="Area ID")  # Reference - foreign key to Area
-    numberOfGuests: int = Field(..., alias="numberOfGuests", description="Number of guests")  # Attribute
+    areaId: str = Field(
+        ..., alias="areaId", description="Area ID"
+    )  # Reference - foreign key to Area
+    numberOfGuests: int = Field(
+        ..., alias="numberOfGuests", description="Number of guests"
+    )  # Attribute
     countryOfGuests: list[str] = Field(
         ..., alias="countryOfGuests", description="Array of country codes of guests"
     )  # Attribute
-    temporal: TemporalResponse = Field(..., description="Temporal composite")  # Composite
-    platformId: str = Field(..., alias="platformId", description="Platform ID")  # Attribute
-    platformName: str = Field(..., alias="platformName", description="Platform name")  # Attribute
-    createdAt: datetime = Field(..., alias="createdAt", description="Creation timestamp")  # Attribute
+    temporal: TemporalResponse = Field(
+        ..., description="Temporal composite"
+    )  # Composite
+    platformId: str = Field(
+        ..., alias="platformId", description="Platform ID"
+    )  # Attribute
+    platformName: str = Field(
+        ..., alias="platformName", description="Platform name"
+    )  # Attribute
+    createdAt: datetime = Field(
+        ..., alias="createdAt", description="Creation timestamp"
+    )  # Attribute
 
 
 class ActivityDataListResponse(BaseModel):

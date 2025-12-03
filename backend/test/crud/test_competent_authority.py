@@ -3,9 +3,9 @@
 from datetime import datetime
 
 import pytest
+from app.crud import competent_authority
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import competent_authority
 from test.fixtures.factories import CompetentAuthorityFactory
 
 
@@ -52,7 +52,9 @@ class TestCompetentAuthorityCRUD:
         assert result.competent_authority_name == new_name
         assert result.competent_authority_id == ca.competent_authority_id
 
-    async def test_update_competent_authority_not_found(self, async_session: AsyncSession):
+    async def test_update_competent_authority_not_found(
+        self, async_session: AsyncSession
+    ):
         """Test updating a non-existent competent authority."""
         # Act
         result = await competent_authority.update(
@@ -77,7 +79,9 @@ class TestCompetentAuthorityCRUD:
         retrieved = await competent_authority.get_by_id(async_session, ca.id)
         assert retrieved is None
 
-    async def test_delete_competent_authority_not_found(self, async_session: AsyncSession):
+    async def test_delete_competent_authority_not_found(
+        self, async_session: AsyncSession
+    ):
         """Test deleting a non-existent competent authority."""
         # Act
         result = await competent_authority.delete(async_session, 99999)
@@ -125,7 +129,9 @@ class TestCompetentAuthorityCRUD:
         # Assert
         assert len(results) == initial_count + 3
 
-    async def test_get_all_competent_authorities_with_pagination(self, async_session: AsyncSession):
+    async def test_get_all_competent_authorities_with_pagination(
+        self, async_session: AsyncSession
+    ):
         """Test getting competent authorities with pagination."""
         # Arrange
         for _ in range(5):
@@ -177,7 +183,9 @@ class TestCompetentAuthorityCRUD:
         assert len(results) == 1
         assert results[0].id == ca.id
 
-    async def test_get_by_competent_authority_id_not_found(self, async_session: AsyncSession):
+    async def test_get_by_competent_authority_id_not_found(
+        self, async_session: AsyncSession
+    ):
         """Test getting competent authorities by non-existent competent_authority_id."""
         # Act
         results = await competent_authority.get_by_competent_authority_id(
@@ -203,7 +211,9 @@ class TestCompetentAuthorityCRUD:
         assert len(results) == 1
         assert results[0].id == ca.id
 
-    async def test_get_by_competent_authority_name_not_found(self, async_session: AsyncSession):
+    async def test_get_by_competent_authority_name_not_found(
+        self, async_session: AsyncSession
+    ):
         """Test getting competent authorities by non-existent name."""
         # Act
         results = await competent_authority.get_by_competent_authority_name(

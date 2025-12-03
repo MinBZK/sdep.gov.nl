@@ -229,7 +229,9 @@ async def get_all(
     return list(result.scalars().all())
 
 
-async def get_by_id(session: AsyncSession, activity_data_id: int) -> ActivityData | None:
+async def get_by_id(
+    session: AsyncSession, activity_data_id: int
+) -> ActivityData | None:
     """
     Get an activity data by id.
 
@@ -343,7 +345,9 @@ async def get_by_platform_id(
         List of ActivityData instances matching the platform_id
     """
     stmt = (
-        select(ActivityData).where(ActivityData.platform_id == platform_id).offset(offset)
+        select(ActivityData)
+        .where(ActivityData.platform_id == platform_id)
+        .offset(offset)
     )
     if limit is not None:
         stmt = stmt.limit(limit)
@@ -367,9 +371,7 @@ async def get_by_area_id(
     Returns:
         List of ActivityData instances for the given area_id
     """
-    stmt = (
-        select(ActivityData).where(ActivityData.area_id == area_id).offset(offset)
-    )
+    stmt = select(ActivityData).where(ActivityData.area_id == area_id).offset(offset)
     if limit is not None:
         stmt = stmt.limit(limit)
 
@@ -400,7 +402,9 @@ async def get_by_competent_authority_id(
     """
     stmt = (
         select(ActivityData)
-        .options(selectinload(ActivityData.platform))  # Eagerly load platform relationship
+        .options(
+            selectinload(ActivityData.platform)
+        )  # Eagerly load platform relationship
         .join(Area, ActivityData.area_id == Area.id)
         .join(CompetentAuthority, Area.competent_authority_id == CompetentAuthority.id)
         .where(CompetentAuthority.competent_authority_id == competent_authority_id)

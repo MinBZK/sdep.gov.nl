@@ -3,10 +3,10 @@
 from datetime import datetime
 
 import pytest
+from app.crud import platform
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import platform
 from test.fixtures.factories import PlatformFactory
 
 
@@ -34,7 +34,9 @@ class TestPlatformCRUD:
         assert result.created_at is not None
         assert isinstance(result.created_at, datetime)
 
-    async def test_create_platform_with_duplicate_platform_id(self, async_session: AsyncSession):
+    async def test_create_platform_with_duplicate_platform_id(
+        self, async_session: AsyncSession
+    ):
         """Test that creating a platform with duplicate platform_id raises IntegrityError."""
         # Arrange
         duplicate_platform_id = "duplicate-platform"
@@ -97,7 +99,9 @@ class TestPlatformCRUD:
     async def test_get_by_platform_id_not_found(self, async_session: AsyncSession):
         """Test getting a non-existent platform by platform_id."""
         # Act
-        result = await platform.get_by_platform_id(async_session, "non-existent-platform")
+        result = await platform.get_by_platform_id(
+            async_session, "non-existent-platform"
+        )
 
         # Assert
         assert result is None

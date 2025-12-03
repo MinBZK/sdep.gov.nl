@@ -79,7 +79,7 @@ async def process_activity_data_list(
             if area is None:
                 raise BusinessLogicError(
                     f"Area with area_id '{area_id_str}' not found",
-                    details={"area_id": area_id_str}
+                    details={"area_id": area_id_str},
                 )
 
             # Look up or create Platform by platform_id string

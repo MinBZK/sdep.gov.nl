@@ -69,17 +69,13 @@ async def health(response: Response):
         200: {
             "description": "Health check passed",
             "content": {
-                "application/json": {
-                    "example": {"backup_restore_status": "OK"}
-                }
+                "application/json": {"example": {"backup_restore_status": "OK"}}
             },
         },
         422: {
             "description": "Health check failed - backup/restore check failed",
             "content": {
-                "application/json": {
-                    "example": {"backup_restore_status": "NOK"}
-                }
+                "application/json": {"example": {"backup_restore_status": "NOK"}}
             },
         },
     },

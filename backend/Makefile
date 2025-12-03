@@ -1,5 +1,5 @@
 .PHONY: install \
-        check-postgres upgrade downgrade revision show-history show-current show-postgres show-postgres-full \
+        .check-postgres upgrade downgrade revision show-history show-current show-postgres show-postgres-full \
         clean-stale up down \
         test-crud test-services test-api test-security test test-coverage \
         format lint typecheck check \
@@ -22,7 +22,7 @@ install: ## Install dependencies
 
 ##@ Alembic
 
-check-postgres: ## Check if postgres container is running
+.check-postgres: ## Check if postgres container is running
 	@echo "Checking if PostgreSQL container 'sdep-postgres' is running..."
 	@if ! docker ps --format "table {{.Names}}" | grep -q "^sdep-postgres$$"; then \
 		echo "❌ PostgreSQL container 'sdep-postgres' is not running."; \
@@ -30,15 +30,15 @@ check-postgres: ## Check if postgres container is running
 	fi
 	@echo "✅ PostgreSQL container 'sdep-postgres' is running."
 
-upgrade: check-postgres ## Upgrade
+upgrade: .check-postgres ## Upgrade
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && \
 	uv run alembic upgrade head
 
-downgrade: check-postgres ## Downgrade
+downgrade: .check-postgres ## Downgrade
 	@echo "Downgrading database by one revision..."
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic downgrade -1
 
-revision: check-postgres ## Create revision
+revision: .check-postgres ## Create revision
 	@echo "Creating new migration revision..."
 	@if [ -z "$(MSG)" ]; then \
 		echo "Usage: make revision MSG='Description of changes'"; \
@@ -46,15 +46,15 @@ revision: check-postgres ## Create revision
 	fi
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic revision --autogenerate -m "$(MSG)"
 
-show-current: check-postgres ## Show current
+show-current: .check-postgres ## Show current
 	@echo "Showing current database revision..."
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic current
 
-show-history: check-postgres ## Show history
+show-history: .check-postgres ## Show history
 	@echo "Showing migration history..."
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic history
 
-show-postgres: check-postgres ## Smoke test
+show-postgres: .check-postgres ## Smoke test
 	@echo "Showing database migration status and tables..."
 	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "\\dt"
 	@echo ""
@@ -68,7 +68,7 @@ show-postgres: check-postgres ## Smoke test
 		fi; \
 	done
 
-show-postgres-full: check-postgres ## Smoke test (full)
+show-postgres-full: .check-postgres ## Smoke test (full)
 	@echo "Showing database migration status and tables..."
 	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "\\dt"
 	@echo ""
@@ -107,15 +107,6 @@ clean-stale: # Kill any stale uvicorn/backend processes
 			sudo kill -9 $$pid 2>/dev/null || echo "❌ Failed to kill root process $$pid"; \
 		fi; \
 	done
-# 	@# Method 3: Kill by port using fuser (as fallback)
-# 	@fuser -k 8000/tcp 2>/dev/null || true
-# 	@# Give it a moment to release the port
-# 	@sleep 1
-# 	@# Verify port is free
-# 	@if ss -tln | grep -q ':8000 '; then \
-# 		echo "❌ Port 8000 is still in use. Please run: sudo fuser -k 8000/tcp"; \
-# 		exit 1; \
-# 	fi
 	@echo "✅ Stale processes cleaned!"
 
 up: clean-stale ## Start backend

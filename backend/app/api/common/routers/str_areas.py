@@ -36,9 +36,16 @@ router = APIRouter(tags=["str"])
     },
 )
 async def get_areas(
-    offset: Annotated[int, Query(ge=0, description="Number of records to skip (default: 0)")] = 0,
+    offset: Annotated[
+        int, Query(ge=0, description="Number of records to skip (default: 0)")
+    ] = 0,
     limit: Annotated[
-        int | None, Query(ge=1, le=1000, description="Maximum number of records to return (default: unlimited, max: 1000 when specified)")
+        int | None,
+        Query(
+            ge=1,
+            le=1000,
+            description="Maximum number of records to return (default: unlimited, max: 1000 when specified)",
+        ),
     ] = None,
     session: AsyncSession = Depends(get_async_db_read_only),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),

@@ -1,12 +1,12 @@
 """Tests for ActivityData CRUD operations."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
+from app.crud import activity_data
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import activity_data
 from test.fixtures.factories import ActivityDataFactory, AreaFactory, PlatformFactory
 
 
@@ -68,7 +68,9 @@ class TestActivityDataCRUD:
         assert result.created_at is not None
         assert isinstance(result.created_at, datetime)
 
-    async def test_create_activity_data_with_optional_fields(self, async_session: AsyncSession):
+    async def test_create_activity_data_with_optional_fields(
+        self, async_session: AsyncSession
+    ):
         """Test creating activity data with optional address fields."""
         # Arrange
         area = await AreaFactory.create_async(async_session)
@@ -172,7 +174,9 @@ class TestActivityDataCRUD:
         assert result.url == new_url
         assert result.registration_number == new_registration_number
 
-    async def test_update_activity_data_address_fields(self, async_session: AsyncSession):
+    async def test_update_activity_data_address_fields(
+        self, async_session: AsyncSession
+    ):
         """Test updating address fields of activity data."""
         # Arrange
         ad = await ActivityDataFactory.create_async(async_session)
@@ -198,7 +202,9 @@ class TestActivityDataCRUD:
         assert result.address_postal_code == new_postal_code
         assert result.address_city == new_city
 
-    async def test_update_activity_data_temporal_fields(self, async_session: AsyncSession):
+    async def test_update_activity_data_temporal_fields(
+        self, async_session: AsyncSession
+    ):
         """Test updating temporal fields of activity data."""
         # Arrange
         ad = await ActivityDataFactory.create_async(async_session)
@@ -287,7 +293,9 @@ class TestActivityDataCRUD:
         # Assert
         assert len(results) == 2
 
-    async def test_get_all_activity_data_with_pagination(self, async_session: AsyncSession):
+    async def test_get_all_activity_data_with_pagination(
+        self, async_session: AsyncSession
+    ):
         """Test getting activity data with pagination."""
         # Arrange
         for _ in range(5):
@@ -395,7 +403,9 @@ class TestActivityDataCRUD:
         assert result.id == ad.id
         assert result.url == test_url
 
-    async def test_get_by_unique_constraint_not_found(self, async_session: AsyncSession):
+    async def test_get_by_unique_constraint_not_found(
+        self, async_session: AsyncSession
+    ):
         """Test getting activity data by non-existent unique constraint."""
         # Act
         result = await activity_data.get_by_unique_constraint(
@@ -426,7 +436,9 @@ class TestActivityDataCRUD:
         assert results[0].id == ad.id
         assert results[0].registration_number == test_reg_number
 
-    async def test_get_by_registration_number_not_found(self, async_session: AsyncSession):
+    async def test_get_by_registration_number_not_found(
+        self, async_session: AsyncSession
+    ):
         """Test getting activity data by non-existent registration number."""
         # Act
         results = await activity_data.get_by_registration_number(

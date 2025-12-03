@@ -3,10 +3,10 @@
 from datetime import datetime
 
 import pytest
+from app.crud import area
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import area, competent_authority
 from test.fixtures.factories import AreaFactory, CompetentAuthorityFactory
 
 
@@ -275,7 +275,9 @@ class TestAreaCRUD:
         assert len(results) == 2
         assert all(r.competent_authority_id == ca.id for r in results)
 
-    async def test_get_by_competent_authority_id_not_found(self, async_session: AsyncSession):
+    async def test_get_by_competent_authority_id_not_found(
+        self, async_session: AsyncSession
+    ):
         """Test getting areas by non-existent competent authority id."""
         # Act
         results = await area.get_by_competent_authority_id(async_session, 99999)
@@ -330,7 +332,9 @@ class TestAreaCRUD:
         # Assert
         assert result is None
 
-    async def test_create_area_with_duplicate_area_id(self, async_session: AsyncSession):
+    async def test_create_area_with_duplicate_area_id(
+        self, async_session: AsyncSession
+    ):
         """Test that creating an area with duplicate area_id raises IntegrityError."""
         # Arrange
         ca = await CompetentAuthorityFactory.create_async(async_session)

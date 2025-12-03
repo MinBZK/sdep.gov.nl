@@ -4,14 +4,14 @@ from typing import Any
 
 import pytest
 import pytest_asyncio
-from fastapi import status
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.api.v0.main import app_v0
 from app.crud import activity_data as activity_data_crud
 from app.db.config import get_async_db
 from app.security import verify_bearer_token
+from fastapi import status
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from test.fixtures.factories import AreaFactory, CompetentAuthorityFactory
 
 
@@ -21,9 +21,7 @@ def mock_verify_bearer_token() -> dict[str, Any]:
         "sub": "test_user",
         "client_id": "str01",
         "client_name": "STR Platform 01",
-        "realm_access": {
-            "roles": ["sdep_str", "sdep_read", "sdep_write"]
-        }
+        "realm_access": {"roles": ["sdep_str", "sdep_read", "sdep_write"]},
     }
 
 
@@ -70,15 +68,11 @@ class TestActivityDataAPI:
         ca = await CompetentAuthorityFactory.create_async(
             async_session,
             competent_authority_id="TEST",
-            competent_authority_name="Test Authority"
+            competent_authority_name="Test Authority",
         )
 
         # Create areas with specific area_ids needed by tests
-        area_ids = [
-            "0363", "0344",
-            "ceaba747-15ca-4d8a-81f7",
-            "ceaba747-15ca"
-        ]
+        area_ids = ["0363", "0344", "ceaba747-15ca-4d8a-81f7", "ceaba747-15ca"]
 
         # Also create areas for transaction atomicity test (0000-0009)
         # Note: This already includes "0001" so don't add it separately above
@@ -92,7 +86,7 @@ class TestActivityDataAPI:
                 area_id=area_id,
                 competent_authority_id=ca.id,
                 filename=f"{area_id}.geojson",
-                filedata=b"test_data"
+                filedata=b"test_data",
             )
             areas[area_id] = area
 
@@ -104,8 +98,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with single activity."""
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/listing-001",
@@ -124,7 +117,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD", "DEU", "BEL"],
                     "numberOfGuests": 4,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -156,8 +149,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with multiple activities."""
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/listing-001",
@@ -194,7 +186,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["DEU", "BEL"],
                     "numberOfGuests": 4,
                 },
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -222,8 +214,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with all optional fields populated."""
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/listing-full",
@@ -244,7 +235,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD", "DEU", "BEL", "FRA"],
                     "numberOfGuests": 8,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -274,8 +265,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data without authentication token."""
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -294,7 +284,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -310,6 +300,7 @@ class TestActivityDataAPI:
         self, async_session: AsyncSession, test_areas
     ):
         """Test POST /str/activity-data without 'sdep_str' role returns 403."""
+
         # Setup override with token missing 'sdep_str' role
         def mock_verify_bearer_token_without_str_role() -> dict[str, Any]:
             """Mock token verification without str role."""
@@ -319,10 +310,12 @@ class TestActivityDataAPI:
                 "client_name": "CA 01",
                 "realm_access": {
                     "roles": ["ca", "sdep_read"]  # Missing 'sdep_str' role
-                }
+                },
             }
 
-        app_v0.dependency_overrides[verify_bearer_token] = mock_verify_bearer_token_without_str_role
+        app_v0.dependency_overrides[verify_bearer_token] = (
+            mock_verify_bearer_token_without_str_role
+        )
 
         async def override_get_db():
             yield async_session
@@ -331,8 +324,7 @@ class TestActivityDataAPI:
 
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-no-role",
@@ -351,7 +343,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -379,6 +371,7 @@ class TestActivityDataAPI:
         self, async_session: AsyncSession, test_areas
     ):
         """Test POST /str/activity-data without 'client_id' claim returns 401."""
+
         # Setup override with token missing 'client_id' claim
         def mock_verify_bearer_token_without_client_id() -> dict[str, Any]:
             """Mock token verification without client_id claim."""
@@ -386,12 +379,12 @@ class TestActivityDataAPI:
                 "sub": "test_user",
                 # "client_id": "str01",  # Missing client_id!
                 "client_name": "STR Platform 01",
-                "realm_access": {
-                    "roles": ["sdep_str", "sdep_read", "sdep_write"]
-                }
+                "realm_access": {"roles": ["sdep_str", "sdep_read", "sdep_write"]},
             }
 
-        app_v0.dependency_overrides[verify_bearer_token] = mock_verify_bearer_token_without_client_id
+        app_v0.dependency_overrides[verify_bearer_token] = (
+            mock_verify_bearer_token_without_client_id
+        )
 
         async def override_get_db():
             yield async_session
@@ -400,8 +393,7 @@ class TestActivityDataAPI:
 
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-no-client-id",
@@ -420,7 +412,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -449,8 +441,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with missing required field."""
         # Arrange - missing 'url' field
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     # "url": "http://example.com/test",  # Missing!
@@ -469,7 +460,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -491,8 +482,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with invalid postal code (contains space)."""
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -511,7 +501,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -535,8 +525,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with end datetime before start datetime."""
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -555,7 +544,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -578,8 +567,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with duplicate unique constraint (url + temporal dates)."""
         # Arrange - post same URL with same temporal dates twice
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/duplicate",
@@ -615,7 +603,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["DEU"],
                     "numberOfGuests": 4,
                 },
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -653,8 +641,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with same URL but different temporal dates (should succeed)."""
         # Arrange - same URL but different temporal periods
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/same-url",
@@ -690,7 +677,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["DEU"],
                     "numberOfGuests": 4,
                 },
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -745,8 +732,7 @@ class TestActivityDataAPI:
         """Test that all activities are processed atomically (all or nothing)."""
         # Arrange - valid payload
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": f"http://example.com/listing-{i:03d}",
@@ -766,7 +752,7 @@ class TestActivityDataAPI:
                     "numberOfGuests": 2,
                 }
                 for i in range(1, 6)  # 5 activities
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -792,8 +778,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with letter instead of number for address.number field."""
         # Arrange - address.number should be int, providing string instead
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -812,7 +797,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -844,8 +829,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with number instead of letter for address.letter field."""
         # Arrange - address.letter should be str, providing int instead
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -865,7 +849,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -897,8 +881,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with numeric string for address.letter field."""
         # Arrange - address.letter should be alphabetic only, providing numeric string
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -918,7 +901,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -947,8 +930,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with special character for address.letter field."""
         # Arrange - address.letter should be alphabetic only
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -968,7 +950,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -995,8 +977,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with special character in postal code."""
         # Arrange - postal code should be alphanumeric only
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1015,7 +996,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1035,7 +1016,9 @@ class TestActivityDataAPI:
         error = data["detail"][0]
         assert "postalCode" in error["loc"] or "postal_code" in str(error["loc"])
         # Error can be from pattern constraint or validator
-        assert "alphanumeric" in error["msg"].lower() or "pattern" in error["msg"].lower()
+        assert (
+            "alphanumeric" in error["msg"].lower() or "pattern" in error["msg"].lower()
+        )
 
     async def test_post_activity_data_validation_error_area_id_uppercase(
         self, async_session: AsyncSession, setup_overrides
@@ -1043,8 +1026,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with uppercase characters in area_id."""
         # Arrange - area_id should be lowercase alphanumeric
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1063,7 +1045,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1083,7 +1065,11 @@ class TestActivityDataAPI:
         error = data["detail"][0]
         assert "areaId" in error["loc"] or "area_id" in str(error["loc"])
         # Error can be from pattern constraint or validator
-        assert "lowercase" in error["msg"].lower() or "alphanumeric" in error["msg"].lower() or "pattern" in error["msg"].lower()
+        assert (
+            "lowercase" in error["msg"].lower()
+            or "alphanumeric" in error["msg"].lower()
+            or "pattern" in error["msg"].lower()
+        )
 
     async def test_post_activity_data_validation_error_area_id_non_alphanumeric_chars(
         self, async_session: AsyncSession, setup_overrides
@@ -1091,8 +1077,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with non-alphanumeric characters in area_id."""
         # Arrange - area_id should only contain lowercase alphanumeric chars (0-9, a-z) and dashes
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1111,7 +1096,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1131,7 +1116,9 @@ class TestActivityDataAPI:
         error = data["detail"][0]
         assert "areaId" in error["loc"] or "area_id" in str(error["loc"])
         # Error can be from pattern constraint or validator
-        assert "alphanumeric" in error["msg"].lower() or "pattern" in error["msg"].lower()
+        assert (
+            "alphanumeric" in error["msg"].lower() or "pattern" in error["msg"].lower()
+        )
 
     async def test_post_activity_data_validation_success_area_id_with_hyphens(
         self, async_session: AsyncSession, setup_overrides, test_areas
@@ -1139,8 +1126,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data accepts valid alphanumeric area_id with hyphens."""
         # Arrange - valid lowercase alphanumeric with hyphens should be accepted
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-hex-hyphens",
@@ -1159,7 +1145,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1183,8 +1169,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with lowercase country code."""
         # Arrange - country codes should be uppercase
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1200,10 +1185,12 @@ class TestActivityDataAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca",
-                    "countryOfGuests": ["nld"],  # Invalid: lowercase (ISO 3166-1 alpha-3)
+                    "countryOfGuests": [
+                        "nld"
+                    ],  # Invalid: lowercase (ISO 3166-1 alpha-3)
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1221,7 +1208,9 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(error["loc"])
+        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(
+            error["loc"]
+        )
         assert "uppercase" in error["msg"].lower()
 
     async def test_post_activity_data_validation_error_country_code_too_short(
@@ -1230,8 +1219,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with country code too short."""
         # Arrange - country codes must be exactly 3 characters (ISO 3166-1 alpha-3)
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1250,7 +1238,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NL"],  # Invalid: 2 characters instead of 3
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1268,7 +1256,9 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(error["loc"])
+        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(
+            error["loc"]
+        )
         assert "3 characters" in error["msg"]
 
     async def test_post_activity_data_validation_error_country_code_too_long(
@@ -1277,8 +1267,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with country code too long."""
         # Arrange - country codes must be exactly 3 characters (ISO 3166-1 alpha-3)
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1297,7 +1286,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["ABCD"],  # Invalid: 4 characters instead of 3
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1315,7 +1304,9 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(error["loc"])
+        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(
+            error["loc"]
+        )
         assert "3 characters" in error["msg"]
 
     async def test_post_activity_data_validation_error_country_code_with_numbers(
@@ -1324,8 +1315,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data with country code containing numbers."""
         # Arrange - country codes should be alphabetic only
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1344,7 +1334,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["N1D"],  # Invalid: contains number
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1362,7 +1352,9 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(error["loc"])
+        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(
+            error["loc"]
+        )
         assert "alphabetic" in error["msg"].lower()
 
     async def test_post_activity_data_validation_success_country_codes_alpha3(
@@ -1371,8 +1363,7 @@ class TestActivityDataAPI:
         """Test POST /str/activity-data accepts valid ISO 3166-1 alpha-3 country codes."""
         # Arrange - valid 3-character country codes should be accepted
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-alpha3-countries",
@@ -1388,10 +1379,15 @@ class TestActivityDataAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca",
-                    "countryOfGuests": ["NLD", "USA", "DEU", "GBR"],  # Valid: ISO 3166-1 alpha-3 codes
+                    "countryOfGuests": [
+                        "NLD",
+                        "USA",
+                        "DEU",
+                        "GBR",
+                    ],  # Valid: ISO 3166-1 alpha-3 codes
                     "numberOfGuests": 4,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1415,8 +1411,7 @@ class TestActivityDataAPI:
         """Test that platform is extracted from JWT token (client_id and client_name claims)."""
         # Arrange
         payload = {
-            "metadata": {
-            },
+            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-platform-from-token",
@@ -1435,7 +1430,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(
@@ -1458,8 +1453,12 @@ class TestActivityDataAPI:
         assert len(saved) == 1
         # Need to eagerly load the platform to avoid lazy loading issues
         await async_session.refresh(saved[0], ["platform"])
-        assert saved[0].platform.platform_id == "str01"  # From mock token's client_id claim
-        assert saved[0].platform.platform_name == "STR Platform 01"  # From mock token's client_name claim
+        assert (
+            saved[0].platform.platform_id == "str01"
+        )  # From mock token's client_id claim
+        assert (
+            saved[0].platform.platform_name == "STR Platform 01"
+        )  # From mock token's client_name claim
 
     async def test_post_activity_data_validation_error_start_year_before_2025(
         self, async_session: AsyncSession, setup_overrides
@@ -1488,7 +1487,7 @@ class TestActivityDataAPI:
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
-            ]
+            ],
         }
 
         async with AsyncClient(

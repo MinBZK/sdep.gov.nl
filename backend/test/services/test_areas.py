@@ -1,9 +1,9 @@
 """Tests for Areas business service"""
 
 import pytest
+from app.services import area
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services import area
 from test.fixtures.factories import AreaFactory
 
 
@@ -65,15 +65,9 @@ class TestAreasService:
         assert len(result) == 3
 
         # Find each area in results
-        area1 = next(
-            (a for a in result if a["competentAuthorityId"] == "0363"), None
-        )
-        area2 = next(
-            (a for a in result if a["competentAuthorityId"] == "0599"), None
-        )
-        area3 = next(
-            (a for a in result if a["competentAuthorityId"] == "0518"), None
-        )
+        area1 = next((a for a in result if a["competentAuthorityId"] == "0363"), None)
+        area2 = next((a for a in result if a["competentAuthorityId"] == "0599"), None)
+        area3 = next((a for a in result if a["competentAuthorityId"] == "0518"), None)
 
         assert area1 is not None
         assert area1["competentAuthorityName"] == "Gemeente Amsterdam"
@@ -156,16 +150,24 @@ class TestAreasService:
         """Test getting areas with offset pagination"""
         # Arrange
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0001", competent_authority_name="CA 1"
+            async_session,
+            competent_authority_id="0001",
+            competent_authority_name="CA 1",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0002", competent_authority_name="CA 2"
+            async_session,
+            competent_authority_id="0002",
+            competent_authority_name="CA 2",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0003", competent_authority_name="CA 3"
+            async_session,
+            competent_authority_id="0003",
+            competent_authority_name="CA 3",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0004", competent_authority_name="CA 4"
+            async_session,
+            competent_authority_id="0004",
+            competent_authority_name="CA 4",
         )
 
         # Act
@@ -181,13 +183,19 @@ class TestAreasService:
         """Test getting areas with limit pagination"""
         # Arrange
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0001", competent_authority_name="CA 1"
+            async_session,
+            competent_authority_id="0001",
+            competent_authority_name="CA 1",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0002", competent_authority_name="CA 2"
+            async_session,
+            competent_authority_id="0002",
+            competent_authority_name="CA 2",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0003", competent_authority_name="CA 3"
+            async_session,
+            competent_authority_id="0003",
+            competent_authority_name="CA 3",
         )
 
         # Act
@@ -202,19 +210,29 @@ class TestAreasService:
         """Test getting areas with both offset and limit pagination"""
         # Arrange
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0001", competent_authority_name="CA 1"
+            async_session,
+            competent_authority_id="0001",
+            competent_authority_name="CA 1",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0002", competent_authority_name="CA 2"
+            async_session,
+            competent_authority_id="0002",
+            competent_authority_name="CA 2",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0003", competent_authority_name="CA 3"
+            async_session,
+            competent_authority_id="0003",
+            competent_authority_name="CA 3",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0004", competent_authority_name="CA 4"
+            async_session,
+            competent_authority_id="0004",
+            competent_authority_name="CA 4",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0005", competent_authority_name="CA 5"
+            async_session,
+            competent_authority_id="0005",
+            competent_authority_name="CA 5",
         )
 
         # Act
@@ -232,10 +250,14 @@ class TestAreasService:
         """Test pagination with offset beyond available results"""
         # Arrange
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0001", competent_authority_name="CA 1"
+            async_session,
+            competent_authority_id="0001",
+            competent_authority_name="CA 1",
         )
         await AreaFactory.create_async(
-            async_session, competent_authority_id="0002", competent_authority_name="CA 2"
+            async_session,
+            competent_authority_id="0002",
+            competent_authority_name="CA 2",
         )
 
         # Act
@@ -307,7 +329,9 @@ class TestAreasService:
         assert result["filename"] == test_filename
         assert result["filedata"] == test_geo_data
 
-    async def test_get_area_by_area_id_response_structure(self, async_session: AsyncSession):
+    async def test_get_area_by_area_id_response_structure(
+        self, async_session: AsyncSession
+    ):
         """Test that get_area_by_area_id response structure matches specification"""
         # Arrange
         test_area_id = "test-area-xyz"

@@ -115,7 +115,9 @@ async def count(session: AsyncSession) -> int:
     return result.scalar_one()
 
 
-async def get_all(session: AsyncSession, offset: int = 0, limit: int | None = None) -> list[CompetentAuthority]:
+async def get_all(
+    session: AsyncSession, offset: int = 0, limit: int | None = None
+) -> list[CompetentAuthority]:
     """
     Get competent authorities with pagination.
 
@@ -152,7 +154,10 @@ async def get_by_id(session: AsyncSession, id: int) -> CompetentAuthority | None
 
 
 async def get_by_competent_authority_id(
-    session: AsyncSession, competent_authority_id: str, offset: int = 0, limit: int | None = None
+    session: AsyncSession,
+    competent_authority_id: str,
+    offset: int = 0,
+    limit: int | None = None,
 ) -> list[CompetentAuthority]:
     """
     Get competent authorities by competent_authority_id with pagination.
@@ -179,7 +184,10 @@ async def get_by_competent_authority_id(
 
 
 async def get_by_competent_authority_name(
-    session: AsyncSession, competent_authority_name: str, offset: int = 0, limit: int | None = None
+    session: AsyncSession,
+    competent_authority_name: str,
+    offset: int = 0,
+    limit: int | None = None,
 ) -> list[CompetentAuthority]:
     """
     Get competent authorities by competent_authority_name with pagination.

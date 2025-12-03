@@ -11,6 +11,9 @@ from fastapi.responses import JSONResponse
 from app.schemas.error import ErrorDetail, ErrorResponse
 
 if TYPE_CHECKING:
+    from fastapi.exceptions import RequestValidationError
+    from pydantic import ValidationError as PydanticValidationError
+
     from app.exceptions.auth import (
         AuthenticationError,
         AuthorizationError,
@@ -18,8 +21,6 @@ if TYPE_CHECKING:
     )
     from app.exceptions.business import BusinessLogicError, ResourceNotFoundError
     from app.exceptions.validation import ValidationError as AppValidationError
-    from fastapi.exceptions import RequestValidationError
-    from pydantic import ValidationError as PydanticValidationError
 
 
 def _get_logger():
@@ -40,7 +41,9 @@ async def validation_exception_handler(
     for error in exc.errors():
         details.append(
             ErrorDetail(
-                loc=[str(item) for item in error["loc"]],  # Convert all loc items to strings
+                loc=[
+                    str(item) for item in error["loc"]
+                ],  # Convert all loc items to strings
                 msg=error["msg"],
                 type=error["type"],
             )

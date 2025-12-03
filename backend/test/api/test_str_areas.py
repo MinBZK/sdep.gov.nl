@@ -1,28 +1,22 @@
 """Tests for Areas API endpoint."""
 
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
-from fastapi import Depends, status
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.api.v0.main import app_v0
 from app.db.config import get_async_db_read_only
 from app.security import verify_bearer_token
+from fastapi import status
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from test.fixtures.factories import AreaFactory, CompetentAuthorityFactory
 
 
 def mock_verify_bearer_token() -> dict[str, Any]:
     """Mock token verification for testing."""
-    return {
-        "sub": "test_user",
-        "realm_access": {
-            "roles": ["sdep_str", "sdep_read"]
-        }
-    }
+    return {"sub": "test_user", "realm_access": {"roles": ["sdep_str", "sdep_read"]}}
 
 
 @pytest.mark.database
@@ -67,7 +61,7 @@ class TestStrAreasAPI:
         ca = await CompetentAuthorityFactory.create_async(
             async_session,
             competent_authority_id="0363",
-            competent_authority_name="Gemeente Amsterdam"
+            competent_authority_name="Gemeente Amsterdam",
         )
         return ca
 
@@ -127,17 +121,17 @@ class TestStrAreasAPI:
         ca1 = await CompetentAuthorityFactory.create_async(
             async_session,
             competent_authority_id="0363",
-            competent_authority_name="Gemeente Amsterdam"
+            competent_authority_name="Gemeente Amsterdam",
         )
         ca2 = await CompetentAuthorityFactory.create_async(
             async_session,
             competent_authority_id="0599",
-            competent_authority_name="Gemeente Rotterdam"
+            competent_authority_name="Gemeente Rotterdam",
         )
         ca3 = await CompetentAuthorityFactory.create_async(
             async_session,
             competent_authority_id="0518",
-            competent_authority_name="Gemeente Den Haag"
+            competent_authority_name="Gemeente Den Haag",
         )
 
         await AreaFactory.create_async(
@@ -252,7 +246,9 @@ class TestStrAreasAPI:
     ):
         """Test that response has correct content type."""
         # Arrange
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
 
         async with AsyncClient(
             transport=ASGITransport(app=app_v0), base_url="http://test"
@@ -271,10 +267,26 @@ class TestStrAreasAPI:
     ):
         """Test GET /str/areas with offset pagination parameter."""
         # Arrange
-        ca1 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0001", competent_authority_name="CA 1")
-        ca2 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0002", competent_authority_name="CA 2")
-        ca3 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0003", competent_authority_name="CA 3")
-        ca4 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0004", competent_authority_name="CA 4")
+        ca1 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0001",
+            competent_authority_name="CA 1",
+        )
+        ca2 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0002",
+            competent_authority_name="CA 2",
+        )
+        ca3 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0003",
+            competent_authority_name="CA 3",
+        )
+        ca4 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0004",
+            competent_authority_name="CA 4",
+        )
 
         await AreaFactory.create_async(async_session, competent_authority_id=ca1.id)
         await AreaFactory.create_async(async_session, competent_authority_id=ca2.id)
@@ -302,9 +314,15 @@ class TestStrAreasAPI:
     ):
         """Test GET /str/areas with limit pagination parameter."""
         # Arrange
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
 
         async with AsyncClient(
             transport=ASGITransport(app=app_v0), base_url="http://test"
@@ -324,11 +342,31 @@ class TestStrAreasAPI:
     ):
         """Test GET /str/areas with both offset and limit pagination parameters."""
         # Arrange
-        ca1 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0001", competent_authority_name="CA 1")
-        ca2 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0002", competent_authority_name="CA 2")
-        ca3 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0003", competent_authority_name="CA 3")
-        ca4 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0004", competent_authority_name="CA 4")
-        ca5 = await CompetentAuthorityFactory.create_async(async_session, competent_authority_id="0005", competent_authority_name="CA 5")
+        ca1 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0001",
+            competent_authority_name="CA 1",
+        )
+        ca2 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0002",
+            competent_authority_name="CA 2",
+        )
+        ca3 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0003",
+            competent_authority_name="CA 3",
+        )
+        ca4 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0004",
+            competent_authority_name="CA 4",
+        )
+        ca5 = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0005",
+            competent_authority_name="CA 5",
+        )
 
         await AreaFactory.create_async(async_session, competent_authority_id=ca1.id)
         await AreaFactory.create_async(async_session, competent_authority_id=ca2.id)
@@ -358,8 +396,12 @@ class TestStrAreasAPI:
     ):
         """Test GET /str/areas with offset beyond available results."""
         # Arrange
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
 
         async with AsyncClient(
             transport=ASGITransport(app=app_v0), base_url="http://test"
@@ -446,7 +488,9 @@ class TestStrAreasAPI:
     ):
         """Test GET /str/areas/count with single area."""
         # Arrange
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
 
         async with AsyncClient(
             transport=ASGITransport(app=app_v0), base_url="http://test"
@@ -466,11 +510,21 @@ class TestStrAreasAPI:
     ):
         """Test GET /str/areas/count with multiple areas."""
         # Arrange
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
 
         async with AsyncClient(
             transport=ASGITransport(app=app_v0), base_url="http://test"
@@ -490,7 +544,9 @@ class TestStrAreasAPI:
     ):
         """Test that count response structure matches OpenAPI specification."""
         # Arrange
-        await AreaFactory.create_async(async_session, competent_authority_id=competent_authority.id)
+        await AreaFactory.create_async(
+            async_session, competent_authority_id=competent_authority.id
+        )
 
         async with AsyncClient(
             transport=ASGITransport(app=app_v0), base_url="http://test"
@@ -584,14 +640,17 @@ class TestStrAreasAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/area/{area.area_id}", headers={"Authorization": "Bearer test_token"}
+                f"/str/area/{area.area_id}",
+                headers={"Authorization": "Bearer test_token"},
             )
 
         # Assert
         assert response.status_code == status.HTTP_200_OK
         assert response.content == test_data
         assert response.headers["content-type"] == "application/octet-stream"
-        assert f'filename="{test_filename}"' in response.headers.get("content-disposition", "")
+        assert f'filename="{test_filename}"' in response.headers.get(
+            "content-disposition", ""
+        )
 
     async def test_get_area_data_without_authentication(
         self, async_session: AsyncSession, setup_db_only, competent_authority
@@ -602,7 +661,7 @@ class TestStrAreasAPI:
             async_session,
             competent_authority_id=competent_authority.id,
             filename="test.zip",
-            filedata=b"data"
+            filedata=b"data",
         )
 
         async with AsyncClient(
@@ -623,7 +682,7 @@ class TestStrAreasAPI:
             async_session,
             competent_authority_id=competent_authority.id,
             filename="test.zip",
-            filedata=b"data"
+            filedata=b"data",
         )
 
         async with AsyncClient(
@@ -631,7 +690,8 @@ class TestStrAreasAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/area/{area.area_id}", headers={"Authorization": "Bearer invalid_token"}
+                f"/str/area/{area.area_id}",
+                headers={"Authorization": "Bearer invalid_token"},
             )
 
         # Assert
@@ -655,7 +715,8 @@ class TestStrAreasAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/area/{area.area_id}", headers={"Authorization": "Bearer test_token"}
+                f"/str/area/{area.area_id}",
+                headers={"Authorization": "Bearer test_token"},
             )
 
         # Assert
@@ -693,7 +754,8 @@ class TestStrAreasAPI:
         ) as client:
             # Act - request middle area
             response = await client.get(
-                f"/str/area/{area2.area_id}", headers={"Authorization": "Bearer test_token"}
+                f"/str/area/{area2.area_id}",
+                headers={"Authorization": "Bearer test_token"},
             )
 
         # Assert

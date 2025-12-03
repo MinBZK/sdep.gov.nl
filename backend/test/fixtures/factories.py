@@ -35,7 +35,9 @@ class CompetentAuthorityFactory(AsyncSQLAlchemyFactory):
     class Meta:
         model = CompetentAuthority
 
-    competent_authority_id = factory.Sequence(lambda n: f"{n:04d}"[:64])  # "0001", "0002", etc.
+    competent_authority_id = factory.Sequence(
+        lambda n: f"{n:04d}"[:64]
+    )  # "0001", "0002", etc.
     competent_authority_name = Faker("company")
 
 
@@ -45,7 +47,9 @@ class AreaFactory(AsyncSQLAlchemyFactory):
     class Meta:
         model = Area
 
-    area_id = factory.Sequence(lambda n: f"area{n:016x}"[:20])  # Lowercase hex, e.g. "area000000000000001"
+    area_id = factory.Sequence(
+        lambda n: f"area{n:016x}"[:20]
+    )  # Lowercase hex, e.g. "area000000000000001"
     filename = Faker("file_name", extension="geojson")
     filedata = Faker("binary", length=100)
     # Foreign key to CompetentAuthority - defaults to creating one
@@ -53,7 +57,6 @@ class AreaFactory(AsyncSQLAlchemyFactory):
     @classmethod
     async def create_async(cls, session: AsyncSession, **kwargs):
         """Create model instance asynchronously."""
-        from sqlalchemy import select
         from app.crud import competent_authority as ca_crud
 
         # Extract competent authority attributes if provided
@@ -62,7 +65,7 @@ class AreaFactory(AsyncSQLAlchemyFactory):
 
         # If competent_authority_id is provided as a string (the business key, not the database ID)
         # or if competent_authority_name is provided, find or create a CompetentAuthority
-        if isinstance(ca_id, str) and not ca_id.isdigit() or ca_name:
+        if (isinstance(ca_id, str) and not ca_id.isdigit()) or ca_name:
             # Try to find existing CompetentAuthority by competent_authority_id
             if ca_id:
                 existing = await ca_crud.get_by_competent_authority_id(session, ca_id)
@@ -98,7 +101,9 @@ class PlatformFactory(AsyncSQLAlchemyFactory):
     class Meta:
         model = Platform
 
-    platform_id = factory.Sequence(lambda n: f"platform{n:02d}")  # "platform01", "platform02", etc.
+    platform_id = factory.Sequence(
+        lambda n: f"platform{n:02d}"
+    )  # "platform01", "platform02", etc.
     platform_name = Faker("company")
 
 
@@ -143,7 +148,9 @@ class ActivityDataFactory(AsyncSQLAlchemyFactory):
     # Address composite fields (street, number, postal_code, city are mandatory)
     address_street = Faker("street_name")
     address_number = Faker("building_number")
-    address_letter = factory.Sequence(lambda n: chr(97 + (n % 26)) if n % 3 == 0 else None)
+    address_letter = factory.Sequence(
+        lambda n: chr(97 + (n % 26)) if n % 3 == 0 else None
+    )
     address_addition = factory.Sequence(lambda n: f"{n}h" if n % 2 == 0 else None)
     address_postal_code = Faker("postcode")
     address_city = Faker("city")
@@ -151,7 +158,9 @@ class ActivityDataFactory(AsyncSQLAlchemyFactory):
     # Foreign key to Area - defaults to creating one
     # Guest information
     number_of_guests = Faker("random_int", min=1, max=8)
-    country_of_guests = factory.LazyFunction(lambda: ["NLD", "DEU", "BEL"])  # ISO 3166-1 alpha-3
+    country_of_guests = factory.LazyFunction(
+        lambda: ["NLD", "DEU", "BEL"]
+    )  # ISO 3166-1 alpha-3
     # Temporal composite fields (both mandatory)
     # Use sequence to ensure unique combinations with URL
     # Start from 2025 to satisfy the year >= 2025 constraint

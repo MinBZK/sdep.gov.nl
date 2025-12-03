@@ -3,10 +3,10 @@
 from datetime import datetime, timedelta
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 from app.services import activity_data as activity_data_service
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from test.fixtures.factories import ActivityDataFactory, AreaFactory, PlatformFactory
 
 
@@ -47,7 +47,9 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(async_session, activities)
+        await activity_data_service.process_activity_data_list(
+            async_session, activities
+        )
 
         # Assert
         count = await activity_data_service.count_activity_data(async_session)
@@ -87,7 +89,9 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(async_session, activities)
+        await activity_data_service.process_activity_data_list(
+            async_session, activities
+        )
 
         # Assert
         count = await activity_data_service.count_activity_data(async_session)
@@ -120,7 +124,9 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(async_session, activities)
+        await activity_data_service.process_activity_data_list(
+            async_session, activities
+        )
 
         # Assert - verify platform was created
         from app.crud import platform as platform_crud
@@ -161,11 +167,13 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(async_session, activities)
+        await activity_data_service.process_activity_data_list(
+            async_session, activities
+        )
 
         # Assert - verify no new platform was created
-        from sqlalchemy import select
         from app.models.platform import Platform
+        from sqlalchemy import select
 
         platforms = await async_session.execute(select(Platform))
         platform_count = len(platforms.scalars().all())
@@ -198,7 +206,9 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(async_session, activities)
+        await activity_data_service.process_activity_data_list(
+            async_session, activities
+        )
 
         # Assert
         count = await activity_data_service.count_activity_data(async_session)
@@ -235,7 +245,9 @@ class TestActivityDataService:
                 async_session, activities
             )
 
-        assert "Area with area_id 'nonexistent-area-id' not found" in str(exc_info.value)
+        assert "Area with area_id 'nonexistent-area-id' not found" in str(
+            exc_info.value
+        )
         assert exc_info.value.details == {"area_id": "nonexistent-area-id"}
 
     async def test_process_activity_data_list_raises_error_for_duplicate(
@@ -359,7 +371,8 @@ class TestActivityDataService:
         """Test counting activity data by competent authority with single match"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         await ActivityDataFactory.create_async(async_session, area_id=area.id)
@@ -378,11 +391,13 @@ class TestActivityDataService:
         """Test counting activity data by competent authority with multiple matches"""
         # Arrange
         area1 = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         area2 = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         await ActivityDataFactory.create_async(async_session, area_id=area1.id)
@@ -403,11 +418,13 @@ class TestActivityDataService:
         """Test that counting filters by competent authority correctly"""
         # Arrange
         area1 = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         area2 = await AreaFactory.create_async(
-            async_session, competent_authority_id="0599",
+            async_session,
+            competent_authority_id="0599",
             competent_authority_name="Gemeente Rotterdam",
         )
         await ActivityDataFactory.create_async(async_session, area_id=area1.id)
@@ -415,11 +432,15 @@ class TestActivityDataService:
         await ActivityDataFactory.create_async(async_session, area_id=area2.id)
 
         # Act
-        result1 = await activity_data_service.count_activity_data_by_competent_authority(
-            async_session, "0363"
+        result1 = (
+            await activity_data_service.count_activity_data_by_competent_authority(
+                async_session, "0363"
+            )
         )
-        result2 = await activity_data_service.count_activity_data_by_competent_authority(
-            async_session, "0599"
+        result2 = (
+            await activity_data_service.count_activity_data_by_competent_authority(
+                async_session, "0599"
+            )
         )
 
         # Assert
@@ -442,7 +463,8 @@ class TestActivityDataService:
         """Test getting activity data list with no matching records"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         await ActivityDataFactory.create_async(async_session, area_id=area.id)
@@ -461,7 +483,8 @@ class TestActivityDataService:
         """Test getting activity data list with single record"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(
@@ -493,7 +516,8 @@ class TestActivityDataService:
         """Test that response structure matches specification"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
@@ -553,7 +577,8 @@ class TestActivityDataService:
         """Test getting activity data list with multiple records"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
@@ -581,11 +606,13 @@ class TestActivityDataService:
         """Test that listing filters by competent authority correctly"""
         # Arrange
         area1 = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         area2 = await AreaFactory.create_async(
-            async_session, competent_authority_id="0599",
+            async_session,
+            competent_authority_id="0599",
             competent_authority_name="Gemeente Rotterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
@@ -617,7 +644,8 @@ class TestActivityDataService:
         """Test getting activity data list with offset pagination"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
@@ -648,7 +676,8 @@ class TestActivityDataService:
         """Test getting activity data list with limit pagination"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
@@ -676,7 +705,8 @@ class TestActivityDataService:
         """Test getting activity data list with both offset and limit pagination"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
@@ -710,7 +740,8 @@ class TestActivityDataService:
         """Test pagination with offset beyond available results"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
@@ -735,7 +766,8 @@ class TestActivityDataService:
         """Test that activity data list includes platform information via relationship"""
         # Arrange
         area = await AreaFactory.create_async(
-            async_session, competent_authority_id="0363",
+            async_session,
+            competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(

@@ -6,7 +6,9 @@ from typing import Any
 from fastapi import FastAPI
 
 
-def replace_auto_generated_body_schemas(openapi_schema: dict[str, Any]) -> dict[str, Any]:
+def replace_auto_generated_body_schemas(
+    openapi_schema: dict[str, Any],
+) -> dict[str, Any]:
     """Replace auto-generated Body_* schemas with proper namespaced schemas.
 
     FastAPI auto-generates schemas like 'Body_post_auth_token' for Form parameters.
@@ -18,7 +20,10 @@ def replace_auto_generated_body_schemas(openapi_schema: dict[str, Any]) -> dict[
     Returns:
         Modified OpenAPI schema with renamed schemas
     """
-    if "components" not in openapi_schema or "schemas" not in openapi_schema["components"]:
+    if (
+        "components" not in openapi_schema
+        or "schemas" not in openapi_schema["components"]
+    ):
         return openapi_schema
 
     # Map of auto-generated schema names to their replacements
@@ -42,12 +47,16 @@ def replace_auto_generated_body_schemas(openapi_schema: dict[str, Any]) -> dict[
     for path, path_item in openapi_schema.get("paths", {}).items():
         for method, operation in path_item.items():
             if "requestBody" in operation:
-                for content_type, content in operation["requestBody"].get("content", {}).items():
+                for content_type, content in (
+                    operation["requestBody"].get("content", {}).items()
+                ):
                     if "schema" in content and "$ref" in content["schema"]:
                         ref = content["schema"]["$ref"]
                         schema_name = ref.split("/")[-1]
                         if schema_name in replacements:
-                            content["schema"]["$ref"] = f"#/components/schemas/{replacements[schema_name]}"
+                            content["schema"]["$ref"] = (
+                                f"#/components/schemas/{replacements[schema_name]}"
+                            )
 
     return openapi_schema
 

@@ -51,7 +51,9 @@ async def create(
     return platform
 
 
-async def get_by_platform_id(session: AsyncSession, platform_id: str) -> Platform | None:
+async def get_by_platform_id(
+    session: AsyncSession, platform_id: str
+) -> Platform | None:
     """
     Get a platform by platform_id string.
 

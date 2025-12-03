@@ -7,9 +7,6 @@
 FROM python:3.13-slim AS builder
 LABEL "maintainer"="ICTU DevOps"
 
-# Fix https://stackoverflow.com/questions/69692842/error-message-error0308010cdigital-envelope-routinesunsupported
-# ENV NODE_OPTIONS "--openssl-legacy-provider"
-
 # The installer requires curl (and certificates) to download the release archive
 # Also install libpq-dev for psycopg
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -45,8 +42,8 @@ ENV PYRIGHT_PYTHON_FORCE_VERSION="latest"
 RUN npm install -g pyright
 
 # Install packages
-WORKDIR /api
-COPY ./pyproject.toml ./uv.lock /api/
+WORKDIR /backend
+COPY ./pyproject.toml ./uv.lock /backend/
 
 # Do not use venv
 ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
@@ -54,13 +51,9 @@ ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 ENV UV_HTTP_TIMEOUT=300
 RUN uv sync --frozen --no-install-project
 
-# Run pyright once, it requires node. This will prevent installation of node during pipeline.
-WORKDIR /app
-RUN pyright
-
 # -- Stage 2 - package (final image with build artifacts and without source code)
 
-FROM library/python:3.13-slim
+FROM python:3.13-slim
 
 # Pass IMAGE_TAG (injected from build environment/pipeline)
 ARG IMAGE_TAG
@@ -74,15 +67,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-# Download uv installer
-ADD https://astral.sh/uv/0.5.4/install.sh /uv-installer.sh
-
-# Run the installer then remove it
-RUN sh /uv-installer.sh && rm /uv-installer.sh
-
-# Ensure the installed binary is on the `PATH`
-ENV PATH="/root/.local/bin/:$PATH"
 
 # Copy installed packages from builder stage
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages

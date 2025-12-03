@@ -14,7 +14,7 @@ Pattern:
 """
 
 import logging
-from typing import Annotated, Any
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -146,7 +146,9 @@ async def post_activity_data(
         # Convert Pydantic models to service layer format
         # This flattens nested composites and converts to snake_case
         # Platform ID and name are extracted from the token, not from the request payload
-        activities_dict = data.to_service_list(platform_id=platform_id, platform_name=platform_name)
+        activities_dict = data.to_service_list(
+            platform_id=platform_id, platform_name=platform_name
+        )
 
         # Call service layer with injected session
         # Transaction is managed by get_async_db dependency (auto-commit on success)

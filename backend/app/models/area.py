@@ -11,7 +11,9 @@ from app.db.config import Base
 
 def generate_area_id() -> str:
     """Generate a random lowercase alphanumeric area_id."""
-    return uuid.uuid4().hex[:20]  # Generate 20 character lowercase alphanumeric string (UUID hex)
+    return uuid.uuid4().hex[
+        :20
+    ]  # Generate 20 character lowercase alphanumeric string (UUID hex)
 
 
 class Area(Base):

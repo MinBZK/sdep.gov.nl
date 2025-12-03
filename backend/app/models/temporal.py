@@ -58,7 +58,10 @@ class Temporal:
     @property
     def is_valid(self) -> bool:
         """Check if the temporal period is valid (start < end and year >= 2025)."""
-        return self.start_date_time.year >= MIN_START_YEAR and self.start_date_time < self.end_date_time
+        return (
+            self.start_date_time.year >= MIN_START_YEAR
+            and self.start_date_time < self.end_date_time
+        )
 
     def __ne__(self, other: object) -> bool:
         """Compare two Temporal instances for inequality."""
