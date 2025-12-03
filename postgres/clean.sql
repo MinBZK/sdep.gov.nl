@@ -23,8 +23,3 @@ GRANT ALL PRIVILEGES ON DATABASE "sdep-data" TO sdep;
 GRANT ALL ON SCHEMA public TO sdep;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO sdep;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO sdep;
-
--- drop table if exists activity_data cascade;
--- drop table if exists area cascade;
--- drop table if exists competent_authority cascade;
--- drop table if exists alembic_version cascade;

@@ -1,5 +1,5 @@
 #
-# See ./env for environment variables (is used by default)
+# See ./env for environment variables being used
 #
 
 volumes:
