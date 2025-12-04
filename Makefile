@@ -132,7 +132,7 @@ postgres-logs: ## Show postgres logs
 
 ##@ Keycloak
 
-keycloak-up: .clean-stale ## Start keycloak
+keycloak-up: postgres-up ## Start keycloak
 	@echo "🚀 Starting keycloak..."
 	docker-compose up -d keycloak
 	@echo "✅ Keycloak started!"
