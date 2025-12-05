@@ -86,11 +86,12 @@ postgres-up: .clean-stale ## Start postgres
 	@$(MAKE) --no-print-directory status
 	@echo "✅ Postgres status shown!"
 
-postgres-down: ## Stop and remove postgres
+postgres-down: ## Stop and remove postgres (including volumes)
 	@echo "🛑 Stopping postgres..."
 	docker-compose stop postgres
-	docker-compose rm -f postgres
-	@echo "✅ Postgres stopped and removed!"
+	docker-compose rm -f -v postgres
+	@docker volume rm $$(docker volume ls -q | grep postgres_data) 2>/dev/null || true
+	@echo "✅ Postgres stopped, removed, and volumes cleaned!"
 
 postgres-login: ## Login to postgres
 	@echo "🔐 Connecting to PostgreSQL..."
@@ -145,11 +146,11 @@ keycloak-up: postgres-up ## Start keycloak
 	@$(MAKE) --no-print-directory status
 	@echo "✅ Keycloak status shown!"
 
-keycloak-down: ## Stop and remove keycloak
+keycloak-down: ## Stop and remove keycloak (including volumes)
 	@echo "🛑 Stopping keycloak..."
 	docker-compose stop keycloak
-	docker-compose rm -f keycloak
-	@echo "✅ Keycloak stopped and removed!"
+	docker-compose rm -f -v keycloak
+	@echo "✅ Keycloak stopped, removed, and volumes cleaned!"
 
 keycloak-realm: .wait-keycloak ## Add Keycloak realm (idempotent)
 	@./keycloak/add-realm.sh
@@ -170,11 +171,11 @@ backend-up: .build .clean-stale ## Start backend
 	docker-compose up -d backend
 	@echo "✅ Backend started!"
 
-backend-down: ## Stop and remove backend
+backend-down: ## Stop and remove backend (including volumes)
 	@echo "🛑 Stopping backend..."
 	docker-compose stop backend
-	docker-compose rm -f backend
-	@echo "✅ Backend stopped and removed!"
+	docker-compose rm -f -v backend
+	@echo "✅ Backend stopped, removed, and volumes cleaned!"
 
 backend-logs: ## Show backend logs
 	docker-compose logs -f backend
@@ -280,7 +281,7 @@ test: .is-up ## Test all
 	@set -a && . ./.env && set +a && set -o pipefail && \
 	RESULTS_FILE=$$(mktemp) && \
 	FAILED_TESTS_FILE=$$(mktemp) && \
-	OUTPUT_FILE=$$(mktemp) && \
+	OUTPUT_FILE=$$(mktemp) && \	
 	trap "rm -f $$RESULTS_FILE $$FAILED_TESTS_FILE $$OUTPUT_FILE" EXIT && \
 	echo "🧪 Running all tests..." && \
 	echo "" && \
