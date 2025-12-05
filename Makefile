@@ -281,7 +281,7 @@ test: .is-up ## Test all
 	@set -a && . ./.env && set +a && set -o pipefail && \
 	RESULTS_FILE=$$(mktemp) && \
 	FAILED_TESTS_FILE=$$(mktemp) && \
-	OUTPUT_FILE=$$(mktemp) && \	
+	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$RESULTS_FILE $$FAILED_TESTS_FILE $$OUTPUT_FILE" EXIT && \
 	echo "🧪 Running all tests..." && \
 	echo "" && \
