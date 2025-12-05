@@ -5,7 +5,6 @@ description = "SDEP backend"
 authors = [
     {name = "ICTU DevOps"}
 ]
-readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.13"
 keywords = ["fastapi", "pydantic", "sqlalchemy", "alembic"]
@@ -226,8 +225,6 @@ exclude = [
 include = [
     "backend/app/**/*.py",
     "backend/pyproject.toml",
-    "AGENTS.md",
-    "README.md",
 ]
 exclude = [
     "**/.ictudevops/**"
