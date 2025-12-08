@@ -21,12 +21,12 @@ Overview:
 
 **Run SDEP fullstack** (incl. local infra)
 
-Start stack:
+Start:
 ```
 make up
 ```
 
-Explore API docs in Swagger UI:
+Explore API docs (Swagger UI):
 
 - http://localhost:8000/api/v0/docs
 
