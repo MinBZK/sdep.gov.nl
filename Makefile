@@ -47,23 +47,23 @@ SHELL := /bin/bash
 	@set -a && . .env && . keycloak/.env && set +a && echo "✅ $$KC_BASE_URL"
 
 .keycloak-realm: .keycloak-wait ## Add Keycloak realm (idempotent)
-	@set -a && . .env && . keycloak/.env && set +a && ./keycloak/add-app-realm.sh
+	@set -a && . .env && . keycloak/.env && set +a && ./keycloak/add-realm.sh
 
 .keycloak-admin: .keycloak-realm ## Create app-realm CI/CD account
 	@mkdir -p ./tmp
 	@set -a && . .env && . keycloak/.env && set +a && \
-	KC_APP_REALM_ADMIN_PASSWORD=$$(bash keycloak/add-app-realm-admin.sh | grep "Client Secret:" | cut -d' ' -f3) && \
+	KC_APP_REALM_ADMIN_PASSWORD=$$(bash keycloak/add-realm-admin.sh | grep "Client Secret:" | cut -d' ' -f3) && \
 	echo "$$KC_APP_REALM_ADMIN_PASSWORD" > ./tmp/KC_APP_REALM_ADMIN_password.txt
 
 .keycloak-roles: .keycloak-admin ## Add Keycloak realm roles
 	@set -a && . .env && . keycloak/.env && set +a && \
 	export KC_APP_REALM_ADMIN_PASSWORD=$$(cat ./tmp/KC_APP_REALM_ADMIN_password.txt) && \
-	./keycloak/add-app-realm-roles.sh
+	./keycloak/add-realm-roles.sh
 
 .keycloak-clients: .keycloak-roles ## Add Keycloak clients from keycloak/clients.yaml
 	@set -a && . .env && . keycloak/.env && set +a && \
 	export KC_APP_REALM_ADMIN_PASSWORD=$$(cat ./tmp/KC_APP_REALM_ADMIN_password.txt) && \
-	./keycloak/add-app-realm-clients.sh
+	./keycloak/add-realm-clients.sh
 
 .is-up: ## Check services running
 	@echo "🔍 Checking if services are up..."
