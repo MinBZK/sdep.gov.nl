@@ -30,7 +30,7 @@ Explore API docs (Swagger UI):
 
 - http://localhost:8000/api/v0/docs
 
-Select client credentials:
+Select client credentials (by role):
 
 - Choose `id`, `secret` from [clients.yaml](./keycloak/clients.yaml)
 
