@@ -42,7 +42,7 @@ Authorize in Swagger UI:
 - Swagger will obtain a bearer token "under the hood" (acting on the `token/` endpoint)
 - You are authorized conform the client credentials' roles
 
-Explore endpoints in your current role (sdep_ca, sdep_str).
+Explore endpoints in your current role (ca, str).
 
 **Run SDEP fullstack tests**
 ```
