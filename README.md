@@ -27,7 +27,7 @@ make up
 Once SDEP is running, explore the Backend API docs in the Swagger UI.
 
 - In the Swagger UI, select Authorize
-- Enter client credentials (choose `id`, `secret` from [client.yaml](./keycloak/client.yaml))
+- Enter client credentials (choose `id`, `secret` from [clients.yaml](./keycloak/clients.yaml))
 - Select Authorize again
 - Swagger will obtain a bearer token "under the hood" (by acting on the `token/` endpoint)
 - Result: you can start testing the other endpoints

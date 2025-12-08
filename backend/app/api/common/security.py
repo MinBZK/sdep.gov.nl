@@ -29,14 +29,14 @@ def get_keycloak_public_key() -> dict[str, Any]:
     Raises:
         HTTPException: If unable to fetch public key
     """
-    if not settings.KEYCLOAK_BASE_URL:
+    if not settings.KC_BASE_URL:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Keycloak URL is not configured",
         )
 
     # Construct the certs endpoint URL
-    certs_url = f"{settings.KEYCLOAK_BASE_URL.rstrip('/')}/realms/sdep/protocol/openid-connect/certs"
+    certs_url = f"{settings.KC_BASE_URL.rstrip('/')}/realms/sdep/protocol/openid-connect/certs"
 
     try:
         response = httpx.get(certs_url, timeout=10.0)

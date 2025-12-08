@@ -14,13 +14,13 @@ fi
 echo "⏳ Waiting for Keycloak to be ready..."
 
 # First wait for HTTP endpoint
-until curl -sf "${KEYCLOAK_BASE_URL}" > /dev/null 2>&1; do
+until curl -sf "${KC_BASE_URL}" > /dev/null 2>&1; do
     printf "."
     sleep 2
 done
 
 # Then wait for admin API to be ready by checking the master realm endpoint
-until curl -sf "${KEYCLOAK_BASE_URL}/realms/master/.well-known/openid-configuration" > /dev/null 2>&1; do
+until curl -sf "${KC_BASE_URL}/realms/master/.well-known/openid-configuration" > /dev/null 2>&1; do
     printf "."
     sleep 2
 done
@@ -29,10 +29,10 @@ done
 MAX_RETRIES=10
 RETRY_COUNT=0
 until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-    TOKEN_RESPONSE=$(curl -sf -X POST "${KEYCLOAK_BASE_URL}/realms/master/protocol/openid-connect/token" \
+    TOKEN_RESPONSE=$(curl -sf -X POST "${KC_BASE_URL}/realms/master/protocol/openid-connect/token" \
         -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "username=${KC_BOOTSTRAP_ADMIN_USERNAME}" \
-        -d "password=${KC_BOOTSTRAP_ADMIN_PASSWORD}" \
+        -d "username=${KC_ADMIN_REALM_ADMIN_USERNAME}" \
+        -d "password=${KC_ADMIN_REALM_ADMIN_PASSWORD}" \
         -d "grant_type=password" \
         -d "client_id=admin-cli" 2>&1 || echo "")
 
@@ -53,5 +53,4 @@ if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
     exit 1
 fi
 
-echo ""
 echo "✅ Keycloak is ready!"

@@ -60,7 +60,7 @@ async def post_auth_token(
             detail="Client credentials must be provided via HTTP Basic Auth or form parameters",
         )
     # Check if Keycloak URL is configured
-    if not settings.KEYCLOAK_BASE_URL:
+    if not settings.KC_BASE_URL:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Keycloak URL is not configured",
@@ -74,7 +74,7 @@ async def post_auth_token(
     }
 
     # Construct the full token endpoint URL with realm path
-    token_endpoint = f"{settings.KEYCLOAK_BASE_URL.rstrip('/')}/realms/sdep/protocol/openid-connect/token"
+    token_endpoint = f"{settings.KC_BASE_URL.rstrip('/')}/realms/sdep/protocol/openid-connect/token"
 
     # Forward the request to Keycloak
     try:

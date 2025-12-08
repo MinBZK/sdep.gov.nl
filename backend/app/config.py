@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     )
 
     # Keycloak settings
-    KEYCLOAK_BASE_URL: str = Field(
+    KC_BASE_URL: str = Field(
         default="",
         description="Keycloak server URL for token endpoint",
     )

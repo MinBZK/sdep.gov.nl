@@ -301,6 +301,7 @@ lerna-debug.log*
 *.temp
 .tmp/
 .temp/
+tmp/
 
 # Build artifacts
 build/

@@ -1,8 +1,8 @@
-m2m_clients:
+clients:
   # Short-term rental platforms (STR) - test
   - id: "sdep-str-01"
-    name: "STR platform 01"
-    description: "M2M client (STR) with read-write access"
+    name: "Short-term rental platform 01"
+    description: "STR client with read-write access"
     secret: "sdep-str-01"
     service_account_roles:
       - sdep_str
@@ -10,8 +10,8 @@ m2m_clients:
       - sdep_write
   # Competent authorities (CA) - test
   - id: "sdep-ca-01"
-    name: "CA competent authority 01"
-    description: "M2M client (CA) with read-write access"
+    name: "Competent authority 01"
+    description: "CA client with read-write access"
     secret: "sdep-ca-01"
     service_account_roles:
       - sdep_ca
@@ -20,7 +20,7 @@ m2m_clients:
   # Competent authorities (CA) - test "real"
   - id: "sdep-ca-0363"
     name: "Gemeente Amsterdam"
-    description: "M2M client (CA) with read-write access"
+    description: "CA client with read-write access"
     secret: "sdep-ca-0363"
     service_account_roles:
       - sdep_ca
@@ -28,7 +28,7 @@ m2m_clients:
       - sdep_write
   - id: "sdep-ca-0599"
     name: "Gemeente Rotterdam"
-    description: "M2M client (CA) with read-write access"
+    description: "CA client with read-write access"
     secret: "sdep-ca-0599"
     service_account_roles:
       - sdep_ca
@@ -36,7 +36,7 @@ m2m_clients:
       - sdep_write
   - id: "sdep-ca-0518"
     name: "Gemeente Den Haag"
-    description: "M2M client (CA) with read-write access"
+    description: "CA client with read-write access"
     secret: "sdep-ca-0518"
     service_account_roles:
       - sdep_ca

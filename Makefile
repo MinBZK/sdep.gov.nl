@@ -2,36 +2,81 @@ SHELL := /bin/bash
 
 .PHONY: help up down restart status test logs infra postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
         down-except-keycloak postgres-reset .build .is-up .clean-stale .drop-sdep-database .migrate-sdep-database .load-sdep-test-data \
-        .wait-keycloak keycloak-realm keycloak-roles keycloak-clients \
+        .keycloak-wait .keycloak-realm .keycloak-admin .keycloak-roles .keycloak-clients \
         test-security test-str test-ca test test-and-teardown \
         postgres-login postgres-status postgres-status-full \
         backend-logs postgres-logs keycloak-logs kind
 
 .DEFAULT_GOAL := help
 
-# Load environment variables
-include .env
-
 # Helpers
 
-.build: ## Build
-	@echo "🐳 Building fullstack..."
-	docker-compose build
-	@echo "✅ Fullstack built successfully!"
-	@echo "📊 Images"
-	docker images | grep $(APP_PREFIX)
+.clean-stale: ## Remove stale containers
+	@echo "🧹 Cleaning stale containers..."
+	@set -a && . .env && set +a && \
+	docker ps -a --filter "name=$$APP_PREFIX" --filter "status=exited" -q | xargs -r docker rm -f || true
+	@docker-compose rm -f initdb 2>/dev/null || true
+	@echo "✅ Stale containers cleaned!"
+
+
+.drop-sdep-database: ## Drop database
+	@set -a && . .env && set +a && \
+	echo "🧹 Cleaning database $$POSTGRES_DB_NAME..." && \
+	docker exec -i sdep-postgres psql -U $$POSTGRES_SUPER_USER -d postgres < postgres/clean.sql
+	@echo "✅ Database cleaned!"
+
+.migrate-sdep-database: ## Migrate database (create/update tables)
+	@echo "🔄 Running database migrations..."
+	@docker exec -i $$(docker-compose ps -q backend) alembic upgrade head
+	@echo "✅ Database migrations completed!"
+
+.load-sdep-test-data: ## Load testdata
+	@set -a && . .env && set +a && \
+	echo "📊 Loading test data into $$POSTGRES_DB_NAME..." && \
+	for sql_file in ./test-data/*.sql; do \
+		if [ -f "$$sql_file" ]; then \
+			echo "Executing $$sql_file..."; \
+			docker exec -i sdep-postgres psql -U $$POSTGRES_SUPER_USER -d $$POSTGRES_DB_NAME < "$$sql_file" || exit 1; \
+		fi; \
+	done
+	@echo "✅ Test data loaded!"
+
+.keycloak-wait: ## Wait until keycloak allows to authenticate
+	@echo "🚀 Waiting for keycloak ready..."
+	@./keycloak/wait.sh
+	@set -a && . .env && . keycloak/.env && set +a && echo "✅ $$KC_BASE_URL"
+
+.keycloak-realm: .keycloak-wait ## Add Keycloak realm (idempotent)
+	@set -a && . .env && . keycloak/.env && set +a && ./keycloak/add-app-realm.sh
+
+.keycloak-admin: .keycloak-realm ## Create app-realm CI/CD account
+	@mkdir -p ./tmp
+	@set -a && . .env && . keycloak/.env && set +a && \
+	KC_APP_REALM_ADMIN_PASSWORD=$$(bash keycloak/add-app-realm-admin.sh | grep "Client Secret:" | cut -d' ' -f3) && \
+	echo "$$KC_APP_REALM_ADMIN_PASSWORD" > ./tmp/KC_APP_REALM_ADMIN_password.txt
+
+.keycloak-roles: .keycloak-admin ## Add Keycloak realm roles
+	@set -a && . .env && . keycloak/.env && set +a && \
+	export KC_APP_REALM_ADMIN_PASSWORD=$$(cat ./tmp/KC_APP_REALM_ADMIN_password.txt) && \
+	./keycloak/add-app-realm-roles.sh
+
+.keycloak-clients: .keycloak-roles ## Add Keycloak clients from keycloak/clients.yaml
+	@set -a && . .env && . keycloak/.env && set +a && \
+	export KC_APP_REALM_ADMIN_PASSWORD=$$(cat ./tmp/KC_APP_REALM_ADMIN_password.txt) && \
+	./keycloak/add-app-realm-clients.sh
 
 .is-up: ## Check services running
 	@echo "🔍 Checking if services are up..."
-	@POSTGRES_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $(POSTGRES_CONTAINER_NAME) 2>&1 | grep -v "^Error" || echo "not-running"); \
-	KEYCLOAK_STATUS=$$(docker inspect --format='{{.State.Status}}' $(KEYCLOAK_CONTAINER_NAME) 2>&1 | grep -v "^Error" || echo "not-running"); \
-	BACKEND_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $(BACKEND_CONTAINER_NAME) 2>&1 | grep -v "^Error" || echo "not-running"); \
+	@set -a && . .env && set +a && \
+	POSTGRES_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$POSTGRES_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
+	KC_STATUS=$$(docker inspect --format='{{.State.Status}}' $$KC_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
+	BACKEND_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$BACKEND_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
 	ALL_UP=true; \
 	echo ""; \
 	printf "  %-15s %s\n" "Postgres:" "$$POSTGRES_STATUS"; \
 	if [ "$$POSTGRES_STATUS" != "healthy" ]; then ALL_UP=false; fi; \
-	printf "  %-15s %s\n" "Keycloak:" "$$KEYCLOAK_STATUS"; \
-	if [ "$$KEYCLOAK_STATUS" != "running" ]; then ALL_UP=false; fi; \
+	printf "  %-15s %s\n" "Keycloak:" "$$KC_STATUS"; \
+	if [ "$$KC_STATUS" != "running" ]; then ALL_UP=false; fi; \
 	printf "  %-15s %s\n" "Backend:" "$$BACKEND_STATUS"; \
 	if [ "$$BACKEND_STATUS" != "healthy" ]; then ALL_UP=false; fi; \
 	echo ""; \
@@ -47,34 +92,12 @@ include .env
 		exit 1; \
 	fi
 
-.clean-stale: ## Remove stale containers
-	@echo "🧹 Cleaning stale containers..."
-	@docker ps -a --filter "name=$(APP_PREFIX)" --filter "status=exited" -q | xargs -r docker rm -f || true
-	@docker-compose rm -f initdb 2>/dev/null || true
-	@echo "✅ Stale containers cleaned!"
-
-.wait-keycloak: ## Wait for keycloak
-	@./keycloak/wait.sh
-
-.drop-sdep-database: ## Drop database
-	@echo "🧹 Cleaning database $(POSTGRES_DB_NAME)..."
-	@docker exec -i sdep-postgres psql -U $(POSTGRES_SUPER_USER) -d postgres < postgres/clean.sql
-	@echo "✅ Database cleaned!"
-
-.migrate-sdep-database: ## Migrate database (create/update tables)
-	@echo "🔄 Running database migrations..."
-	@docker exec -i $$(docker-compose ps -q backend) alembic upgrade head
-	@echo "✅ Database migrations completed!"
-
-.load-sdep-test-data: ## Load testdata
-	@echo "📊 Loading test data into $(POSTGRES_DB_NAME)..."
-	@for sql_file in ./test-data/*.sql; do \
-		if [ -f "$$sql_file" ]; then \
-			echo "Executing $$sql_file..."; \
-			docker exec -i sdep-postgres psql -U $(POSTGRES_SUPER_USER) -d $(POSTGRES_DB_NAME) < "$$sql_file" || exit 1; \
-		fi; \
-	done
-	@echo "✅ Test data loaded!"
+.build: ## Build
+	@echo "🐳 Building fullstack..."
+	docker-compose build
+	@echo "✅ Fullstack built successfully!"
+	@echo "📊 Images"
+	@set -a && . .env && set +a && docker images | grep $$APP_PREFIX
 
 ##@ Postgres
 
@@ -82,9 +105,6 @@ postgres-up: .clean-stale ## Start postgres
 	@echo "🚀 Starting postgres..."
 	docker-compose up -d postgres
 	@echo "✅ Postgres started!"
-	@echo "🚀 Showing postgres status..."
-	@$(MAKE) --no-print-directory status
-	@echo "✅ Postgres status shown!"
 
 postgres-down: ## Stop and remove postgres (including volumes)
 	@echo "🛑 Stopping postgres..."
@@ -98,28 +118,31 @@ postgres-login: ## Login to postgres
 	docker exec -it $$(docker-compose ps -q postgres) psql -U postgres -d sdep-data
 
 postgres-status: ## Show postgres tables (SDEP)
-	@echo "Showing tables for database $(POSTGRES_DB_NAME)..."
-	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "\\dt"
+	@set -a && . .env && set +a && \
+	echo "Showing tables for database $$POSTGRES_DB_NAME..." && \
+	docker exec sdep-postgres psql -U $$POSTGRES_DB_USER -d $$POSTGRES_DB_NAME -c "\\dt"
 	@echo ""
 	@echo "Showing structure of each table..."
-	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -t -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" | \
+	@set -a && . .env && set +a && \
+	docker exec sdep-postgres psql -U $$POSTGRES_DB_USER -d $$POSTGRES_DB_NAME -t -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" | \
 	while read -r table; do \
 		if [ -n "$$table" ]; then \
 			echo ""; \
 			echo "=== Table: $$table ==="; \
-			docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='$$table' ORDER BY ordinal_position"; \
+			docker exec sdep-postgres psql -U $$POSTGRES_DB_USER -d $$POSTGRES_DB_NAME -c "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='$$table' ORDER BY ordinal_position"; \
 		fi; \
 	done
 
 postgres-status-full: postgres-status ## Show postgres tables with full details (SDEP)
 	@echo ""
 	@echo "Showing full structure of each table..."
-	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -t -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" | \
+	@set -a && . .env && set +a && \
+	docker exec sdep-postgres psql -U $$POSTGRES_DB_USER -d $$POSTGRES_DB_NAME -t -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" | \
 	while read -r table; do \
 		if [ -n "$$table" ]; then \
 			echo ""; \
 			echo "=== Table: $$table (full details) ==="; \
-			docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "\\d+ $$table"; \
+			docker exec sdep-postgres psql -U $$POSTGRES_DB_USER -d $$POSTGRES_DB_NAME -c "\\d+ $$table"; \
 		fi; \
 	done
 
@@ -138,28 +161,16 @@ keycloak-up: postgres-up ## Start keycloak
 	docker-compose up -d keycloak
 	@echo "✅ Keycloak started!"
 	@echo "🚀 Configuring keycloak..."
-	@$(MAKE) --no-print-directory keycloak-realm || echo Realm already added
-	@$(MAKE) --no-print-directory keycloak-roles || echo Roles already added
-	@$(MAKE) --no-print-directory keycloak-clients || echo Clients already added
+	@$(MAKE) --no-print-directory .keycloak-realm || echo Realm already added
+	@$(MAKE) --no-print-directory .keycloak-roles || echo Roles already added
+	@$(MAKE) --no-print-directory .keycloak-clients || echo Clients already added
 	@echo "✅ Keycloak configured!"
-	@echo "🚀 Showing keycloak status..."
-	@$(MAKE) --no-print-directory status
-	@echo "✅ Keycloak status shown!"
 
 keycloak-down: ## Stop and remove keycloak (including volumes)
 	@echo "🛑 Stopping keycloak..."
 	docker-compose stop keycloak
 	docker-compose rm -f -v keycloak
 	@echo "✅ Keycloak stopped, removed, and volumes cleaned!"
-
-keycloak-realm: .wait-keycloak ## Add Keycloak realm (idempotent)
-	@./keycloak/add-realm.sh
-
-keycloak-roles: .wait-keycloak ## Add Keycloak realm roles
-	@./keycloak/add-roles.sh
-
-keycloak-clients: keycloak-roles ## Add Keycloak clients from keycloak/client.yaml
-	@./keycloak/add-clients.sh
 
 keycloak-logs: ## Show keycloak logs
 	docker-compose logs -f sdep-keycloak
@@ -188,9 +199,9 @@ up: .build .clean-stale ## Start
 	@echo "✅ Fullstack started!"
 
 	@echo "🚀 Configuring keycloak..."
-	@$(MAKE) --no-print-directory keycloak-realm
-	@$(MAKE) --no-print-directory keycloak-roles
-	@$(MAKE) --no-print-directory keycloak-clients
+	@$(MAKE) --no-print-directory .keycloak-realm
+	@$(MAKE) --no-print-directory .keycloak-roles
+	@$(MAKE) --no-print-directory .keycloak-clients
 	@echo "✅ Keycloak configured!"
 
 	@echo "🚀 Initializing database..."
@@ -214,10 +225,11 @@ status: ## Show status
 	@docker-compose ps
 	@echo ""
 	@echo "🔍 Use these URLs when images are running:"
-	@printf "  %-30s %s\n" "Backend API docs:" "${BACKEND_BASE_URL}/api/v0/docs"
-	@printf "  %-30s %s\n" "Backend health:" "${BACKEND_BASE_URL}/api/health"
-	@printf "  %-30s %s\n" "Backend health (restore):" "${BACKEND_BASE_URL}/api/health-br"
-	@printf "  %-30s %s\n" "Keycloak:" "${KEYCLOAK_BASE_URL}/admin"
+	@set -a && . .env && set +a && \
+	printf "  %-30s %s\n" "Backend API docs:" "$$BACKEND_BASE_URL/api/v0/docs" && \
+	printf "  %-30s %s\n" "Backend health:" "$$BACKEND_BASE_URL/api/health" && \
+	printf "  %-30s %s\n" "Backend health (restore):" "$$BACKEND_BASE_URL/api/health-br" && \
+	printf "  %-30s %s\n" "Keycloak:" "$$KC_BASE_URL/admin"
 	@echo ""
 
 logs: ## Show logs
@@ -230,7 +242,7 @@ test-security: ## Test security (headers, unauthorized, credentials)
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🔒 Testing security..." && \
-	echo "BACKEND_BASE_URL: $(BACKEND_BASE_URL)" && \
+	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
 	echo "Testing security headers..." && \
 	./test/auth-headers.sh 2>&1 | tee $$OUTPUT_FILE && \
@@ -247,7 +259,7 @@ test-str: .is-up postgres-reset ## Test STR endpoints
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🏘️  Testing STR endpoints..." && \
-	echo "BACKEND_BASE_URL: $(BACKEND_BASE_URL)" && \
+	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
 	if CLIENT_ID=$$STR_CLIENT_ID CLIENT_SECRET=$$STR_CLIENT_SECRET ./test/auth-client.sh; then # Using STR_CLIENT_ID and STR_CLIENT_SECRET from .env \
 		echo "✅ STR client authorized"; \
@@ -265,7 +277,7 @@ test-ca: .is-up test-str ## Test CA endpoints (builds upon test-str)
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🏛️  Testing CA endpoints..." && \
-	echo "BACKEND_BASE_URL: $(BACKEND_BASE_URL)" && \
+	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
 	if CLIENT_ID=$$CA_CLIENT_ID CLIENT_SECRET=$$CA_CLIENT_SECRET ./test/auth-client.sh; then \
 		echo "✅ CA client authorized"; \
@@ -330,6 +342,4 @@ test: .is-up ## Test all
 
 help: ## Show help
 	@echo "🤖 Make"
-	@echo ""
-	@echo "Available commands:"
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
