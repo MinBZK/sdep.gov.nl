@@ -21,7 +21,7 @@ Overview:
 
 **Run SDEP fullstack** (incl. local infra)
 
-Start:
+Start (postgres + keycloak + backend):
 ```
 make up
 ```
