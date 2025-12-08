@@ -20,17 +20,29 @@ Overview:
 
 
 **Run SDEP fullstack** (incl. local infra)
+
+Start stack:
 ```
 make up
 ```
 
-Once SDEP is running, explore the Backend API docs in the Swagger UI.
+Explore API docs in Swagger UI:
 
-- In the Swagger UI, select Authorize
-- Enter client credentials (choose `id`, `secret` from [clients.yaml](./keycloak/clients.yaml))
+- http://localhost:8000/api/v0/docs
+
+Select client credentials:
+
+- Choose `id`, `secret` from [clients.yaml](./keycloak/clients.yaml)
+
+Authorize in Swagger UI:
+
+- Select Authorize
+- Enter client credentials
 - Select Authorize again
-- Swagger will obtain a bearer token "under the hood" (by acting on the `token/` endpoint)
-- Result: you can start testing the other endpoints
+- Swagger will obtain a bearer token "under the hood" (acting on the `token/` endpoint)
+- You are authorized conform the client credentials' roles
+
+Explore endpoints in your current role (sdep_ca, sdep_str).
 
 **Run SDEP fullstack tests**
 ```
