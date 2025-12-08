@@ -130,7 +130,7 @@ for i in $(seq 0 $((CLIENT_COUNT - 1))); do
     # Add protocol mappers for client_id and client_name (JWT claims)
     echo "🔧 Adding protocol mappers for client_id and client_name to $CLIENT_ID..."
 
-    # Protocol mapper for client_id (maps from "id" field in app-realm-clients.yaml)
+    # Protocol mapper for client_id (maps from "id" field in clients.yaml)
     CLIENT_ID_MAPPER=$(jq -n \
         --arg clientId "$CLIENT_ID" \
         '{
@@ -163,7 +163,7 @@ for i in $(seq 0 $((CLIENT_COUNT - 1))); do
         echo "Response: $MAPPER_RESPONSE"
     fi
 
-    # Protocol mapper for client_name (maps from "name" field in app-realm-clients.yaml)
+    # Protocol mapper for client_name (maps from "name" field in clients.yaml)
     CLIENT_NAME_MAPPER=$(jq -n \
         --arg clientName "$CLIENT_NAME" \
         '{
