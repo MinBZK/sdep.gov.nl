@@ -1,11 +1,11 @@
 SHELL := /bin/bash
 
-.PHONY: help up down restart status test logs infra postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
-        down-except-keycloak postgres-reset .build .is-up .clean-stale .drop-sdep-database .migrate-sdep-database .load-sdep-test-data \
+.PHONY: help up down restart status test logs postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
+        postgres-reset .build .is-up .clean-stale .drop-sdep-database .migrate-sdep-database .load-sdep-test-data .generate-area-sql \
         .keycloak-wait .keycloak-realm .keycloak-admin .keycloak-roles .keycloak-clients \
-        test-security test-str test-ca test test-and-teardown \
+        test-security test-str test-ca \
         postgres-login postgres-status postgres-status-full \
-        backend-logs postgres-logs keycloak-logs kind
+        backend-logs postgres-logs keycloak-logs
 
 .DEFAULT_GOAL := help
 
