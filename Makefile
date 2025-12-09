@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: help up down restart status test logs postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
         postgres-reset .build .is-up .clean-stale .drop-sdep-database .migrate-sdep-database .load-sdep-test-data .generate-area-sql \
         .keycloak-wait .keycloak-realm .keycloak-admin .keycloak-roles .keycloak-clients \
-        test-security test-str test-ca \
+        .check-credentials test-security test-str test-ca \
         postgres-login postgres-status postgres-status-full \
         backend-logs postgres-logs keycloak-logs
 
@@ -74,30 +74,35 @@ SHELL := /bin/bash
 	./keycloak/add-realm-clients.sh
 
 .is-up: ## Check if services are running
-	@echo "🔍 Checking if services are up..."
-	@set -a && . .env && set +a && \
-	POSTGRES_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$POSTGRES_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
-	KC_STATUS=$$(docker inspect --format='{{.State.Status}}' $$KC_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
-	BACKEND_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$BACKEND_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
-	ALL_UP=true; \
-	echo ""; \
-	printf "  %-15s %s\n" "Postgres:" "$$POSTGRES_STATUS"; \
-	if [ "$$POSTGRES_STATUS" != "healthy" ]; then ALL_UP=false; fi; \
-	printf "  %-15s %s\n" "Keycloak:" "$$KC_STATUS"; \
-	if [ "$$KC_STATUS" != "running" ]; then ALL_UP=false; fi; \
-	printf "  %-15s %s\n" "Backend:" "$$BACKEND_STATUS"; \
-	if [ "$$BACKEND_STATUS" != "healthy" ]; then ALL_UP=false; fi; \
-	echo ""; \
-	if [ "$$ALL_UP" = "true" ]; then \
-		echo "✅ All services are up and healthy!"; \
+	@if [ -n "$$ENV_LOADED" ]; then \
+		echo "🔍 Skipping service check (testing remote environment)"; \
 		exit 0; \
 	else \
-		echo "❌ Some services are not healthy!"; \
+		echo "🔍 Checking if services are up..." && \
+		set -a && . .env && set +a && \
+		POSTGRES_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$POSTGRES_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
+		KC_STATUS=$$(docker inspect --format='{{.State.Status}}' $$KC_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
+		BACKEND_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$BACKEND_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
+		ALL_UP=true; \
 		echo ""; \
-		echo "Please start all services first with:"; \
-		echo "  make up"; \
+		printf "  %-15s %s\n" "Postgres:" "$$POSTGRES_STATUS"; \
+		if [ "$$POSTGRES_STATUS" != "healthy" ]; then ALL_UP=false; fi; \
+		printf "  %-15s %s\n" "Keycloak:" "$$KC_STATUS"; \
+		if [ "$$KC_STATUS" != "running" ]; then ALL_UP=false; fi; \
+		printf "  %-15s %s\n" "Backend:" "$$BACKEND_STATUS"; \
+		if [ "$$BACKEND_STATUS" != "healthy" ]; then ALL_UP=false; fi; \
 		echo ""; \
-		exit 1; \
+		if [ "$$ALL_UP" = "true" ]; then \
+			echo "✅ All services are up and healthy!"; \
+			exit 0; \
+		else \
+			echo "❌ Some services are not healthy!"; \
+			echo ""; \
+			echo "Please start all services first with:"; \
+			echo "  make up"; \
+			echo ""; \
+			exit 1; \
+		fi; \
 	fi
 
 .build: ## Build
@@ -155,9 +160,13 @@ postgres-status-full: postgres-status ## Show postgres tables with full details 
 	done
 
 postgres-reset: .clean-stale ## Reset postgres (drop, migrate, test data)
-	@echo "🚀 Resetting sdep-database in postgres ..."
-	$(MAKE) --no-print-directory .drop-sdep-database .migrate-sdep-database .load-sdep-test-data
-	@echo "✅ SDEP database reset!"
+	@if [ -n "$$ENV_LOADED" ]; then \
+		echo "🚀 Skipping database reset (testing remote environment)"; \
+	else \
+		echo "🚀 Resetting sdep-database in postgres ..." && \
+		$(MAKE) --no-print-directory .drop-sdep-database .migrate-sdep-database .load-sdep-test-data && \
+		echo "✅ SDEP database reset!"; \
+	fi
 
 postgres-logs: ## Show postgres logs
 	docker-compose logs -f sdep-postgres
@@ -245,8 +254,38 @@ logs: ## Show logs
 
 ##@ Test
 
-test-security: ## Test security (headers, unauthorized, credentials)
-	@set -a && . ./.env && set +a && set -o pipefail && \
+.check-credentials: # Helper to check if required credentials are set
+	@echo "Checking credentials..."
+	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && \
+	MISSING_VARS="" && \
+	echo "  STR_CLIENT_ID: $$STR_CLIENT_ID" && \
+	[ -z "$$STR_CLIENT_ID" ] && MISSING_VARS="$${MISSING_VARS} STR_CLIENT_ID" || true && \
+	if [ -n "$$STR_CLIENT_SECRET" ]; then \
+		echo "  STR_CLIENT_SECRET: [length: $${#STR_CLIENT_SECRET}]"; \
+	else \
+		echo "  STR_CLIENT_SECRET: [empty]"; \
+		MISSING_VARS="$${MISSING_VARS} STR_CLIENT_SECRET"; \
+	fi && \
+	echo "  CA_CLIENT_ID: $$CA_CLIENT_ID" && \
+	[ -z "$$CA_CLIENT_ID" ] && MISSING_VARS="$${MISSING_VARS} CA_CLIENT_ID" || true && \
+	if [ -n "$$CA_CLIENT_SECRET" ]; then \
+		echo "  CA_CLIENT_SECRET: [length: $${#CA_CLIENT_SECRET}]"; \
+	else \
+		echo "  CA_CLIENT_SECRET: [empty]"; \
+		MISSING_VARS="$${MISSING_VARS} CA_CLIENT_SECRET"; \
+	fi && \
+	if [ -n "$${MISSING_VARS}" ]; then \
+		echo ""; \
+		echo "❌ Error: One or more credentials are empty, please define them in OS environment:$${MISSING_VARS}"; \
+		echo ""; \
+		exit 1; \
+	fi && \
+	echo "✅ All credentials are set"
+
+# Using ENV_LOADED allows test re-use from another remote (CI/CD) environment
+
+test-security: .check-credentials .is-up ## Test security (headers, unauthorized, credentials)
+	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🔒 Testing security..." && \
@@ -262,8 +301,25 @@ test-security: ## Test security (headers, unauthorized, credentials)
 	./test/auth-credentials.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ Security tested"
 
-test-str: .is-up postgres-reset ## Test STR endpoints
-	@set -a && . ./.env && set +a && set -o pipefail && \
+test-ca: .check-credentials .is-up ## Test CA endpoints
+	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
+	OUTPUT_FILE=$$(mktemp) && \
+	trap "rm -f $$OUTPUT_FILE" EXIT && \
+	echo "🏛️  Testing CA endpoints..." && \
+	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
+	echo "" && \
+	if CLIENT_ID=$$CA_CLIENT_ID CLIENT_SECRET=$$CA_CLIENT_SECRET ./test/auth-client.sh; then \
+		echo "✅ CA client authorized"; \
+	else \
+		echo "❌ CA client authorization failed"; \
+		exit 1; \
+	fi && \
+	./test/health-ping.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./test/ca-activity-data.sh 2>&1 | tee $$OUTPUT_FILE && \
+	echo "✅ CA endpoints tested"
+
+test-str: .check-credentials .is-up ## Test STR endpoints
+	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🏘️  Testing STR endpoints..." && \
@@ -280,25 +336,8 @@ test-str: .is-up postgres-reset ## Test STR endpoints
 	./test/str-activity-data.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ STR endpoints tested"
 
-test-ca: .is-up test-str ## Test CA endpoints (builds upon test-str)
-	@set -a && . ./.env && set +a && set -o pipefail && \
-	OUTPUT_FILE=$$(mktemp) && \
-	trap "rm -f $$OUTPUT_FILE" EXIT && \
-	echo "🏛️  Testing CA endpoints..." && \
-	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
-	echo "" && \
-	if CLIENT_ID=$$CA_CLIENT_ID CLIENT_SECRET=$$CA_CLIENT_SECRET ./test/auth-client.sh; then \
-		echo "✅ CA client authorized"; \
-	else \
-		echo "❌ CA client authorization failed"; \
-		exit 1; \
-	fi && \
-	./test/health-ping.sh 2>&1 | tee $$OUTPUT_FILE && \
-	./test/ca-activity-data.sh 2>&1 | tee $$OUTPUT_FILE && \
-	echo "✅ CA endpoints tested"
-
-test: .is-up ## Test all
-	@set -a && . ./.env && set +a && set -o pipefail && \
+test: .check-credentials .is-up ## Test all
+	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
 	RESULTS_FILE=$$(mktemp) && \
 	FAILED_TESTS_FILE=$$(mktemp) && \
 	OUTPUT_FILE=$$(mktemp) && \
@@ -306,41 +345,45 @@ test: .is-up ## Test all
 	echo "🧪 Running all tests..." && \
 	echo "" && \
 	if $(MAKE) --no-print-directory test-security 2>&1 | tee $$OUTPUT_FILE; then \
-		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
+		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
 	else \
-		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
+		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
 		echo "test-security" >> $$FAILED_TESTS_FILE; \
 	fi && \
 	echo "" && \
 	if $(MAKE) --no-print-directory test-str 2>&1 | tee $$OUTPUT_FILE; then \
-		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
+		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
 	else \
-		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
+		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
 		echo "test-str" >> $$FAILED_TESTS_FILE; \
 	fi && \
 	echo "" && \
 	if $(MAKE) --no-print-directory test-ca 2>&1 | tee $$OUTPUT_FILE; then \
-		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
+		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
 	else \
-		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
+		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
 		echo "test-ca" >> $$FAILED_TESTS_FILE; \
 	fi && \
 	GRAND_TOTAL=$$(grep "Total:" $$RESULTS_FILE 2>/dev/null | awk '{sum += $$2} END {print sum+0}') && \
 	GRAND_PASSED=$$(grep "Passed:" $$RESULTS_FILE 2>/dev/null | awk '{sum += $$2} END {print sum+0}') && \
 	GRAND_FAILED=$$(grep "Failed:" $$RESULTS_FILE 2>/dev/null | awk '{sum += $$2} END {print sum+0}') && \
+	SUITES_FAILED=$$(if [ -s $$FAILED_TESTS_FILE ]; then wc -l < $$FAILED_TESTS_FILE; else echo 0; fi) && \
 	echo "" && \
 	echo "════════════════════════════════════════════" && \
 	echo "GRAND TOTAL - All Tests:" && \
 	echo "  Test suites:	$$GRAND_TOTAL" && \
 	echo "  Tests passed:	$$GRAND_PASSED ✅" && \
 	echo "  Tests failed: $$GRAND_FAILED ❌" && \
+	echo "  Suites failed: $$SUITES_FAILED ❌" && \
 	echo "════════════════════════════════════════════" && \
-	if [ -s $$FAILED_TESTS_FILE ]; then \
+	if [ -s $$FAILED_TESTS_FILE ] || [ "$$GRAND_FAILED" -gt 0 ]; then \
+		if [ -s $$FAILED_TESTS_FILE ]; then \
+			echo "" && \
+			echo "Failed test suites:" && \
+			cat $$FAILED_TESTS_FILE | while read test; do echo "  ❌ $$test"; done; \
+		fi && \
 		echo "" && \
-		echo "Failed test suites:" && \
-		cat $$FAILED_TESTS_FILE | while read test; do echo "  ❌ $$test"; done && \
-		echo "" && \
-		echo "❌ Some tests failed!" && \
+		echo "❌ Some test (suites) failed!" && \
 		exit 1; \
 	else \
 		echo "✅ All tests passed!"; \

@@ -45,6 +45,10 @@ echo "Test 1: POST single activity data (amsterdam-myhouse-1)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
+# Generate dynamic timestamps to avoid duplicate key errors
+START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+END_TIME=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%M:%SZ")
+
 # Prepare JSON payload
 read -r -d '' PAYLOAD <<EOF || true
 {
@@ -61,8 +65,8 @@ read -r -d '' PAYLOAD <<EOF || true
         "city": "Amsterdam"
       },
       "temporal": {
-        "startDatetime": "2025-06-08T14:00:00Z",
-        "endDatetime": "2025-06-14T11:00:00Z"
+        "startDatetime": "$START_TIME",
+        "endDatetime": "$END_TIME"
       },
       "areaId": "amsterdam-area-0363",
       "countryOfGuests": ["NLD", "DEU", "BEL"],
@@ -120,6 +124,12 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
+    # Generate dynamic timestamps for multiple activities
+    START_TIME_1=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_1=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%M:%SZ")
+    START_TIME_2=$(date -u -d "+2 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_2=$(date -u -d "+3 hours" +"%Y-%m-%dT%H:%M:%SZ")
+
     # Prepare JSON payload with 2 activities similar to test data
     read -r -d '' PAYLOAD_MULTI <<EOF || true
 {
@@ -136,8 +146,8 @@ if [ -n "$BEARER_TOKEN" ]; then
         "city": "Rotterdam"
       },
       "temporal": {
-        "startDatetime": "2025-07-11T16:00:00Z",
-        "endDatetime": "2025-07-20T10:00:00Z"
+        "startDatetime": "$START_TIME_1",
+        "endDatetime": "$END_TIME_1"
       },
       "areaId": "rotterdam-area-0599",
       "countryOfGuests": ["NLD", "GBR"],
@@ -153,8 +163,8 @@ if [ -n "$BEARER_TOKEN" ]; then
         "city": "Den Haag"
       },
       "temporal": {
-        "startDatetime": "2025-08-23T15:00:00Z",
-        "endDatetime": "2025-08-30T11:00:00Z"
+        "startDatetime": "$START_TIME_2",
+        "endDatetime": "$END_TIME_2"
       },
       "areaId": "denhaag-area-0518",
       "countryOfGuests": ["NLD", "FRA", "DEU"],
@@ -204,6 +214,10 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
+    # Generate dynamic timestamps
+    START_TIME_3=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_3=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%M:%SZ")
+
     # Prepare invalid payload (missing 'url' field)
     read -r -d '' PAYLOAD_INVALID <<EOF || true
 {
@@ -219,8 +233,8 @@ if [ -n "$BEARER_TOKEN" ]; then
         "city": "Amsterdam"
       },
       "temporal": {
-        "startDatetime": "2025-06-01T14:00:00Z",
-        "endDatetime": "2025-06-07T11:00:00Z"
+        "startDatetime": "$START_TIME_3",
+        "endDatetime": "$END_TIME_3"
       },
       "areaId": "amsterdam-area-0363",
       "countryOfGuests": ["NLD"],
