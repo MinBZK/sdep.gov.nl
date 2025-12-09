@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 .PHONY: help up down restart status test logs postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
-        postgres-reset .build .is-up .clean-stale .drop-sdep-database .migrate-sdep-database .load-sdep-test-data .generate-area-sql \
+        postgres-reset .build .is-up .clean-stale .drop-database .migrate-database .load-test-data .generate-area-sql \
         .keycloak-wait .keycloak-realm .keycloak-admin .keycloak-roles .keycloak-clients \
         .check-client-credentials test-security test-str test-ca \
         postgres-login postgres-status postgres-status-full \
@@ -13,19 +13,19 @@ SHELL := /bin/bash
 
 .clean-stale: ## Remove stale containers
 	@echo "🧹 Cleaning stale containers..."
-	@set -a && . .env && set +a && \
+	@set -a && source .env && set +a && \
 	docker ps -a --filter "name=$$APP_PREFIX" --filter "status=exited" -q | xargs -r docker rm -f || true
 	@docker-compose rm -f initdb 2>/dev/null || true
 	@echo "✅ Stale containers cleaned!"
 
 
-.drop-sdep-database: ## Drop database
-	@set -a && . .env && set +a && \
+.drop-database: ## Drop database
+	@set -a && source .env && set +a && \
 	echo "🧹 Cleaning database $$POSTGRES_DB_NAME..." && \
 	docker exec -i sdep-postgres psql -U $$POSTGRES_SUPER_USER -d postgres < postgres/clean.sql
 	@echo "✅ Database cleaned!"
 
-.migrate-sdep-database: ## Migrate database (create/update tables)
+.migrate-database: ## Migrate database (create/update tables)
 	@echo "🔄 Running database migrations..."
 	@docker exec -i $$(docker-compose ps -q backend) alembic upgrade head
 	@echo "✅ Database migrations completed!"
@@ -35,14 +35,14 @@ SHELL := /bin/bash
 	@./test-data/generate-area-sql.sh
 	@echo "✅ Area SQL file generated"
 
-.load-sdep-test-data: .generate-area-sql ## Load testdata
+.load-test-data: .generate-area-sql ## Load testdata
 	@echo "🐳 Initializing test data..."
-	@set -a && . .env && set +a && \
+	@set -a && source .env && set +a && \
 	echo "Using PostgreSQL user: $$POSTGRES_SUPER_USER" && \
 	echo "Connecting to database: $$POSTGRES_DB_NAME" && \
 	sleep 3
 	@echo "Executing SQL initialization files..."
-	@set -a && . .env && set +a && \
+	@set -a && source .env && set +a && \
 	for sql_file in $$(ls test-data/*.sql 2>/dev/null | sort); do \
 		echo "  Executing: $$sql_file"; \
 		docker exec -i sdep-postgres psql -U $$POSTGRES_SUPER_USER -d $$POSTGRES_DB_NAME -v ON_ERROR_STOP=1 < "$$sql_file"; \
@@ -52,24 +52,24 @@ SHELL := /bin/bash
 .keycloak-wait: ## Wait until keycloak allows to authenticate
 	@echo "🚀 Waiting for keycloak ready..."
 	@./keycloak/wait.sh
-	@set -a && . .env && . keycloak/.env && set +a && echo "✅ $$KC_BASE_URL"
+	@set -a && source .env && source keycloak/.env && set +a && echo "✅ $$KC_BASE_URL"
 
 .keycloak-realm: .keycloak-wait ## Create realm
-	@set -a && . .env && . keycloak/.env && set +a && ./keycloak/add-realm.sh
+	@set -a && source .env && source keycloak/.env && set +a && ./keycloak/add-realm.sh
 
 .keycloak-admin: .keycloak-realm ## Create (CI/CD) admin account in realm
 	@mkdir -p ./tmp
-	@set -a && . .env && . keycloak/.env && set +a && \
+	@set -a && source .env && source keycloak/.env && set +a && \
 	KC_APP_REALM_ADMIN_PASSWORD=$$(bash keycloak/add-realm-admin.sh | grep "Client Secret:" | cut -d' ' -f3) && \
 	echo "$$KC_APP_REALM_ADMIN_PASSWORD" > ./tmp/KC_APP_REALM_ADMIN_password.txt
 
 .keycloak-roles: .keycloak-admin ## Create roles in realm (keycloak/roles.yaml)
-	@set -a && . .env && . keycloak/.env && set +a && \
+	@set -a && source .env && source keycloak/.env && set +a && \
 	export KC_APP_REALM_ADMIN_PASSWORD=$$(cat ./tmp/KC_APP_REALM_ADMIN_password.txt) && \
 	./keycloak/add-realm-roles.sh
 
 .keycloak-clients: .keycloak-roles ## Create clients in realm (keycloak/clients.yaml)
-	@set -a && . .env && . keycloak/.env && set +a && \
+	@set -a && source .env && source keycloak/.env && set +a && \
 	export KC_APP_REALM_ADMIN_PASSWORD=$$(cat ./tmp/KC_APP_REALM_ADMIN_password.txt) && \
 	./keycloak/add-realm-clients.sh
 
@@ -79,7 +79,7 @@ SHELL := /bin/bash
 		exit 0; \
 	else \
 		echo "🔍 Checking if services are up..." && \
-		set -a && . .env && set +a && \
+		set -a && source .env && set +a && \
 		POSTGRES_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$POSTGRES_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
 		KC_STATUS=$$(docker inspect --format='{{.State.Status}}' $$KC_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
 		BACKEND_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$BACKEND_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
@@ -110,7 +110,7 @@ SHELL := /bin/bash
 	docker-compose build
 	@echo "✅ Fullstack built successfully!"
 	@echo "📊 Images"
-	@set -a && . .env && set +a && docker images | grep $$APP_PREFIX
+	@set -a && source .env && set +a && docker images | grep $$APP_PREFIX
 
 ##@ Postgres
 
@@ -131,12 +131,12 @@ postgres-login: ## Login to postgres
 	docker exec -it $$(docker-compose ps -q postgres) psql -U postgres -d sdep-data
 
 postgres-status: ## Show postgres tables (SDEP)
-	@set -a && . .env && set +a && \
+	@set -a && source .env && set +a && \
 	echo "Showing tables for database $$POSTGRES_DB_NAME..." && \
 	docker exec sdep-postgres psql -U $$POSTGRES_DB_USER -d $$POSTGRES_DB_NAME -c "\\dt"
 	@echo ""
 	@echo "Showing structure of each table..."
-	@set -a && . .env && set +a && \
+	@set -a && source .env && set +a && \
 	docker exec sdep-postgres psql -U $$POSTGRES_DB_USER -d $$POSTGRES_DB_NAME -t -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" | \
 	while read -r table; do \
 		if [ -n "$$table" ]; then \
@@ -149,7 +149,7 @@ postgres-status: ## Show postgres tables (SDEP)
 postgres-status-full: postgres-status ## Show postgres tables with full details (SDEP)
 	@echo ""
 	@echo "Showing full structure of each table..."
-	@set -a && . .env && set +a && \
+	@set -a && source .env && set +a && \
 	docker exec sdep-postgres psql -U $$POSTGRES_DB_USER -d $$POSTGRES_DB_NAME -t -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" | \
 	while read -r table; do \
 		if [ -n "$$table" ]; then \
@@ -164,7 +164,7 @@ postgres-reset: .clean-stale ## Reset postgres (drop, migrate, test data)
 		echo "🚀 Skipping database reset (testing remote environment)"; \
 	else \
 		echo "🚀 Resetting sdep-database in postgres ..." && \
-		$(MAKE) --no-print-directory .drop-sdep-database .migrate-sdep-database .load-sdep-test-data && \
+		$(MAKE) --no-print-directory .drop-database .migrate-database .load-test-data && \
 		echo "✅ SDEP database reset!"; \
 	fi
 
@@ -242,7 +242,7 @@ status: ## Show status
 	@docker-compose ps
 	@echo ""
 	@echo "🔍 Use these URLs when images are running:"
-	@set -a && . .env && set +a && \
+	@set -a && source .env && set +a && \
 	printf "  %-30s %s\n" "Backend API docs:" "$$BACKEND_BASE_URL/api/v0/docs" && \
 	printf "  %-30s %s\n" "Backend health:" "$$BACKEND_BASE_URL/api/health" && \
 	printf "  %-30s %s\n" "Backend health (restore):" "$$BACKEND_BASE_URL/api/health-br" && \
@@ -254,38 +254,25 @@ logs: ## Show logs
 
 ##@ Test
 
+# Using ENV_LOADED allows test re-use from another remote (CI/CD) environment
+
 .check-client-credentials: # Helper to check if required credentials are set
 	@echo "Checking credentials..."
-	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && \
-	MISSING_VARS="" && \
+	@if [ -z "$$ENV_LOADED" ]; then set -a && source ./.env && set +a; fi && \
 	echo "  STR_CLIENT_ID: $$STR_CLIENT_ID" && \
-	[ -z "$$STR_CLIENT_ID" ] && MISSING_VARS="$${MISSING_VARS} STR_CLIENT_ID" || true && \
-	if [ -n "$$STR_CLIENT_SECRET" ]; then \
-		echo "  STR_CLIENT_SECRET: [length: $${#STR_CLIENT_SECRET}]"; \
-	else \
-		echo "  STR_CLIENT_SECRET: [empty]"; \
-		MISSING_VARS="$${MISSING_VARS} STR_CLIENT_SECRET"; \
-	fi && \
+	echo "  STR_CLIENT_SECRET: [set]" && \
 	echo "  CA_CLIENT_ID: $$CA_CLIENT_ID" && \
-	[ -z "$$CA_CLIENT_ID" ] && MISSING_VARS="$${MISSING_VARS} CA_CLIENT_ID" || true && \
-	if [ -n "$$CA_CLIENT_SECRET" ]; then \
-		echo "  CA_CLIENT_SECRET: [length: $${#CA_CLIENT_SECRET}]"; \
-	else \
-		echo "  CA_CLIENT_SECRET: [empty]"; \
-		MISSING_VARS="$${MISSING_VARS} CA_CLIENT_SECRET"; \
-	fi && \
-	if [ -n "$${MISSING_VARS}" ]; then \
+	echo "  CA_CLIENT_SECRET: [set]" && \
+	if [ -z "$$STR_CLIENT_ID" ] || [ -z "$$STR_CLIENT_SECRET" ] || [ -z "$$CA_CLIENT_ID" ] || [ -z "$$CA_CLIENT_SECRET" ]; then \
 		echo ""; \
-		echo "❌ Error: One or more credentials are empty, please define them in OS environment:$${MISSING_VARS}"; \
+		echo "❌ One or more credentials are empty"; \
 		echo ""; \
 		exit 1; \
 	fi && \
 	echo "✅ All credentials are set"
 
-# Using ENV_LOADED allows test re-use from another remote (CI/CD) environment
-
 test-security: .check-client-credentials .is-up ## Test security (headers, unauthorized, credentials)
-	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
+	@if [ -z "$$ENV_LOADED" ]; then set -a && source ./.env && set +a; fi && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🔒 Testing security..." && \
@@ -302,7 +289,7 @@ test-security: .check-client-credentials .is-up ## Test security (headers, unaut
 	echo "✅ Security tested"
 
 test-ca: .check-client-credentials .is-up ## Test CA endpoints
-	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
+	@if [ -z "$$ENV_LOADED" ]; then set -a && source ./.env && set +a; fi && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🏛️  Testing CA endpoints..." && \
@@ -319,7 +306,7 @@ test-ca: .check-client-credentials .is-up ## Test CA endpoints
 	echo "✅ CA endpoints tested"
 
 test-str: .check-client-credentials .is-up ## Test STR endpoints
-	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
+	@if [ -z "$$ENV_LOADED" ]; then set -a && source ./.env && set +a; fi && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🏘️  Testing STR endpoints..." && \
@@ -337,7 +324,7 @@ test-str: .check-client-credentials .is-up ## Test STR endpoints
 	echo "✅ STR endpoints tested"
 
 test: .check-client-credentials .is-up ## Test all
-	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
+	@if [ -z "$$ENV_LOADED" ]; then set -a && source ./.env && set +a; fi && set -o pipefail && \
 	RESULTS_FILE=$$(mktemp) && \
 	FAILED_TESTS_FILE=$$(mktemp) && \
 	OUTPUT_FILE=$$(mktemp) && \

@@ -262,11 +262,11 @@ KNOWN_AREA_ID="amsterdam-area-0363"
 
 if [ -n "$BEARER_TOKEN" ]; then
     # Use -i to get headers and -s for silent mode, -w to get http code
-    response=$(curl -s -i -w "\n%{http_code}" \
+    { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${KNOWN_AREA_ID}")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${KNOWN_AREA_ID}"); } 2>/dev/null
 else
-    response=$(curl -s -i -w "\n%{http_code}" "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${KNOWN_AREA_ID}")
+    { response=$(curl -s -i -w "\n%{http_code}" "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${KNOWN_AREA_ID}"); } 2>/dev/null
 fi
 
 http_code=$(echo "$response" | tail -n1)
@@ -315,9 +315,9 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 if [ -n "$BEARER_TOKEN" ]; then
     AREA_ID_2="rotterdam-area-0599"
 
-    response=$(curl -s -i -w "\n%{http_code}" \
+    { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${AREA_ID_2}")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${AREA_ID_2}"); } 2>/dev/null
 
     http_code=$(echo "$response" | tail -n1)
     headers=$(echo "$response" | sed '$d')
@@ -387,9 +387,9 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 if [ -n "$BEARER_TOKEN" ]; then
     AREA_ID_3="denhaag-area-0518"
 
-    response=$(curl -s -i -w "\n%{http_code}" \
+    { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${AREA_ID_3}")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${AREA_ID_3}"); } 2>/dev/null
 
     http_code=$(echo "$response" | tail -n1)
     headers=$(echo "$response" | sed '$d')
