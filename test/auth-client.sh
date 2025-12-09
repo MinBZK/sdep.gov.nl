@@ -48,9 +48,10 @@ authorize() {
         access_token=$(echo "$body" | grep -o '"access_token":"[^"]*"' | sed 's/"access_token":"\([^"]*\)"/\1/')
 
         if [ -n "$access_token" ]; then
-            echo "$access_token" > .bearer_token
+            mkdir -p ./tmp
+            echo "$access_token" > ./tmp/.bearer_token
             export BEARER_TOKEN="$access_token"
-            echo "✅ Token saved to .bearer_token"
+            echo "✅ Token saved to ./tmp/.bearer_token"
             return 0
         else
             echo "❌ Failed to extract access token from response"

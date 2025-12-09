@@ -17,7 +17,7 @@ API_VERSION=${API_VERSION:-v0}
 
 # If BEARER_TOKEN is not set, try to read from token file
 if [ -z "$BEARER_TOKEN" ]; then
-    TOKEN_FILE="${TOKEN_FILE:-.bearer_token}"
+    TOKEN_FILE="${TOKEN_FILE:-./tmp/.bearer_token}"
     if [ -f "$TOKEN_FILE" ]; then
         BEARER_TOKEN=$(cat "$TOKEN_FILE")
         echo "🔑 Loaded BEARER_TOKEN from $TOKEN_FILE"

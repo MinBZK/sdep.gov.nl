@@ -12,9 +12,9 @@ fi
 
 # CA endpoint requires ca01 client (ca role)
 # Load token from .bearer_token file
-if [ -f .bearer_token ]; then
-    BEARER_TOKEN=$(cat .bearer_token)
-    echo "🔑 Loaded BEARER_TOKEN from .bearer_token"
+if [ -f ./tmp/.bearer_token ]; then
+    BEARER_TOKEN=$(cat ./tmp/.bearer_token)
+    echo "🔑 Loaded BEARER_TOKEN from ./tmp/.bearer_token"
 else
     echo "⚠️  No .bearer_token file found"
 fi

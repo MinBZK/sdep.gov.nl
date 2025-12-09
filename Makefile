@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: help up down restart status test logs postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
         postgres-reset .build .is-up .clean-stale .drop-sdep-database .migrate-sdep-database .load-sdep-test-data .generate-area-sql \
         .keycloak-wait .keycloak-realm .keycloak-admin .keycloak-roles .keycloak-clients \
-        .check-credentials test-security test-str test-ca \
+        .check-client-credentials test-security test-str test-ca \
         postgres-login postgres-status postgres-status-full \
         backend-logs postgres-logs keycloak-logs
 
@@ -254,7 +254,7 @@ logs: ## Show logs
 
 ##@ Test
 
-.check-credentials: # Helper to check if required credentials are set
+.check-client-credentials: # Helper to check if required credentials are set
 	@echo "Checking credentials..."
 	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && \
 	MISSING_VARS="" && \
@@ -284,7 +284,7 @@ logs: ## Show logs
 
 # Using ENV_LOADED allows test re-use from another remote (CI/CD) environment
 
-test-security: .check-credentials .is-up ## Test security (headers, unauthorized, credentials)
+test-security: .check-client-credentials .is-up ## Test security (headers, unauthorized, credentials)
 	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
@@ -301,7 +301,7 @@ test-security: .check-credentials .is-up ## Test security (headers, unauthorized
 	./test/auth-credentials.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ Security tested"
 
-test-ca: .check-credentials .is-up ## Test CA endpoints
+test-ca: .check-client-credentials .is-up ## Test CA endpoints
 	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
@@ -318,7 +318,7 @@ test-ca: .check-credentials .is-up ## Test CA endpoints
 	./test/ca-activity-data.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ CA endpoints tested"
 
-test-str: .check-credentials .is-up ## Test STR endpoints
+test-str: .check-client-credentials .is-up ## Test STR endpoints
 	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
@@ -336,7 +336,7 @@ test-str: .check-credentials .is-up ## Test STR endpoints
 	./test/str-activity-data.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ STR endpoints tested"
 
-test: .check-credentials .is-up ## Test all
+test: .check-client-credentials .is-up ## Test all
 	@if [ -z "$$ENV_LOADED" ]; then set -a && . ./.env && set +a; fi && set -o pipefail && \
 	RESULTS_FILE=$$(mktemp) && \
 	FAILED_TESTS_FILE=$$(mktemp) && \
