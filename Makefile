@@ -260,9 +260,9 @@ logs: ## Show logs
 	@echo "Checking credentials..."
 	@if [ -z "$$ENV_LOADED" ]; then set -a && source ./.env && set +a; fi && \
 	echo "  STR_CLIENT_ID: $$STR_CLIENT_ID" && \
-	echo "  STR_CLIENT_SECRET: [set]" && \
+	echo "  STR_CLIENT_SECRET: $${#STR_CLIENT_SECRET}" && \
 	echo "  CA_CLIENT_ID: $$CA_CLIENT_ID" && \
-	echo "  CA_CLIENT_SECRET: [set]" && \
+	echo "  CA_CLIENT_SECRET: $${#CA_CLIENT_SECRET}" && \
 	if [ -z "$$STR_CLIENT_ID" ] || [ -z "$$STR_CLIENT_SECRET" ] || [ -z "$$CA_CLIENT_ID" ] || [ -z "$$CA_CLIENT_SECRET" ]; then \
 		echo ""; \
 		echo "❌ One or more credentials are empty"; \

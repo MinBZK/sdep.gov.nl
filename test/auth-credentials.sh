@@ -66,7 +66,7 @@ test_credentials() {
                 3) JWT_PAYLOAD="${JWT_PAYLOAD}=" ;;
             esac
             # Decode and pretty print
-            echo "$JWT_PAYLOAD" | base64 -d 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "⚠️  Could not decode JWT token"
+            echo "$JWT_PAYLOAD" | base64 -d 2>/dev/null | jq . 2>/dev/null || echo "⚠️  Could not decode JWT token"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
             PASSED_TESTS=$((PASSED_TESTS + 1))
