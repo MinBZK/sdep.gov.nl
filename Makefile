@@ -30,16 +30,24 @@ SHELL := /bin/bash
 	@docker exec -i $$(docker-compose ps -q backend) alembic upgrade head
 	@echo "✅ Database migrations completed!"
 
-.load-sdep-test-data: ## Load testdata
+.generate-area-sql: ## Helper to generate 02-area-generated.sql with embedded shapefile data
+	@echo "🔄 Generating area SQL file with embedded shapefile data..."
+	@./test-data/generate-area-sql.sh
+	@echo "✅ Area SQL file generated"
+
+.load-sdep-test-data: .generate-area-sql ## Load testdata
+	@echo "🐳 Initializing test data..."
 	@set -a && . .env && set +a && \
-	echo "📊 Loading test data into $$POSTGRES_DB_NAME..." && \
-	for sql_file in ./test-data/*.sql; do \
-		if [ -f "$$sql_file" ]; then \
-			echo "Executing $$sql_file..."; \
-			docker exec -i sdep-postgres psql -U $$POSTGRES_SUPER_USER -d $$POSTGRES_DB_NAME < "$$sql_file" || exit 1; \
-		fi; \
+	echo "Using PostgreSQL user: $$POSTGRES_SUPER_USER" && \
+	echo "Connecting to database: $$POSTGRES_DB_NAME" && \
+	sleep 3
+	@echo "Executing SQL initialization files..."
+	@set -a && . .env && set +a && \
+	for sql_file in $$(ls test-data/*.sql 2>/dev/null | sort); do \
+		echo "  Executing: $$sql_file"; \
+		docker exec -i sdep-postgres psql -U $$POSTGRES_SUPER_USER -d $$POSTGRES_DB_NAME -v ON_ERROR_STOP=1 < "$$sql_file"; \
 	done
-	@echo "✅ Test data loaded!"
+	@echo "✅ Test data initialized"
 
 .keycloak-wait: ## Wait until keycloak allows to authenticate
 	@echo "🚀 Waiting for keycloak ready..."
@@ -146,7 +154,7 @@ postgres-status-full: postgres-status ## Show postgres tables with full details 
 		fi; \
 	done
 
-postgres-reset: .clean-stale ## Reset postgres (drop, migrate, test data - SDEP)
+postgres-reset: .clean-stale ## Reset postgres (drop, migrate, test data)
 	@echo "🚀 Resetting sdep-database in postgres ..."
 	$(MAKE) --no-print-directory .drop-sdep-database .migrate-sdep-database .load-sdep-test-data
 	@echo "✅ SDEP database reset!"
