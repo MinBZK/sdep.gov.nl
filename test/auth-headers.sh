@@ -236,9 +236,9 @@ echo
 echo "════════════════════════════════════════"
 echo "📊 Test Summary"
 echo "════════════════════════════════════════"
-echo "  Total Tests:  $TOTAL_TESTS"
-echo "  Passed:       $PASSED_TESTS ✅"
-echo "  Failed:       $FAILED_TESTS ❌"
+echo "  Total:  $TOTAL_TESTS"
+echo "  Passed: $PASSED_TESTS ✅"
+echo "  Failed: $FAILED_TESTS ❌"
 echo "════════════════════════════════════════"
 
 if [ $FAILED_TESTS -eq 0 ]; then

@@ -11,12 +11,12 @@ if [ -z "$BACKEND_BASE_URL" ]; then
 fi
 
 # CA endpoint requires ca01 client (ca role)
-# Load token from .bearer_token file
+# Load token from ./tmp/.bearer_token file
 if [ -f ./tmp/.bearer_token ]; then
     BEARER_TOKEN=$(cat ./tmp/.bearer_token)
     echo "🔑 Loaded BEARER_TOKEN from ./tmp/.bearer_token"
 else
-    echo "⚠️  No .bearer_token file found"
+    echo "⚠️  No ./tmp/.bearer_token file found"
 fi
 
 # Default API version to v0 if not set

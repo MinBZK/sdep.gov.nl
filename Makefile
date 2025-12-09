@@ -332,25 +332,26 @@ test: .check-client-credentials .is-up ## Test all
 	echo "🧪 Running all tests..." && \
 	echo "" && \
 	if $(MAKE) --no-print-directory test-security 2>&1 | tee $$OUTPUT_FILE; then \
-		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
+		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
 	else \
-		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
+		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
 		echo "test-security" >> $$FAILED_TESTS_FILE; \
 	fi && \
 	echo "" && \
 	if $(MAKE) --no-print-directory test-str 2>&1 | tee $$OUTPUT_FILE; then \
-		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
+		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
 	else \
-		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
+		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
 		echo "test-str" >> $$FAILED_TESTS_FILE; \
 	fi && \
 	echo "" && \
 	if $(MAKE) --no-print-directory test-ca 2>&1 | tee $$OUTPUT_FILE; then \
-		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
+		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
 	else \
-		tail -n 20 $$OUTPUT_FILE | grep -E "^\s*(Total|Passed|Failed):" >> $$RESULTS_FILE || true; \
+		grep -E "^\s*(Total|Passed|Failed):" $$OUTPUT_FILE >> $$RESULTS_FILE || true; \
 		echo "test-ca" >> $$FAILED_TESTS_FILE; \
 	fi && \
+	SUITE_COUNT=$$(grep -c "Total:" $$RESULTS_FILE 2>/dev/null || echo 0) && \
 	GRAND_TOTAL=$$(grep "Total:" $$RESULTS_FILE 2>/dev/null | awk '{sum += $$2} END {print sum+0}') && \
 	GRAND_PASSED=$$(grep "Passed:" $$RESULTS_FILE 2>/dev/null | awk '{sum += $$2} END {print sum+0}') && \
 	GRAND_FAILED=$$(grep "Failed:" $$RESULTS_FILE 2>/dev/null | awk '{sum += $$2} END {print sum+0}') && \
@@ -358,7 +359,8 @@ test: .check-client-credentials .is-up ## Test all
 	echo "" && \
 	echo "════════════════════════════════════════════" && \
 	echo "GRAND TOTAL - All Tests:" && \
-	echo "  Test suites:	$$GRAND_TOTAL" && \
+	echo "  Test suites:	$$SUITE_COUNT" && \
+	echo "  Total tests:	$$GRAND_TOTAL" && \
 	echo "  Tests passed:	$$GRAND_PASSED ✅" && \
 	echo "  Tests failed: $$GRAND_FAILED ❌" && \
 	echo "  Suites failed: $$SUITES_FAILED ❌" && \
