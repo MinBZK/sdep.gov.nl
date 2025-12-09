@@ -46,26 +46,26 @@ SHELL := /bin/bash
 	@./keycloak/wait.sh
 	@set -a && . .env && . keycloak/.env && set +a && echo "✅ $$KC_BASE_URL"
 
-.keycloak-realm: .keycloak-wait ## Add Keycloak realm (idempotent)
+.keycloak-realm: .keycloak-wait ## Create realm
 	@set -a && . .env && . keycloak/.env && set +a && ./keycloak/add-realm.sh
 
-.keycloak-admin: .keycloak-realm ## Create app-realm CI/CD account
+.keycloak-admin: .keycloak-realm ## Create (CI/CD) admin account in realm
 	@mkdir -p ./tmp
 	@set -a && . .env && . keycloak/.env && set +a && \
 	KC_APP_REALM_ADMIN_PASSWORD=$$(bash keycloak/add-realm-admin.sh | grep "Client Secret:" | cut -d' ' -f3) && \
 	echo "$$KC_APP_REALM_ADMIN_PASSWORD" > ./tmp/KC_APP_REALM_ADMIN_password.txt
 
-.keycloak-roles: .keycloak-admin ## Add Keycloak realm roles
+.keycloak-roles: .keycloak-admin ## Create roles in realm (keycloak/roles.yaml)
 	@set -a && . .env && . keycloak/.env && set +a && \
 	export KC_APP_REALM_ADMIN_PASSWORD=$$(cat ./tmp/KC_APP_REALM_ADMIN_password.txt) && \
 	./keycloak/add-realm-roles.sh
 
-.keycloak-clients: .keycloak-roles ## Add Keycloak clients from keycloak/clients.yaml
+.keycloak-clients: .keycloak-roles ## Create clients in realm (keycloak/clients.yaml)
 	@set -a && . .env && . keycloak/.env && set +a && \
 	export KC_APP_REALM_ADMIN_PASSWORD=$$(cat ./tmp/KC_APP_REALM_ADMIN_password.txt) && \
 	./keycloak/add-realm-clients.sh
 
-.is-up: ## Check services running
+.is-up: ## Check if services are running
 	@echo "🔍 Checking if services are up..."
 	@set -a && . .env && set +a && \
 	POSTGRES_STATUS=$$(docker inspect --format='{{.State.Health.Status}}' $$POSTGRES_CONTAINER_NAME 2>&1 | grep -v "^Error" || echo "not-running"); \
