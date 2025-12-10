@@ -26,3 +26,5 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 https://restfulapi.net/resource-naming/
 
 https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
+
+https://logius-standaarden.github.io/API-Design-Rules
