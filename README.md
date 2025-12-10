@@ -82,7 +82,7 @@ https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng
 
 ## Design decisions
 
-- [Architecture](./docs/DECISIONS.md)
+- [Design decisions](./docs/DECISIONS.md)
 
 ## Integration test
 
