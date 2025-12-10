@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, LargeBinary, String, func
+from sqlalchemy import CheckConstraint, ForeignKey, LargeBinary, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.config import Base
@@ -25,13 +25,24 @@ class Area(Base):
     """
 
     __tablename__ = "area"
+    __table_args__ = (
+        UniqueConstraint(
+            "area_id",
+            "competent_authority_id",
+            name="uq_area_area_id_competent_authority",
+        ),
+        CheckConstraint(
+            "length(filedata) <= 1048576",
+            name="ck_area_filedata_max_size",
+        ),
+    )
 
     # Primary key
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
     # Attributes
     area_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, unique=True, default=generate_area_id, index=True
+        String(64), nullable=False, default=generate_area_id, index=True
     )  # Lowercase alphanumeric with dashes, auto-generated if not supplied, for example "amsterdam-area-0363"
 
     filename: Mapped[str] = mapped_column(
@@ -40,7 +51,7 @@ class Area(Base):
 
     filedata: Mapped[bytes] = mapped_column(
         LargeBinary, nullable=False
-    )  # Mandatory, for example: a .zip with a collection of ESRI shapefile files
+    )  # Mandatory, max size 1 MiB, for example: a .zip with a collection of ESRI shapefile files
 
     competent_authority_id: Mapped[int] = mapped_column(
         ForeignKey("competent_authority.id"), nullable=False, index=True
@@ -56,8 +67,8 @@ class Area(Base):
         "CompetentAuthority", back_populates="areas"
     )  # One to one (mandatory)
 
-    activity_data: Mapped[list["ActivityData"]] = relationship(
-        "ActivityData", back_populates="area"
+    activities: Mapped[list["Activity"]] = relationship(
+        "Activity", back_populates="area"
     )  # Zero to many
 
     def __repr__(self) -> str:

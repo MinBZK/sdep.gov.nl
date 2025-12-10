@@ -1,25 +1,25 @@
-"""Tests for ActivityData business service"""
+"""Tests for Activity business service"""
 
 from datetime import datetime, timedelta
 
 import pytest
 from app.exceptions.business import BusinessLogicError, DuplicateResourceError
-from app.services import activity_data as activity_data_service
+from app.services import activity as activity_service
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import ActivityDataFactory, AreaFactory, PlatformFactory
+from test.fixtures.factories import ActivityFactory, AreaFactory, PlatformFactory
 
 
 @pytest.mark.database
-class TestActivityDataService:
-    """Test suite for ActivityData business service"""
+class TestActivityService:
+    """Test suite for Activity business service"""
 
-    # Tests for process_activity_data_list
+    # Tests for process_activity_list
 
-    async def test_process_activity_data_list_single_activity(
+    async def test_process_activity_list_single_activity(
         self, async_session: AsyncSession
     ):
-        """Test processing a single activity data"""
+        """Test processing a single activity"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -47,18 +47,18 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(
+        await activity_service.process_activity_list(
             async_session, activities
         )
 
         # Assert
-        count = await activity_data_service.count_activity_data(async_session)
+        count = await activity_service.count_activity(async_session)
         assert count == 1
 
-    async def test_process_activity_data_list_multiple_activities(
+    async def test_process_activity_list_multiple_activities(
         self, async_session: AsyncSession
     ):
-        """Test processing multiple activity data records"""
+        """Test processing multiple activities"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -89,15 +89,15 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(
+        await activity_service.process_activity_list(
             async_session, activities
         )
 
         # Assert
-        count = await activity_data_service.count_activity_data(async_session)
+        count = await activity_service.count_activity(async_session)
         assert count == 5
 
-    async def test_process_activity_data_list_creates_platform_if_not_exists(
+    async def test_process_activity_list_creates_platform_if_not_exists(
         self, async_session: AsyncSession
     ):
         """Test that platform is created if it doesn't exist"""
@@ -124,7 +124,7 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(
+        await activity_service.process_activity_list(
             async_session, activities
         )
 
@@ -135,7 +135,7 @@ class TestActivityDataService:
         assert platform is not None
         assert platform.platform_name == "New Platform"
 
-    async def test_process_activity_data_list_reuses_existing_platform(
+    async def test_process_activity_list_reuses_existing_platform(
         self, async_session: AsyncSession
     ):
         """Test that existing platform is reused if it exists"""
@@ -167,7 +167,7 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(
+        await activity_service.process_activity_list(
             async_session, activities
         )
 
@@ -179,10 +179,10 @@ class TestActivityDataService:
         platform_count = len(platforms.scalars().all())
         assert platform_count == 1
 
-    async def test_process_activity_data_list_with_optional_address_fields(
+    async def test_process_activity_list_with_optional_address_fields(
         self, async_session: AsyncSession
     ):
-        """Test processing activity data with optional address fields"""
+        """Test processing activities with optional address fields"""
         # Arrange
         area = await AreaFactory.create_async(async_session)
         activities = [
@@ -206,15 +206,15 @@ class TestActivityDataService:
         ]
 
         # Act
-        await activity_data_service.process_activity_data_list(
+        await activity_service.process_activity_list(
             async_session, activities
         )
 
         # Assert
-        count = await activity_data_service.count_activity_data(async_session)
+        count = await activity_service.count_activity(async_session)
         assert count == 1
 
-    async def test_process_activity_data_list_raises_error_for_nonexistent_area(
+    async def test_process_activity_list_raises_error_for_nonexistent_area(
         self, async_session: AsyncSession
     ):
         """Test that processing fails when area doesn't exist"""
@@ -241,7 +241,7 @@ class TestActivityDataService:
 
         # Act & Assert
         with pytest.raises(BusinessLogicError) as exc_info:
-            await activity_data_service.process_activity_data_list(
+            await activity_service.process_activity_list(
                 async_session, activities
             )
 
@@ -250,7 +250,7 @@ class TestActivityDataService:
         )
         assert exc_info.value.details == {"area_id": "nonexistent-area-id"}
 
-    async def test_process_activity_data_list_raises_error_for_duplicate(
+    async def test_process_activity_list_raises_error_for_duplicate(
         self, async_session: AsyncSession
     ):
         """Test that processing fails when duplicate activity is submitted"""
@@ -259,7 +259,7 @@ class TestActivityDataService:
         platform = await PlatformFactory.create_async(async_session)
 
         # Create first activity
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session,
             url="http://example.com/listing-1",
             temporal_start_date_time=datetime(2025, 6, 1, 12, 0, 0),
@@ -291,104 +291,104 @@ class TestActivityDataService:
 
         # Act & Assert
         with pytest.raises(DuplicateResourceError) as exc_info:
-            await activity_data_service.process_activity_data_list(
+            await activity_service.process_activity_list(
                 async_session, activities
             )
 
         assert "already exists" in str(exc_info.value)
 
-    # Tests for count_activity_data
+    # Tests for count_activity
 
-    async def test_count_activity_data_empty(self, async_session: AsyncSession):
-        """Test counting activity data when database is empty"""
+    async def test_count_activity_empty(self, async_session: AsyncSession):
+        """Test counting activities when database is empty"""
         # Act
-        result = await activity_data_service.count_activity_data(async_session)
+        result = await activity_service.count_activity(async_session)
 
         # Assert
         assert result == 0
 
-    async def test_count_activity_data_single(self, async_session: AsyncSession):
-        """Test counting activity data with single record"""
+    async def test_count_activity_single(self, async_session: AsyncSession):
+        """Test counting activities with single record"""
         # Arrange
-        await ActivityDataFactory.create_async(async_session)
+        await ActivityFactory.create_async(async_session)
 
         # Act
-        result = await activity_data_service.count_activity_data(async_session)
+        result = await activity_service.count_activity(async_session)
 
         # Assert
         assert result == 1
 
-    async def test_count_activity_data_multiple(self, async_session: AsyncSession):
-        """Test counting activity data with multiple records"""
+    async def test_count_activity_multiple(self, async_session: AsyncSession):
+        """Test counting activities with multiple records"""
         # Arrange
-        await ActivityDataFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(async_session)
+        await ActivityFactory.create_async(async_session)
+        await ActivityFactory.create_async(async_session)
+        await ActivityFactory.create_async(async_session)
 
         # Act
-        result = await activity_data_service.count_activity_data(async_session)
+        result = await activity_service.count_activity(async_session)
 
         # Assert
         assert result == 3
 
-    # Tests for count_activity_data_by_competent_authority
+    # Tests for count_activity_by_competent_authority
 
-    async def test_count_activity_data_by_competent_authority_empty(
+    async def test_count_activity_by_competent_authority_empty(
         self, async_session: AsyncSession
     ):
-        """Test counting activity data by competent authority when database is empty"""
+        """Test counting activities by competent authority when database is empty"""
         # Act
-        result = await activity_data_service.count_activity_data_by_competent_authority(
+        result = await activity_service.count_activity_by_competent_authority(
             async_session, "0363"
         )
 
         # Assert
         assert result == 0
 
-    async def test_count_activity_data_by_competent_authority_no_match(
+    async def test_count_activity_by_competent_authority_no_match(
         self, async_session: AsyncSession
     ):
-        """Test counting activity data by competent authority with no matching records"""
+        """Test counting activities by competent authority with no matching records"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
             competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
-        await ActivityDataFactory.create_async(async_session, area_id=area.id)
+        await ActivityFactory.create_async(async_session, area_id=area.id)
 
         # Act
-        result = await activity_data_service.count_activity_data_by_competent_authority(
+        result = await activity_service.count_activity_by_competent_authority(
             async_session, "0599"
         )
 
         # Assert
         assert result == 0
 
-    async def test_count_activity_data_by_competent_authority_single_match(
+    async def test_count_activity_by_competent_authority_single_match(
         self, async_session: AsyncSession
     ):
-        """Test counting activity data by competent authority with single match"""
+        """Test counting activities by competent authority with single match"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
             competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
-        await ActivityDataFactory.create_async(async_session, area_id=area.id)
+        await ActivityFactory.create_async(async_session, area_id=area.id)
 
         # Act
-        result = await activity_data_service.count_activity_data_by_competent_authority(
+        result = await activity_service.count_activity_by_competent_authority(
             async_session, "0363"
         )
 
         # Assert
         assert result == 1
 
-    async def test_count_activity_data_by_competent_authority_multiple_matches(
+    async def test_count_activity_by_competent_authority_multiple_matches(
         self, async_session: AsyncSession
     ):
-        """Test counting activity data by competent authority with multiple matches"""
+        """Test counting activities by competent authority with multiple matches"""
         # Arrange
         area1 = await AreaFactory.create_async(
             async_session,
@@ -400,19 +400,19 @@ class TestActivityDataService:
             competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
-        await ActivityDataFactory.create_async(async_session, area_id=area1.id)
-        await ActivityDataFactory.create_async(async_session, area_id=area1.id)
-        await ActivityDataFactory.create_async(async_session, area_id=area2.id)
+        await ActivityFactory.create_async(async_session, area_id=area1.id)
+        await ActivityFactory.create_async(async_session, area_id=area1.id)
+        await ActivityFactory.create_async(async_session, area_id=area2.id)
 
         # Act
-        result = await activity_data_service.count_activity_data_by_competent_authority(
+        result = await activity_service.count_activity_by_competent_authority(
             async_session, "0363"
         )
 
         # Assert
         assert result == 3
 
-    async def test_count_activity_data_by_competent_authority_filters_correctly(
+    async def test_count_activity_by_competent_authority_filters_correctly(
         self, async_session: AsyncSession
     ):
         """Test that counting filters by competent authority correctly"""
@@ -427,18 +427,18 @@ class TestActivityDataService:
             competent_authority_id="0599",
             competent_authority_name="Gemeente Rotterdam",
         )
-        await ActivityDataFactory.create_async(async_session, area_id=area1.id)
-        await ActivityDataFactory.create_async(async_session, area_id=area1.id)
-        await ActivityDataFactory.create_async(async_session, area_id=area2.id)
+        await ActivityFactory.create_async(async_session, area_id=area1.id)
+        await ActivityFactory.create_async(async_session, area_id=area1.id)
+        await ActivityFactory.create_async(async_session, area_id=area2.id)
 
         # Act
         result1 = (
-            await activity_data_service.count_activity_data_by_competent_authority(
+            await activity_service.count_activity_by_competent_authority(
                 async_session, "0363"
             )
         )
         result2 = (
-            await activity_data_service.count_activity_data_by_competent_authority(
+            await activity_service.count_activity_by_competent_authority(
                 async_session, "0599"
             )
         )
@@ -447,40 +447,40 @@ class TestActivityDataService:
         assert result1 == 2
         assert result2 == 1
 
-    # Tests for get_activity_data_list
+    # Tests for get_activity_list
 
-    async def test_get_activity_data_list_empty(self, async_session: AsyncSession):
-        """Test getting activity data list when database is empty"""
+    async def test_get_activity_list_empty(self, async_session: AsyncSession):
+        """Test getting activities list when database is empty"""
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363"
         )
 
         # Assert
         assert result == []
 
-    async def test_get_activity_data_list_no_match(self, async_session: AsyncSession):
-        """Test getting activity data list with no matching records"""
+    async def test_get_activity_list_no_match(self, async_session: AsyncSession):
+        """Test getting activities list with no matching records"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
             competent_authority_id="0363",
             competent_authority_name="Gemeente Amsterdam",
         )
-        await ActivityDataFactory.create_async(async_session, area_id=area.id)
+        await ActivityFactory.create_async(async_session, area_id=area.id)
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0599"
         )
 
         # Assert
         assert result == []
 
-    async def test_get_activity_data_list_single_record(
+    async def test_get_activity_list_single_record(
         self, async_session: AsyncSession
     ):
-        """Test getting activity data list with single record"""
+        """Test getting activities list with single record"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -492,7 +492,7 @@ class TestActivityDataService:
             platform_id="platform01",
             platform_name="Test Platform",
         )
-        activity = await ActivityDataFactory.create_async(
+        activity = await ActivityFactory.create_async(
             async_session,
             url="http://example.com/listing-1",
             area_id=area.id,
@@ -500,7 +500,7 @@ class TestActivityDataService:
         )
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363"
         )
 
@@ -510,7 +510,7 @@ class TestActivityDataService:
         assert result[0]["platform_id"] == "platform01"
         assert result[0]["platform_name"] == "Test Platform"
 
-    async def test_get_activity_data_list_response_structure(
+    async def test_get_activity_list_response_structure(
         self, async_session: AsyncSession
     ):
         """Test that response structure matches specification"""
@@ -521,12 +521,12 @@ class TestActivityDataService:
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363"
         )
 
@@ -536,6 +536,7 @@ class TestActivityDataService:
 
         # Verify all required keys are present
         required_keys = {
+            "activity_id",
             "url",
             "address_street",
             "address_number",
@@ -556,6 +557,7 @@ class TestActivityDataService:
         assert set(activity_dict.keys()) == required_keys
 
         # Verify types
+        assert isinstance(activity_dict["activity_id"], str)
         assert isinstance(activity_dict["url"], str)
         assert isinstance(activity_dict["address_street"], str)
         assert isinstance(activity_dict["address_number"], int)
@@ -571,10 +573,10 @@ class TestActivityDataService:
         assert isinstance(activity_dict["platform_name"], str)
         assert isinstance(activity_dict["created_at"], datetime)
 
-    async def test_get_activity_data_list_multiple_records(
+    async def test_get_activity_list_multiple_records(
         self, async_session: AsyncSession
     ):
-        """Test getting activity data list with multiple records"""
+        """Test getting activities list with multiple records"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -582,25 +584,25 @@ class TestActivityDataService:
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363"
         )
 
         # Assert
         assert len(result) == 3
 
-    async def test_get_activity_data_list_filters_by_competent_authority(
+    async def test_get_activity_list_filters_by_competent_authority(
         self, async_session: AsyncSession
     ):
         """Test that listing filters by competent authority correctly"""
@@ -616,21 +618,21 @@ class TestActivityDataService:
             competent_authority_name="Gemeente Rotterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area1.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area1.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area2.id, platform_id=platform.id
         )
 
         # Act
-        result1 = await activity_data_service.get_activity_data_list(
+        result1 = await activity_service.get_activity_list(
             async_session, "0363"
         )
-        result2 = await activity_data_service.get_activity_data_list(
+        result2 = await activity_service.get_activity_list(
             async_session, "0599"
         )
 
@@ -638,10 +640,10 @@ class TestActivityDataService:
         assert len(result1) == 2
         assert len(result2) == 1
 
-    async def test_get_activity_data_list_with_pagination_offset(
+    async def test_get_activity_list_with_pagination_offset(
         self, async_session: AsyncSession
     ):
-        """Test getting activity data list with offset pagination"""
+        """Test getting activities list with offset pagination"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -649,31 +651,31 @@ class TestActivityDataService:
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363", offset=2
         )
 
         # Assert
         assert len(result) == 2
 
-    async def test_get_activity_data_list_with_pagination_limit(
+    async def test_get_activity_list_with_pagination_limit(
         self, async_session: AsyncSession
     ):
-        """Test getting activity data list with limit pagination"""
+        """Test getting activities list with limit pagination"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -681,28 +683,28 @@ class TestActivityDataService:
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363", limit=2
         )
 
         # Assert
         assert len(result) == 2
 
-    async def test_get_activity_data_list_with_pagination_offset_and_limit(
+    async def test_get_activity_list_with_pagination_offset_and_limit(
         self, async_session: AsyncSession
     ):
-        """Test getting activity data list with both offset and limit pagination"""
+        """Test getting activities list with both offset and limit pagination"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -710,31 +712,31 @@ class TestActivityDataService:
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363", offset=1, limit=2
         )
 
         # Assert
         assert len(result) == 2
 
-    async def test_get_activity_data_list_pagination_offset_beyond_results(
+    async def test_get_activity_list_pagination_offset_beyond_results(
         self, async_session: AsyncSession
     ):
         """Test pagination with offset beyond available results"""
@@ -745,25 +747,25 @@ class TestActivityDataService:
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session, area_id=area.id, platform_id=platform.id
         )
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363", offset=10
         )
 
         # Assert
         assert len(result) == 0
 
-    async def test_get_activity_data_list_includes_platform_info(
+    async def test_get_activity_list_includes_platform_info(
         self, async_session: AsyncSession
     ):
-        """Test that activity data list includes platform information via relationship"""
+        """Test that activities list includes platform information via relationship"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -775,7 +777,7 @@ class TestActivityDataService:
             platform_id="platform99",
             platform_name="Super Platform",
         )
-        await ActivityDataFactory.create_async(
+        await ActivityFactory.create_async(
             async_session,
             url="http://example.com/test",
             area_id=area.id,
@@ -783,7 +785,7 @@ class TestActivityDataService:
         )
 
         # Act
-        result = await activity_data_service.get_activity_data_list(
+        result = await activity_service.get_activity_list(
             async_session, "0363"
         )
 

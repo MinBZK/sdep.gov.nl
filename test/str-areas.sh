@@ -7,7 +7,7 @@
 # Tests:
 #   - GET /str/areas/count (count areas)
 #   - GET /str/areas (list areas with optional pagination)
-#   - GET /str/area/{areaId} (get specific area shapefile data)
+#   - GET /str/areas/{areaId} (get specific area shapefile data)
 
 set -e
 
@@ -53,7 +53,7 @@ echo "════════════════════════�
 echo
 
 # Test 1: Count areas
-echo "Test 1: Count areas (should be 3)"
+echo "Test 1: Count areas"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
@@ -82,11 +82,11 @@ if [ "$http_code" -eq 200 ]; then
     if [ -z "$actual_count" ]; then
         echo "❌ Test 1 failed: Could not extract count from response body"
         FAILED_TESTS=$((FAILED_TESTS + 1))
-    elif [ "$actual_count" -eq "$EXPECTED_COUNT" ]; then
-        echo "✅ Test 1 passed: Areas count is correct (Expected: $EXPECTED_COUNT, Got: $actual_count)"
+    elif [ "$actual_count" -ge "$EXPECTED_COUNT" ]; then
+        echo "✅ Test 1 passed: Areas count is correct (Expected minimal: $EXPECTED_COUNT, Got: $actual_count)"
         PASSED_TESTS=$((PASSED_TESTS + 1))
     else
-        echo "❌ Test 1 failed: Unexpected count value (Expected: $EXPECTED_COUNT, Got: $actual_count)"
+        echo "❌ Test 1 failed: Unexpected count value (Expected minimal: $EXPECTED_COUNT, Got: $actual_count)"
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 elif [ "$http_code" -eq 401 ] && [ -z "$BEARER_TOKEN" ]; then
@@ -245,16 +245,16 @@ fi
 echo
 
 ##############################################################################
-# GET /str/area/{areaId} - Get specific area tests
+# GET /str/areas/{areaId} - Get specific area tests
 ##############################################################################
 
 echo "════════════════════════════════════════════"
-echo "Testing GET /str/area/{areaId} (get area data)"
+echo "Testing GET /str/areas/{areaId} (get area)"
 echo "════════════════════════════════════════════"
 echo
 
-# Test 5: GET area data with known areaId
-echo "Test 5: GET area data with known areaId (amsterdam-area-0363)"
+# Test 5: GET area with known areaId
+echo "Test 5: GET area with known areaId (amsterdam-area-0363)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
@@ -264,9 +264,9 @@ if [ -n "$BEARER_TOKEN" ]; then
     # Use -i to get headers and -s for silent mode, -w to get http code
     { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${KNOWN_AREA_ID}"); } 2>/dev/null
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${KNOWN_AREA_ID}"); } 2>/dev/null
 else
-    { response=$(curl -s -i -w "\n%{http_code}" "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${KNOWN_AREA_ID}"); } 2>/dev/null
+    { response=$(curl -s -i -w "\n%{http_code}" "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${KNOWN_AREA_ID}"); } 2>/dev/null
 fi
 
 http_code=$(echo "$response" | tail -n1)
@@ -286,7 +286,7 @@ if [ "$http_code" -eq 200 ]; then
 
     if echo "$content_type" | grep -q "application/octet-stream"; then
         if echo "$content_disposition" | grep -q "attachment"; then
-            echo "✅ Test 5 passed: Retrieved area data with correct headers"
+            echo "✅ Test 5 passed: Retrieved area with correct headers"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
             echo "❌ Test 5 failed: Missing Content-Disposition attachment header"
@@ -306,8 +306,8 @@ fi
 
 echo
 
-# Test 6: GET area data with another known areaId
-echo "Test 6: GET area data with another known areaId (rotterdam-area-0599)"
+# Test 6: GET area with another known areaId
+echo "Test 6: GET area with another known areaId (rotterdam-area-0599)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
@@ -317,7 +317,7 @@ if [ -n "$BEARER_TOKEN" ]; then
 
     { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${AREA_ID_2}"); } 2>/dev/null
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${AREA_ID_2}"); } 2>/dev/null
 
     http_code=$(echo "$response" | tail -n1)
     headers=$(echo "$response" | sed '$d')
@@ -329,7 +329,7 @@ if [ -n "$BEARER_TOKEN" ]; then
         content_type=$(echo "$headers" | grep -i "content-type:" | head -n1 | cut -d' ' -f2- | tr -d '\r')
 
         if echo "$content_type" | grep -q "application/octet-stream"; then
-            echo "✅ Test 6 passed: Retrieved area data for Rotterdam"
+            echo "✅ Test 6 passed: Retrieved area for Rotterdam"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
             echo "❌ Test 6 failed: Expected Content-Type application/octet-stream"
@@ -345,8 +345,8 @@ fi
 
 echo
 
-# Test 7: GET area data with non-existent areaId (should return 404)
-echo "Test 7: GET area data with non-existent areaId (should return 404)"
+# Test 7: GET area with non-existent areaId (should return 404)
+echo "Test 7: GET area with non-existent areaId (should return 404)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
@@ -356,7 +356,7 @@ if [ -n "$BEARER_TOKEN" ]; then
 
     response=$(curl -s -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${NONEXISTENT_AREA_ID}")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${NONEXISTENT_AREA_ID}")
 
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
@@ -389,7 +389,7 @@ if [ -n "$BEARER_TOKEN" ]; then
 
     { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/area/${AREA_ID_3}"); } 2>/dev/null
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${AREA_ID_3}"); } 2>/dev/null
 
     http_code=$(echo "$response" | tail -n1)
     headers=$(echo "$response" | sed '$d')

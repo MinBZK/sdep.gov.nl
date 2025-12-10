@@ -1,4 +1,4 @@
-"""ActivityData business service.
+"""Activity business service.
 
 Transaction Management Architecture:
 - Service layer contains business logic only (no transaction management)
@@ -23,19 +23,19 @@ Exception Handling:
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import activity_data as activity_data_crud
+from app.crud import activity as activity_crud
 from app.crud import area as area_crud
 from app.crud import platform as platform_crud
 from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 
 
-async def process_activity_data_list(
+async def process_activity_list(
     session: AsyncSession, activities: list[dict]
 ) -> None:
     """
-    Process and save a list of activity data.
+    Process and save a list of activities.
 
-    Business logic for processing activity data submissions.
+    Business logic for processing activity submissions.
     Validation is handled by Pydantic schemas in the API layer.
 
     Transaction Management:
@@ -46,7 +46,7 @@ async def process_activity_data_list(
 
     Args:
         session: Async database session (transaction managed by API layer)
-        activities: List of validated activity data dictionaries (validated by Pydantic), each containing:
+        activities: List of validated activity dictionaries (validated by Pydantic), each containing:
             - url: Unique URL
             - address_street: Street name
             - address_number: House number
@@ -96,8 +96,9 @@ async def process_activity_data_list(
                 )
 
             # Save to database using CRUD layer (which only flushes)
-            await activity_data_crud.create(
+            await activity_crud.create(
                 session=session,
+                activity_id=None,  # Let the model generate it
                 url=activity["url"],
                 address_street=activity["address_street"],
                 address_number=activity["address_number"],
@@ -122,7 +123,7 @@ async def process_activity_data_list(
             start_time = activity.get("temporal_start_date_time", "unknown")
             end_time = activity.get("temporal_end_date_time", "unknown")
             raise DuplicateResourceError(
-                f"Activity data with URL '{url}', start time '{start_time}', "
+                f"Activity with URL '{url}', start time '{start_time}', "
                 f"and end time '{end_time}' already exists"
             ) from e
         # Other integrity errors (foreign key, check constraints, etc.)
@@ -131,26 +132,26 @@ async def process_activity_data_list(
     # Transaction rolls back at API layer automatically on exception
 
 
-async def count_activity_data(session: AsyncSession) -> int:
+async def count_activity(session: AsyncSession) -> int:
     """
-    Count all activity data.
+    Count all activities.
 
     Args:
         session: Async database session
 
     Returns:
-        Total number of activity data records
+        Total number of activity records
     """
-    return await activity_data_crud.count(session)
+    return await activity_crud.count(session)
 
 
-async def count_activity_data_by_competent_authority(
+async def count_activity_by_competent_authority(
     session: AsyncSession, competent_authority_id: str
 ) -> int:
     """
-    Count activity data for a competent authority.
+    Count activities for a competent authority.
 
-    Business logic for counting activity data filtered by competent authority.
+    Business logic for counting activities filtered by competent authority.
 
     Transaction Management:
     - Uses read-only session (no transaction needed for queries)
@@ -161,23 +162,23 @@ async def count_activity_data_by_competent_authority(
         competent_authority_id: Competent authority ID string (e.g., "0363")
 
     Returns:
-        Total number of activity data records for the given competent authority
+        Total number of activity records for the given competent authority
     """
-    return await activity_data_crud.count_by_competent_authority_id(
+    return await activity_crud.count_by_competent_authority_id(
         session, competent_authority_id
     )
 
 
-async def get_activity_data_list(
+async def get_activity_list(
     session: AsyncSession,
     competent_authority_id: str,
     offset: int = 0,
     limit: int | None = None,
 ) -> list[dict]:
     """
-    Get activity data list for a competent authority.
+    Get activity list for a competent authority.
 
-    Business logic for retrieving activity data filtered by competent authority.
+    Business logic for retrieving activities filtered by competent authority.
     Returns data in dictionary format for API layer serialization.
 
     Transaction Management:
@@ -191,10 +192,10 @@ async def get_activity_data_list(
         limit: Maximum number of records to return (default: no limit)
 
     Returns:
-        List of dictionaries containing activity data
+        List of dictionaries containing activities
     """
-    # Get activity data from CRUD layer
-    activity_data_list = await activity_data_crud.get_by_competent_authority_id(
+    # Get activities from CRUD layer
+    activity_list = await activity_crud.get_by_competent_authority_id(
         session, competent_authority_id, offset=offset, limit=limit
     )
 
@@ -202,6 +203,7 @@ async def get_activity_data_list(
     # Platform information is accessed via the relationship
     return [
         {
+            "activity_id": activity.activity_id,
             "url": activity.url,
             "address_street": activity.address_street,
             "address_number": activity.address_number,
@@ -219,5 +221,5 @@ async def get_activity_data_list(
             "platform_name": activity.platform.platform_name,  # Access via relationship
             "created_at": activity.created_at,
         }
-        for activity in activity_data_list
+        for activity in activity_list
     ]

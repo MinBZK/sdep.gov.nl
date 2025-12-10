@@ -205,6 +205,8 @@ backend-down: ## Stop and remove backend (including volumes)
 	docker-compose rm -f -v backend
 	@echo "✅ Backend stopped, removed, and volumes cleaned!"
 
+backend-restart: backend-down backend-up ## Stop and restart backend
+
 backend-logs: ## Show backend logs
 	docker-compose logs -f backend
 
@@ -302,7 +304,8 @@ test-ca: .check-client-credentials .is-up ## Test CA endpoints
 		exit 1; \
 	fi && \
 	./test/health-ping.sh 2>&1 | tee $$OUTPUT_FILE && \
-	./test/ca-activity-data.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./test/ca-areas.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./test/ca-activities.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ CA endpoints tested"
 
 test-str: .check-client-credentials .is-up ## Test STR endpoints
@@ -312,7 +315,7 @@ test-str: .check-client-credentials .is-up ## Test STR endpoints
 	echo "🏘️  Testing STR endpoints..." && \
 	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
-	if CLIENT_ID=$$STR_CLIENT_ID CLIENT_SECRET=$$STR_CLIENT_SECRET ./test/auth-client.sh; then # Using STR_CLIENT_ID and STR_CLIENT_SECRET from .env \
+	if CLIENT_ID=$$STR_CLIENT_ID CLIENT_SECRET=$$STR_CLIENT_SECRET ./test/auth-client.sh; then \
 		echo "✅ STR client authorized"; \
 	else \
 		echo "❌ STR client authorization failed"; \
@@ -320,7 +323,7 @@ test-str: .check-client-credentials .is-up ## Test STR endpoints
 	fi && \
 	./test/health-ping.sh 2>&1 | tee $$OUTPUT_FILE && \
 	./test/str-areas.sh 2>&1 | tee $$OUTPUT_FILE && \
-	./test/str-activity-data.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./test/str-activities.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ STR endpoints tested"
 
 test: .check-client-credentials .is-up ## Test all

@@ -9,7 +9,7 @@ MIN_START_YEAR = 2025
 class Temporal:
     """Temporal composite representing a time period.
 
-    This is a composite type (not a standalone entity) used inline in ActivityData.
+    This is a composite type (not a standalone entity) used inline in Activity.
     Represents a duration with start and end datetimes.
     Constraints:
     - startDatetime < endDatetime

@@ -12,6 +12,7 @@ from app.schemas.area import (
     AreasListResponse,
 )
 from app.schemas.auth import UnauthorizedError
+from app.schemas.validation import HTTPBadRequestError
 from app.security import verify_bearer_token
 from app.services import area
 
@@ -23,15 +24,19 @@ router = APIRouter(tags=["str"])
     response_model=AreasListResponse,
     status_code=status.HTTP_200_OK,
     summary="Get areas (areaId, competent authority, creation timestamp)",
-    description="Get areas in context of the current SDEP/member state. By default, returns all areas(unlimited). Use optional pagination parameters to limit results. Requires 'sdep_str' and 'sdep_read' roles.",
+    description="Get areas in context of the current SDEP/member state. By default, returns all areas(unlimited). Use optional pagination parameters to limit results.",
     operation_id="getAreas",
     responses={
+        "400": {
+            "model": HTTPBadRequestError,
+            "description": "Bad Request - Invalid query parameters",
+        },
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_str' or 'sdep_read' role",
+            "description": "Forbidden - Missing required authorization roles",
         },
     },
 )
@@ -105,15 +110,19 @@ async def get_areas(
     response_model=AreasCountResponse,
     status_code=status.HTTP_200_OK,
     summary="Get area count",
-    description="Get the total count of areas in context of the current SDEP/member state. Requires 'sdep_str' and 'sdep_read' roles.",
+    description="Get the total count of areas in context of the current SDEP/member state.",
     operation_id="countAreas",
     responses={
+        "400": {
+            "model": HTTPBadRequestError,
+            "description": "Bad Request - Invalid query parameters",
+        },
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_str' or 'sdep_read' role",
+            "description": "Forbidden - Missing required authorization roles",
         },
     },
 )
@@ -153,41 +162,45 @@ async def count_areas(
 
 
 @router.get(
-    "/str/area/{areaId}",
+    "/str/areas/{areaId}",
     response_class=Response,
     status_code=status.HTTP_200_OK,
-    summary="Get area data (shapefile)",
-    description="Get area data (shapefile) based on areaId. Requires 'sdep_str' and 'sdep_read' roles.",
-    operation_id="getAreaData",
+    summary="Get area (shapefile)",
+    description="Get area (shapefile) based on areaId.",
+    operation_id="getArea",
     responses={
         "200": {
             "content": {"application/octet-stream": {}},
-            "description": "Binary area data",
+            "description": "Binary area",
+        },
+        "400": {
+            "model": HTTPBadRequestError,
+            "description": "Bad Request - Invalid query parameters",
         },
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_str' or 'sdep_read' role",
+            "description": "Forbidden - Missing required authorization roles",
         },
         "404": {
             "description": "Area not found",
         },
     },
 )
-async def get_area_data(
+async def get_area(
     areaId: str,
     session: AsyncSession = Depends(get_async_db_read_only),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
 ) -> Response:
     """
-    Get area data for a specific area.
+    Get specific area.
 
     Authorization:
     - Requires valid bearer token with "sdep_str" and "sdep_read" roles in realm_access
 
-    Returns raw binary area data.
+    Returns raw binary area.
     """
     # Authorization check: Verify user has "sdep_str" and "sdep_read" roles
     realm_access = token_payload.get("realm_access", {})

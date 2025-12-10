@@ -18,6 +18,11 @@ def generate_area_id() -> str:
     """Generate a random lowercase alphanumeric area_id."""
     return uuid.uuid4().hex[:20]
 
+
+def generate_activity_id() -> str:
+    """Generate a random lowercase alphanumeric activity_id."""
+    return uuid.uuid4().hex[:20]
+
 # Revision identifiers, used by Alembic.
 revision: str = "001"
 down_revision: Union[str, None] = None
@@ -49,12 +54,13 @@ def upgrade() -> None:
         sa.Column("filedata", sa.LargeBinary(), nullable=False),
         sa.Column("competent_authority_id", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.CheckConstraint("length(filedata) <= 1048576", name="ck_area_filedata_max_size"),
         sa.ForeignKeyConstraint(["competent_authority_id"], ["competent_authority.id"], name=op.f("fk_area_competent_authority_id_competent_authority")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_area")),
-        sa.UniqueConstraint("area_id", name=op.f("uq_area_area_id")),
+        sa.UniqueConstraint("area_id", "competent_authority_id", name="uq_area_area_id_competent_authority"),
     )
     op.create_index(op.f("ix_area_id"), "area", ["id"], unique=False)
-    op.create_index(op.f("ix_area_area_id"), "area", ["area_id"], unique=True)
+    op.create_index(op.f("ix_area_area_id"), "area", ["area_id"], unique=False)
     op.create_index(op.f("ix_area_competent_authority_id"), "area", ["competent_authority_id"], unique=False)
 
     # Create platform table
@@ -70,10 +76,11 @@ def upgrade() -> None:
     op.create_index(op.f("ix_platform_id"), "platform", ["id"], unique=False)
     op.create_index(op.f("ix_platform_platform_id"), "platform", ["platform_id"], unique=True)
 
-    # Create activity_data table
+    # Create activity table
     op.create_table(
-        "activity_data",
+        "activity",
         sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("activity_id", sa.String(length=64), nullable=False),
         sa.Column("url", sa.String(length=128), nullable=False),
         sa.Column("address_street", sa.String(length=64), nullable=False),
         sa.Column("address_number", sa.Integer(), nullable=False),
@@ -93,58 +100,40 @@ def upgrade() -> None:
         sa.Column("temporal_end_date_time", sa.DateTime(timezone=True), nullable=False),
         sa.Column("platform_id", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.ForeignKeyConstraint(["area_id"], ["area.id"], name=op.f("fk_activity_data_area_id_area")),
-        sa.ForeignKeyConstraint(["platform_id"], ["platform.id"], name=op.f("fk_activity_data_platform_id_platform")),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_activity_data")),
+        sa.CheckConstraint("number_of_guests >= 1 AND number_of_guests <= 1024", name="ck_activity_number_of_guests_range"),
+        sa.CheckConstraint("array_length(country_of_guests, 1) >= 1 AND array_length(country_of_guests, 1) <= 1024", name="ck_activity_country_of_guests_length"),
+        sa.ForeignKeyConstraint(["area_id"], ["area.id"], name=op.f("fk_activity_area_id_area")),
+        sa.ForeignKeyConstraint(["platform_id"], ["platform.id"], name=op.f("fk_activity_platform_id_platform")),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_activity")),
         sa.UniqueConstraint(
             "url",
             "temporal_start_date_time",
             "temporal_end_date_time",
-            name="uq_activity_data_url_temporal",
+            name="uq_activity_url_temporal",
         ),
     )
     op.create_index(
-        op.f("ix_activity_data_id"), "activity_data", ["id"], unique=False
+        op.f("ix_activity_id"), "activity", ["id"], unique=False
     )
     op.create_index(
-        op.f("ix_activity_data_area_id"), "activity_data", ["area_id"], unique=False
+        op.f("ix_activity_activity_id"), "activity", ["activity_id"], unique=False
     )
     op.create_index(
-        op.f("ix_activity_data_platform_id"), "activity_data", ["platform_id"], unique=False
+        op.f("ix_activity_area_id"), "activity", ["area_id"], unique=False
     )
-
-    # Add check constraint for number_of_guests range (1-1024)
-    op.create_check_constraint(
-        "ck_activity_data_number_of_guests_range",
-        "activity_data",
-        "number_of_guests >= 1 AND number_of_guests <= 1024"
-    )
-
-    # Add check constraint for country_of_guests array length (1-1024)
-    op.create_check_constraint(
-        "ck_activity_data_country_of_guests_length",
-        "activity_data",
-        "array_length(country_of_guests, 1) >= 1 AND array_length(country_of_guests, 1) <= 1024"
-    )
-
-    # Add check constraint for temporal_start_date_time year >= 2025
-    op.create_check_constraint(
-        "ck_activity_data_temporal_start_year",
-        "activity_data",
-        "EXTRACT(YEAR FROM temporal_start_date_time) >= 2025"
+    op.create_index(
+        op.f("ix_activity_platform_id"), "activity", ["platform_id"], unique=False
     )
 
 
 def downgrade() -> None:
     """Downgrade database schema."""
-    # Drop activity_data table constraints
-    op.drop_constraint("ck_activity_data_temporal_start_year", "activity_data", type_="check")
-    op.drop_constraint("ck_activity_data_country_of_guests_length", "activity_data", type_="check")
-    op.drop_constraint("ck_activity_data_number_of_guests_range", "activity_data", type_="check")
-    op.drop_index(op.f("ix_activity_data_platform_id"), table_name="activity_data")
-    op.drop_index(op.f("ix_activity_data_area_id"), table_name="activity_data")
-    op.drop_index(op.f("ix_activity_data_id"), table_name="activity_data")
-    op.drop_table("activity_data")
+    # Drop activity table
+    op.drop_index(op.f("ix_activity_platform_id"), table_name="activity")
+    op.drop_index(op.f("ix_activity_area_id"), table_name="activity")
+    op.drop_index(op.f("ix_activity_activity_id"), table_name="activity")
+    op.drop_index(op.f("ix_activity_id"), table_name="activity")
+    op.drop_table("activity")
 
     # Drop platform table
     op.drop_index(op.f("ix_platform_platform_id"), table_name="platform")

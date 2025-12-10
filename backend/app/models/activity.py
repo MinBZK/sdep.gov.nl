@@ -1,6 +1,7 @@
-"""ActivityData model."""
+"""Activity model."""
 
 import json
+import uuid
 from datetime import datetime
 
 from sqlalchemy import (
@@ -20,6 +21,11 @@ from sqlalchemy.orm import Mapped, composite, mapped_column, relationship
 from app.db.config import Base
 from app.models.address import Address
 from app.models.temporal import Temporal
+
+
+def generate_activity_id() -> str:
+    """Generate a random lowercase alphanumeric activity_id."""
+    return uuid.uuid4().hex[:20]
 
 
 class StringArray(TypeDecorator):
@@ -52,38 +58,38 @@ class StringArray(TypeDecorator):
         return json.loads(value)
 
 
-class ActivityData(Base):
-    """ActivityData model representing an actual rental activity.
+class Activity(Base):
+    """Activity model representing an actual rental activity.
 
-    An ActivityData represents an actual rental activity.
+    An Activity represents an actual rental activity.
     - The activity can apply to the address as a whole
     - The activity can also apply to part of the address (a unit)
 
     The host has obtained a registration number for the address (conform legislation).
     On the platform, the host has replicated the registration number in each advertisement,
     in case the address is advertised in parts.
-    The registration number is consequently replicated in each ActivityData.
+    The registration number is consequently replicated in each Activity.
 
-    An ActivityData is made unique through the combination of URL, start datetime, and end datetime.
+    An Activity is made unique through the combination of URL, start datetime, and end datetime.
     Although registrationNumber is a string, it still is commonly referred to as "number".
     """
 
-    __tablename__ = "activity_data"
+    __tablename__ = "activity"
     __table_args__ = (
         UniqueConstraint(
             "url",
             "temporal_start_date_time",
             "temporal_end_date_time",
-            name="uq_activity_data_url_temporal",
+            name="uq_activity_url_temporal",
         ),
         CheckConstraint(
             "number_of_guests >= 1 AND number_of_guests <= 1024",
-            name="ck_activity_data_number_of_guests_range",
+            name="ck_activity_number_of_guests_range",
         ),
         # PostgreSQL-specific constraint for array length (array_length function not available in SQLite)
         CheckConstraint(
             "array_length(country_of_guests, 1) >= 1 AND array_length(country_of_guests, 1) <= 1024",
-            name="ck_activity_data_country_of_guests_length",
+            name="ck_activity_country_of_guests_length",
         ).ddl_if(dialect="postgresql"),
     )
 
@@ -91,6 +97,10 @@ class ActivityData(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
     # Attributes
+    activity_id: Mapped[str] = mapped_column(
+        String(64), nullable=False, default=generate_activity_id, index=True
+    )  # Lowercase alphanumeric, auto-generated if not supplied, for example "sdep-str01-001"
+
     url: Mapped[str] = mapped_column(
         String(128), nullable=False
     )  # Mandatory, for example "http://example.com/my-advertisement"
@@ -152,13 +162,13 @@ class ActivityData(Base):
 
     # References
     area: Mapped["Area"] = relationship(
-        "Area", back_populates="activity_data"
+        "Area", back_populates="activities"
     )  # Zero to many to one (mandatory)
 
     platform: Mapped["Platform"] = relationship(
-        "Platform", back_populates="activity_data"
+        "Platform", back_populates="activities"
     )  # Zero to many to one (mandatory)
 
     def __repr__(self) -> str:
-        """String representation of ActivityData."""
-        return f"<ActivityData(id={self.id}, url='{self.url}', registration_number='{self.registration_number}')>"
+        """String representation of Activity."""
+        return f"<Activity(id={self.id}, activity_id='{self.activity_id}', url='{self.url}', registration_number='{self.registration_number}')>"

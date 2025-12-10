@@ -390,7 +390,7 @@ SDEP enforces business rules at multiple layers (defense in-depth):
 The SDEP API is secured by **client credentials grants** for trusted machine-to-machine (M2M) clients, a.k.a. **oAuth2 with JWT**
 
 - The **oAuth resource server** is the application itself (the API)
-  - The resource server protects resources such as areas and rental activity data
+  - The resource server protects resources such as areas and rental activities
 - The **oAuth authorization server** runs "behind the scenes" on behalf of the resource server
   - The authorization server hand-outs oAuth2 JWT tokens to SDEP
   - SDEP clients obtain these tokens by submitting their credentials on the SDEP `/token` endpoint
@@ -447,11 +447,11 @@ References:
 
 ### Naming conventions
 
-- **API endpoints**: kebab-case (e.g., `/activity-data`)
+- **API endpoints**: kebab-case (e.g., `/activities`)
 - **JSON attributes**: lower camelCase (e.g., `firstName`)
 - **Python code**: snake_case (e.g., `get_by_id`)
 - **Classes**: PascalCase (e.g., `RentalActivity`)
-- **Database tables**: snake_case (e.g., `activity_data`)
+- **Database tables**: snake_case (e.g., `activities`)
 
 ### Code quality principles
 

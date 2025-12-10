@@ -107,7 +107,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         sensitive_patterns = [
             "/api/auth/",
             "/api/v0/auth/",
-            "/api/v0/activity-data",
+            "/api/v0/activities",
             "/api/v0/areas",
             "/api/v0/competent-authority",
             "/api/v0/openapi.json",

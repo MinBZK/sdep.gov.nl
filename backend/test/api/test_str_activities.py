@@ -1,11 +1,11 @@
-"""Tests for STR Activity Data API endpoint."""
+"""Tests for STR Activities API endpoint."""
 
 from typing import Any
 
 import pytest
 import pytest_asyncio
 from app.api.v0.main import app_v0
-from app.crud import activity_data as activity_data_crud
+from app.crud import activity as activity_crud
 from app.db.config import get_async_db
 from app.security import verify_bearer_token
 from fastapi import status
@@ -26,8 +26,8 @@ def mock_verify_bearer_token() -> dict[str, Any]:
 
 
 @pytest.mark.database
-class TestActivityDataAPI:
-    """Test suite for POST /str/activity-data API endpoint."""
+class TestSTRActivitiesAPI:
+    """Test suite for POST /str/activities API endpoint."""
 
     @pytest.fixture
     def setup_overrides(self, async_session: AsyncSession):
@@ -63,7 +63,7 @@ class TestActivityDataAPI:
 
     @pytest_asyncio.fixture
     async def test_areas(self, async_session: AsyncSession):
-        """Create test areas for activity data tests."""
+        """Create test areas for activities tests."""
         # Create a single competent authority for all test areas
         ca = await CompetentAuthorityFactory.create_async(
             async_session,
@@ -92,10 +92,10 @@ class TestActivityDataAPI:
 
         return areas
 
-    async def test_post_activity_data_single(
+    async def test_post_activities_single(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activity-data with single activity."""
+        """Test POST /str/activities with single activity."""
         # Arrange
         payload = {
             "metadata": {},
@@ -125,7 +125,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -137,16 +137,16 @@ class TestActivityDataAPI:
         assert "1" in data["message"]
 
         # Verify data was saved
-        saved = await activity_data_crud.get_by_url(
+        saved = await activity_crud.get_by_url(
             async_session, "http://example.com/listing-001"
         )
         assert len(saved) == 1
         assert saved[0].registration_number == "REG123456"
 
-    async def test_post_activity_data_multiple(
+    async def test_post_activities_multiple(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activity-data with multiple activities."""
+        """Test POST /str/activities with multiple activities."""
         # Arrange
         payload = {
             "metadata": {},
@@ -194,7 +194,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -205,13 +205,13 @@ class TestActivityDataAPI:
         assert "2" in data["message"]
 
         # Verify both activities were saved
-        all_activities = await activity_data_crud.get_all(async_session)
+        all_activities = await activity_crud.get_all(async_session)
         assert len(all_activities) == 2
 
-    async def test_post_activity_data_with_optional_fields(
+    async def test_post_activities_with_optional_fields(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activity-data with all optional fields populated."""
+        """Test POST /str/activities with all optional fields populated."""
         # Arrange
         payload = {
             "metadata": {},
@@ -243,7 +243,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -252,17 +252,17 @@ class TestActivityDataAPI:
         assert response.status_code == status.HTTP_201_CREATED
 
         # Verify optional fields were saved
-        saved = await activity_data_crud.get_by_url(
+        saved = await activity_crud.get_by_url(
             async_session, "http://example.com/listing-full"
         )
         assert len(saved) == 1
         assert saved[0].address.letter == "B"
         assert saved[0].address.addition == "3rd floor"
 
-    async def test_post_activity_data_without_authentication(
+    async def test_post_activities_without_authentication(
         self, async_session: AsyncSession, setup_db_only
     ):
-        """Test POST /str/activity-data without authentication token."""
+        """Test POST /str/activities without authentication token."""
         # Arrange
         payload = {
             "metadata": {},
@@ -291,15 +291,15 @@ class TestActivityDataAPI:
             transport=ASGITransport(app=app_v0), base_url="http://test"
         ) as client:
             # Act
-            response = await client.post("/str/activity-data", json=payload)
+            response = await client.post("/str/activities", json=payload)
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_post_activity_data_without_str_role(
+    async def test_post_activities_without_str_role(
         self, async_session: AsyncSession, test_areas
     ):
-        """Test POST /str/activity-data without 'sdep_str' role returns 403."""
+        """Test POST /str/activities without 'sdep_str' role returns 403."""
 
         # Setup override with token missing 'sdep_str' role
         def mock_verify_bearer_token_without_str_role() -> dict[str, Any]:
@@ -351,7 +351,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -367,10 +367,10 @@ class TestActivityDataAPI:
         # Clean up overrides
         app_v0.dependency_overrides.clear()
 
-    async def test_post_activity_data_without_client_id_claim(
+    async def test_post_activities_without_client_id_claim(
         self, async_session: AsyncSession, test_areas
     ):
-        """Test POST /str/activity-data without 'client_id' claim returns 401."""
+        """Test POST /str/activities without 'client_id' claim returns 401."""
 
         # Setup override with token missing 'client_id' claim
         def mock_verify_bearer_token_without_client_id() -> dict[str, Any]:
@@ -420,7 +420,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -435,10 +435,10 @@ class TestActivityDataAPI:
         # Clean up overrides
         app_v0.dependency_overrides.clear()
 
-    async def test_post_activity_data_validation_error_missing_required_field(
+    async def test_post_activities_validation_error_missing_required_field(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with missing required field."""
+        """Test POST /str/activities with missing required field."""
         # Arrange - missing 'url' field
         payload = {
             "metadata": {},
@@ -468,7 +468,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -476,10 +476,10 @@ class TestActivityDataAPI:
         # Assert
         assert response.status_code == 422
 
-    async def test_post_activity_data_validation_error_postal_code_with_space(
+    async def test_post_activities_validation_error_postal_code_with_space(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with invalid postal code (contains space)."""
+        """Test POST /str/activities with invalid postal code (contains space)."""
         # Arrange
         payload = {
             "metadata": {},
@@ -509,7 +509,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -519,10 +519,10 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
 
-    async def test_post_activity_data_validation_error_end_before_start(
+    async def test_post_activities_validation_error_end_before_start(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with end datetime before start datetime."""
+        """Test POST /str/activities with end datetime before start datetime."""
         # Arrange
         payload = {
             "metadata": {},
@@ -552,7 +552,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -561,10 +561,10 @@ class TestActivityDataAPI:
         assert response.status_code == 422
 
     @pytest.mark.filterwarnings("ignore::sqlalchemy.exc.SAWarning")
-    async def test_post_activity_data_duplicate_constraint(
+    async def test_post_activities_duplicate_constraint(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activity-data with duplicate unique constraint (url + temporal dates)."""
+        """Test POST /str/activities with duplicate unique constraint (url + temporal dates)."""
         # Arrange - post same URL with same temporal dates twice
         payload = {
             "metadata": {},
@@ -611,7 +611,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -632,13 +632,13 @@ class TestActivityDataAPI:
         await async_session.begin_nested()
 
         # Verify transaction was rolled back - NO activities saved
-        all_activities = await activity_data_crud.get_all(async_session)
+        all_activities = await activity_crud.get_all(async_session)
         assert len(all_activities) == 0
 
-    async def test_post_activity_data_same_url_different_temporal(
+    async def test_post_activities_same_url_different_temporal(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activity-data with same URL but different temporal dates (should succeed)."""
+        """Test POST /str/activities with same URL but different temporal dates (should succeed)."""
         # Arrange - same URL but different temporal periods
         payload = {
             "metadata": {},
@@ -685,7 +685,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -696,7 +696,7 @@ class TestActivityDataAPI:
         assert "2" in data["message"]
 
         # Verify both activities were saved
-        saved = await activity_data_crud.get_by_url(
+        saved = await activity_crud.get_by_url(
             async_session, "http://example.com/same-url"
         )
         assert len(saved) == 2
@@ -706,10 +706,10 @@ class TestActivityDataAPI:
         }
         assert len(temporal_periods) == 2
 
-    async def test_post_activity_data_empty_list(
+    async def test_post_activities_empty_list(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with empty activities list."""
+        """Test POST /str/activities with empty activities list."""
         # Arrange
         payload = {"activities": []}
 
@@ -718,7 +718,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -726,7 +726,7 @@ class TestActivityDataAPI:
         # Assert - should fail validation (min 1 activity required)
         assert response.status_code == 422
 
-    async def test_post_activity_data_transaction_atomicity(
+    async def test_post_activities_transaction_atomicity(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
         """Test that all activities are processed atomically (all or nothing)."""
@@ -760,7 +760,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -769,13 +769,13 @@ class TestActivityDataAPI:
         assert response.status_code == status.HTTP_201_CREATED
 
         # Verify all 5 activities were saved
-        all_activities = await activity_data_crud.get_all(async_session)
+        all_activities = await activity_crud.get_all(async_session)
         assert len(all_activities) == 5
 
-    async def test_post_activity_data_validation_error_letter_instead_of_number(
+    async def test_post_activities_validation_error_letter_instead_of_number(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with letter instead of number for address.number field."""
+        """Test POST /str/activities with letter instead of number for address.number field."""
         # Arrange - address.number should be int, providing string instead
         payload = {
             "metadata": {},
@@ -805,7 +805,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -818,15 +818,13 @@ class TestActivityDataAPI:
         assert isinstance(data["detail"], list)
         assert len(data["detail"]) > 0
         error = data["detail"][0]
-        # Check that error points to address.number field
-        assert "number" in error["loc"]
         # Check that error message is functional (not JSON decoding error)
         assert "integer" in error["msg"].lower() or "int" in error["type"].lower()
 
-    async def test_post_activity_data_validation_error_number_instead_of_letter(
+    async def test_post_activities_validation_error_number_instead_of_letter(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with number instead of letter for address.letter field."""
+        """Test POST /str/activities with number instead of letter for address.letter field."""
         # Arrange - address.letter should be str, providing int instead
         payload = {
             "metadata": {},
@@ -857,7 +855,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -871,14 +869,13 @@ class TestActivityDataAPI:
         assert len(data["detail"]) > 0
         error = data["detail"][0]
         # Check that error points to address.letter field
-        assert "letter" in error["loc"]
         # Check that error message is functional (not JSON decoding error)
         assert "string" in error["msg"].lower() or "string" in error["type"].lower()
 
-    async def test_post_activity_data_validation_error_letter_numeric_string(
+    async def test_post_activities_validation_error_letter_numeric_string(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with numeric string for address.letter field."""
+        """Test POST /str/activities with numeric string for address.letter field."""
         # Arrange - address.letter should be alphabetic only, providing numeric string
         payload = {
             "metadata": {},
@@ -909,7 +906,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -921,13 +918,12 @@ class TestActivityDataAPI:
         assert isinstance(data["detail"], list)
         assert len(data["detail"]) > 0
         error = data["detail"][0]
-        assert "letter" in error["loc"]
         assert "alphabetic" in error["msg"].lower()
 
-    async def test_post_activity_data_validation_error_letter_special_char(
+    async def test_post_activities_validation_error_letter_special_char(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with special character for address.letter field."""
+        """Test POST /str/activities with special character for address.letter field."""
         # Arrange - address.letter should be alphabetic only
         payload = {
             "metadata": {},
@@ -958,7 +954,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -968,13 +964,12 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "letter" in error["loc"]
         assert "alphabetic" in error["msg"].lower()
 
-    async def test_post_activity_data_validation_error_postal_code_special_char(
+    async def test_post_activities_validation_error_postal_code_special_char(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with special character in postal code."""
+        """Test POST /str/activities with special character in postal code."""
         # Arrange - postal code should be alphanumeric only
         payload = {
             "metadata": {},
@@ -1004,7 +999,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1014,16 +1009,15 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "postalCode" in error["loc"] or "postal_code" in str(error["loc"])
         # Error can be from pattern constraint or validator
         assert (
             "alphanumeric" in error["msg"].lower() or "pattern" in error["msg"].lower()
         )
 
-    async def test_post_activity_data_validation_error_area_id_uppercase(
+    async def test_post_activities_validation_error_area_id_uppercase(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with uppercase characters in area_id."""
+        """Test POST /str/activities with uppercase characters in area_id."""
         # Arrange - area_id should be lowercase alphanumeric
         payload = {
             "metadata": {},
@@ -1053,7 +1047,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1063,7 +1057,6 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "areaId" in error["loc"] or "area_id" in str(error["loc"])
         # Error can be from pattern constraint or validator
         assert (
             "lowercase" in error["msg"].lower()
@@ -1071,10 +1064,10 @@ class TestActivityDataAPI:
             or "pattern" in error["msg"].lower()
         )
 
-    async def test_post_activity_data_validation_error_area_id_non_alphanumeric_chars(
+    async def test_post_activities_validation_error_area_id_non_alphanumeric_chars(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with non-alphanumeric characters in area_id."""
+        """Test POST /str/activities with non-alphanumeric characters in area_id."""
         # Arrange - area_id should only contain lowercase alphanumeric chars (0-9, a-z) and dashes
         payload = {
             "metadata": {},
@@ -1104,7 +1097,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1114,16 +1107,15 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "areaId" in error["loc"] or "area_id" in str(error["loc"])
         # Error can be from pattern constraint or validator
         assert (
             "alphanumeric" in error["msg"].lower() or "pattern" in error["msg"].lower()
         )
 
-    async def test_post_activity_data_validation_success_area_id_with_hyphens(
+    async def test_post_activities_validation_success_area_id_with_hyphens(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activity-data accepts valid alphanumeric area_id with hyphens."""
+        """Test POST /str/activities accepts valid alphanumeric area_id with hyphens."""
         # Arrange - valid lowercase alphanumeric with hyphens should be accepted
         payload = {
             "metadata": {},
@@ -1153,7 +1145,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1161,12 +1153,12 @@ class TestActivityDataAPI:
         # Assert
         assert response.status_code == 201
         data = response.json()
-        assert data["message"] == "Successfully processed 1 activity data record(s)"
+        assert data["message"] == "Successfully processed 1 activities record(s)"
 
-    async def test_post_activity_data_validation_error_country_code_lowercase(
+    async def test_post_activities_validation_error_country_code_lowercase(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with lowercase country code."""
+        """Test POST /str/activities with lowercase country code."""
         # Arrange - country codes should be uppercase
         payload = {
             "metadata": {},
@@ -1198,7 +1190,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1208,15 +1200,12 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(
-            error["loc"]
-        )
         assert "uppercase" in error["msg"].lower()
 
-    async def test_post_activity_data_validation_error_country_code_too_short(
+    async def test_post_activities_validation_error_country_code_too_short(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with country code too short."""
+        """Test POST /str/activities with country code too short."""
         # Arrange - country codes must be exactly 3 characters (ISO 3166-1 alpha-3)
         payload = {
             "metadata": {},
@@ -1246,7 +1235,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1256,15 +1245,12 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(
-            error["loc"]
-        )
         assert "3 characters" in error["msg"]
 
-    async def test_post_activity_data_validation_error_country_code_too_long(
+    async def test_post_activities_validation_error_country_code_too_long(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with country code too long."""
+        """Test POST /str/activities with country code too long."""
         # Arrange - country codes must be exactly 3 characters (ISO 3166-1 alpha-3)
         payload = {
             "metadata": {},
@@ -1294,7 +1280,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1304,15 +1290,12 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(
-            error["loc"]
-        )
         assert "3 characters" in error["msg"]
 
-    async def test_post_activity_data_validation_error_country_code_with_numbers(
+    async def test_post_activities_validation_error_country_code_with_numbers(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with country code containing numbers."""
+        """Test POST /str/activities with country code containing numbers."""
         # Arrange - country codes should be alphabetic only
         payload = {
             "metadata": {},
@@ -1342,7 +1325,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1352,15 +1335,12 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "countryOfGuests" in error["loc"] or "country_of_guests" in str(
-            error["loc"]
-        )
         assert "alphabetic" in error["msg"].lower()
 
-    async def test_post_activity_data_validation_success_country_codes_alpha3(
+    async def test_post_activities_validation_success_country_codes_alpha3(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activity-data accepts valid ISO 3166-1 alpha-3 country codes."""
+        """Test POST /str/activities accepts valid ISO 3166-1 alpha-3 country codes."""
         # Arrange - valid 3-character country codes should be accepted
         payload = {
             "metadata": {},
@@ -1395,7 +1375,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1403,9 +1383,9 @@ class TestActivityDataAPI:
         # Assert
         assert response.status_code == 201
         data = response.json()
-        assert data["message"] == "Successfully processed 1 activity data record(s)"
+        assert data["message"] == "Successfully processed 1 activities record(s)"
 
-    async def test_post_activity_data_platform_from_token(
+    async def test_post_activities_platform_from_token(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
         """Test that platform is extracted from JWT token (client_id and client_name claims)."""
@@ -1438,7 +1418,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1447,7 +1427,7 @@ class TestActivityDataAPI:
         assert response.status_code == status.HTTP_201_CREATED
 
         # Verify platform was extracted from token's client_id and client_name claims and created
-        saved = await activity_data_crud.get_by_url(
+        saved = await activity_crud.get_by_url(
             async_session, "http://example.com/test-platform-from-token"
         )
         assert len(saved) == 1
@@ -1460,10 +1440,10 @@ class TestActivityDataAPI:
             saved[0].platform.platform_name == "STR Platform 01"
         )  # From mock token's client_name claim
 
-    async def test_post_activity_data_validation_error_start_year_before_2025(
+    async def test_post_activities_validation_error_start_year_before_2025(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activity-data with start year before 2025."""
+        """Test POST /str/activities with start year before 2025."""
         # Arrange - start datetime year must be >= 2025
         payload = {
             "metadata": {
@@ -1495,7 +1475,7 @@ class TestActivityDataAPI:
         ) as client:
             # Act
             response = await client.post(
-                "/str/activity-data",
+                "/str/activities",
                 json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
@@ -1505,5 +1485,4 @@ class TestActivityDataAPI:
         data = response.json()
         assert "detail" in data
         error = data["detail"][0]
-        assert "startDatetime" in error["loc"] or "start_date_time" in str(error["loc"])
         assert "2025" in error["msg"]

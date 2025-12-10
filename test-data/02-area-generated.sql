@@ -18,7 +18,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0363'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Rotterdam area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -29,7 +29,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0599'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Den Haag area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -40,7 +40,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0518'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Amstelveen area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -51,7 +51,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0362'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Bergen (Noord-Holland) area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -62,7 +62,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0373'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Delft area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -73,7 +73,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0503'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Diemen area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -84,7 +84,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0384'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Gouda area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -95,7 +95,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0513'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Groningen area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -106,7 +106,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0014'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Haarlem area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -117,7 +117,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0392'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Katwijk area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -128,7 +128,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0537'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Landsmeer area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -139,7 +139,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0415'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Leiden area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -150,7 +150,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0546'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Maastricht area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -161,7 +161,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0935'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Middelburg area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -172,7 +172,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0687'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Noordwijk area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -183,7 +183,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0575'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Pijnacker-Nootdorp area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -194,7 +194,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-1926'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Renkum area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -205,7 +205,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0274'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Sluis area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -216,7 +216,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-1714'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Schouwen-Duiveland area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -227,7 +227,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-1676'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Texel area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -238,7 +238,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0448'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Utrecht area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -249,7 +249,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0344'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Vlissingen area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -260,7 +260,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0718'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Voorschoten area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -271,7 +271,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0626'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Waterland area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -282,7 +282,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0852'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Zaanstad area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -293,7 +293,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0479'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Zandvoort area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -304,7 +304,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0473'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 -- Zwolle area
 INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
@@ -315,5 +315,5 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = 'sdep-ca-0193'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 

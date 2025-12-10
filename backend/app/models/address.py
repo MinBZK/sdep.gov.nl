@@ -4,7 +4,7 @@
 class Address:
     """Address composite representing physical addresses.
 
-    This is a composite type (not a standalone entity) used inline in ActivityData.
+    This is a composite type (not a standalone entity) used inline in Activity.
     Represents a physical location with street, number, and other address components.
     """
 

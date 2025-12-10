@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Test script for activity data submission endpoint of the SDEP API
+# Test script for activity submission endpoint of the SDEP API
 # Expects BACKEND_BASE_URL environment variable to be set
 # Optionally accepts BEARER_TOKEN environment variable for authenticated requests
 # Optionally accepts API_VERSION environment variable (defaults to v0)
-# Tests POST /str/activity-data endpoint with valid activity data
+# Tests POST /str/activities endpoint with valid activities
 
 set -e
 
@@ -25,7 +25,7 @@ else
     echo "⚠️  No ./tmp/.bearer_token file found"
 fi
 
-echo "🔍 Testing activity data submission endpoint at: ${BACKEND_BASE_URL}/api/${API_VERSION}/str/activity-data"
+echo "🔍 Testing STR activity endpoints at: ${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities"
 
 # Check if BEARER_TOKEN is set
 if [ -n "$BEARER_TOKEN" ]; then
@@ -40,8 +40,8 @@ TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
 
-# Test 1: POST single activity data (amsterdam-myhouse-1)
-echo "Test 1: POST single activity data (amsterdam-myhouse-1)"
+# Test 1: POST single activity (amsterdam-myhouse-1)
+echo "Test 1: POST single activity (amsterdam-myhouse-1)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
@@ -82,13 +82,13 @@ if [ -n "$BEARER_TOKEN" ]; then
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
         -d "$PAYLOAD" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activity-data")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 else
     response=$(curl -s -w "\n%{http_code}" \
         -X POST \
         -H "Content-Type: application/json" \
         -d "$PAYLOAD" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activity-data")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 fi
 
 http_code=$(echo "$response" | tail -n1)
@@ -101,7 +101,7 @@ echo
 if [ "$http_code" -eq 201 ]; then
     # Check if response contains success message
     if echo "$body" | grep -q "Successfully processed"; then
-        echo "✅ Test 1 passed: Activity data successfully submitted"
+        echo "✅ Test 1 passed: Activity successfully submitted"
         PASSED_TESTS=$((PASSED_TESTS + 1))
     else
         echo "❌ Test 1 failed: Expected success message in response"
@@ -179,7 +179,7 @@ EOF
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
         -d "$PAYLOAD_MULTI" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activity-data")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
@@ -249,7 +249,7 @@ EOF
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
         -d "$PAYLOAD_INVALID" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activity-data")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
@@ -280,9 +280,9 @@ echo "  Failed: $FAILED_TESTS ❌"
 echo "═══════════════════════════════════════"
 
 if [ $FAILED_TESTS -eq 0 ]; then
-    echo "✅ All activity data endpoint tests passed!"
+    echo "✅ All activity endpoint tests passed!"
     exit 0
 else
-    echo "❌ Some activity data endpoint tests failed!"
+    echo "❌ Some activity endpoint tests failed!"
     exit 1
 fi

@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 
 import factory
-from app.models.activity_data import ActivityData
+from app.models.activity import Activity
 from app.models.address import Address
 from app.models.area import Area
 from app.models.competent_authority import CompetentAuthority
@@ -134,16 +134,19 @@ class TemporalFactory(factory.Factory):
     )
 
 
-class ActivityDataFactory(AsyncSQLAlchemyFactory):
-    """Factory for ActivityData model.
+class ActivityFactory(AsyncSQLAlchemyFactory):
+    """Factory for Activity model.
 
     Note: The combination of url, temporal_start_date_time, and temporal_end_date_time must be unique.
     The factory uses sequences to ensure uniqueness.
     """
 
     class Meta:
-        model = ActivityData
+        model = Activity
 
+    activity_id = factory.Sequence(
+        lambda n: f"activity{n:016x}"[:20]
+    )  # Lowercase hex, e.g. "activity00000000001"
     url = factory.Sequence(lambda n: f"http://example.com/listing-{n}")
     # Address composite fields (street, number, postal_code, city are mandatory)
     address_street = Faker("street_name")

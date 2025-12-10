@@ -6,38 +6,43 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.config import get_async_db_read_only
-from app.schemas.activity_data import (
-    ActivityDataCountResponse,
-    ActivityDataListResponse,
-    ActivityDataResponse,
+from app.schemas.activity import (
+    ActivityCountResponse,
+    ActivityListResponse,
+    ActivityResponse,
     AddressResponse,
     TemporalResponse,
 )
 from app.schemas.auth import UnauthorizedError
+from app.schemas.validation import HTTPBadRequestError
 from app.security import verify_bearer_token
-from app.services import activity_data
+from app.services import activity
 
 router = APIRouter(tags=["ca"])
 
 
 @router.get(
-    "/ca/activity-data",
-    response_model=ActivityDataListResponse,
+    "/ca/activities",
+    response_model=ActivityListResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get activity data for competent authority",
-    description="Get activity data for a competent authority. By default, returns all activity data (unlimited). Use optional pagination parameters to limit results. Requires 'sdep_ca' and 'sdep_read' roles. Competent authority ID is extracted from the JWT token.",
-    operation_id="getActivityDataByCompetentAuthority",
+    summary="Get activities for competent authority (authorized by the current bearer token)",
+    description="Get activities for competent authority (authorized by the current bearer token). By default, returns all activities (unlimited). Use optional pagination parameters to limit results.",
+    operation_id="getActivityByCompetentAuthority",
     responses={
+        "400": {
+            "model": HTTPBadRequestError,
+            "description": "Bad Request - Invalid query parameters",
+        },
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_ca' or 'sdep_read' role",
+            "description": "Forbidden - Missing required authorization roles",
         },
     },
 )
-async def get_activity_data(
+async def get_activities(
     offset: Annotated[
         int, Query(ge=0, description="Number of records to skip (default: 0)")
     ] = 0,
@@ -51,15 +56,15 @@ async def get_activity_data(
     ] = None,
     session: AsyncSession = Depends(get_async_db_read_only),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
-) -> ActivityDataListResponse:
+) -> ActivityListResponse:
     """
-    Get activity data for a competent authority.
+    Get activities for competent authority (authorized by the current bearer token).
 
     Authorization:
     - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
     - Competent authority ID is extracted from token's "client_id" claim
 
-    Returns a list of activity data, each containing:
+    Returns a list of activities, each containing:
     - url: URL of the advertisement
     - address: Address composite (street, number, postalCode, city, letter, addition)
     - registrationNumber: Registration number
@@ -101,7 +106,7 @@ async def get_activity_data(
         )
 
     # Call business service with competent authority ID from token
-    activity_data_list = await activity_data.get_activity_data_list(
+    activity_list = await activity.get_activity_list(
         session,
         competent_authority_id=competent_authority_id,
         offset=offset,
@@ -110,7 +115,8 @@ async def get_activity_data(
 
     # Transform to API response format
     activity_responses = [
-        ActivityDataResponse(
+        ActivityResponse(
+            activityId=activity_dict["activity_id"],
             url=activity_dict["url"],
             address=AddressResponse(
                 street=activity_dict["address_street"],
@@ -132,42 +138,46 @@ async def get_activity_data(
             platformName=activity_dict["platform_name"],
             createdAt=activity_dict["created_at"],
         )
-        for activity_dict in activity_data_list
+        for activity_dict in activity_list
     ]
 
-    return ActivityDataListResponse(activities=activity_responses)
+    return ActivityListResponse(activities=activity_responses)
 
 
 @router.get(
-    "/ca/activity-data/count",
-    response_model=ActivityDataCountResponse,
+    "/ca/activities/count",
+    response_model=ActivityCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get activity data count for competent authority",
-    description="Get the total count of activity data records for a competent authority. Requires 'sdep_ca' and 'sdep_read' roles. Competent authority ID is extracted from the JWT token.",
-    operation_id="countActivityData",
+    summary="Get activities count for competent authority (authorized by the current bearer token)",
+    description="Get the total count of activities for competent authority (authorized by the current bearer token).",
+    operation_id="countActivity",
     responses={
+        "400": {
+            "model": HTTPBadRequestError,
+            "description": "Bad Request - Invalid query parameters",
+        },
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_ca' or 'sdep_read' role",
+            "description": "Forbidden - Missing required authorization roles",
         },
     },
 )
-async def count_activity_data(
+async def count_activities(
     session: AsyncSession = Depends(get_async_db_read_only),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
-) -> ActivityDataCountResponse:
+) -> ActivityCountResponse:
     """
-    Count activity data records for a competent authority.
+    Count activities for competent authority (authorized by the current bearer token).
 
     Authorization:
     - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
     - Competent authority ID is extracted from token's "client_id" claim
 
     Returns:
-    - count: Total number of activity data records for the given competent authority
+    - count: Total number of activities for the given competent authority
     """
     # Authorization check: Verify user has "sdep_ca" and "sdep_read" roles
     realm_access = token_payload.get("realm_access", {})
@@ -195,8 +205,8 @@ async def count_activity_data(
         )
 
     # Call business service with competent authority ID from token
-    total_count = await activity_data.count_activity_data_by_competent_authority(
+    total_count = await activity.count_activity_by_competent_authority(
         session, competent_authority_id
     )
 
-    return ActivityDataCountResponse(count=total_count)
+    return ActivityCountResponse(count=total_count)

@@ -9,6 +9,8 @@ Overview:
 - [Quick start (local workstation)](#quick-start-local-workstation)
 - [Background](#background)
 - [Main functionality](#main-functionality)
+- [Design decisions](#design-decisions)
+- [Integration test](#integration-test)
 - [Documentation](#documentation)
 
 ## Quick start (local workstation)
@@ -30,7 +32,7 @@ Explore API docs (Swagger UI):
 
 - http://localhost:8000/api/v0/docs
 
-Select client credentials (by role):
+Select client credentials (by roles):
 
 - Choose `id`, `secret` from [clients.yaml](./keycloak/clients.yaml)
 
@@ -40,7 +42,7 @@ Authorize in Swagger UI:
 - Enter client credentials
 - Select Authorize again
 - Swagger will obtain a bearer token "under the hood" (acting on the `token/` endpoint)
-- You are authorized conform the client credentials' roles
+- You are authorized by roles
 
 Explore endpoints in your current role (ca, str).
 
@@ -75,8 +77,20 @@ https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng
 ## Main functionality
 
 - To **ingest regulated areas** from competent authorities (CA)
-- To **ingest rental activity data** from short-term rental platforms (STR)
-- To **expose rental activity data** to other stakeholders
+- To **ingest rental activities** from short-term rental platforms (STR)
+- To **expose rental activities** to other stakeholders
+
+## Design decisions
+
+- [Architecture](./docs/DECISIONS.md)
+
+## Integration test
+
+The local integration tests (`make test`) are also run against deployment in Kubernetes (TST, ACC, PRE, PRD)
+
+This deployment is out of the scope of this project.
+
+Inquire SDEP NL for tips how to re-use.
 
 ## Documentation
 

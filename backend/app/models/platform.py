@@ -11,7 +11,7 @@ from app.db.config import Base
 class Platform(Base):
     """Platform model representing a short-term rental platform.
 
-    A Platform delivers rental activity data to the system.
+    A Platform delivers rental activities to the system.
     Platforms are identified by their unique platformId and have a human-readable platformName.
     """
 
@@ -35,8 +35,8 @@ class Platform(Base):
     )  # Always present
 
     # Relationships
-    activity_data: Mapped[list["ActivityData"]] = relationship(
-        "ActivityData", back_populates="platform"
+    activities: Mapped[list["Activity"]] = relationship(
+        "Activity", back_populates="platform"
     )  # One to many (0..n)
 
     def __repr__(self) -> str:

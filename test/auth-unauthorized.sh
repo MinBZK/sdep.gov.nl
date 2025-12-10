@@ -54,10 +54,11 @@ echo "Testing API v0 endpoints..."
 test_endpoint "GET" "/api/v0/ping" "Ping endpoint (requires authentication)"
 test_endpoint "GET" "/api/v0/str/areas" "Areas retrieval"
 test_endpoint "GET" "/api/v0/str/areas/count" "Areas count"
-test_endpoint "GET" "/api/v0/str/area/amsterdam-area-0363" "Area data retrieval by ID"
-test_endpoint "POST" "/api/v0/str/activity-data" "STR activity data submission"
-test_endpoint "GET" "/api/v0/ca/activity-data" "CA activity data retrieval"
-test_endpoint "GET" "/api/v0/ca/activity-data/count" "CA activity data count"
+test_endpoint "GET" "/api/v0/str/areas/amsterdam-area-0363" "Area retrieval by ID"
+test_endpoint "POST" "/api/v0/str/activities" "STR activity submission"
+test_endpoint "GET" "/api/v0/ca/activities" "CA activity retrieval"
+test_endpoint "GET" "/api/v0/ca/activities/count" "CA activity count"
+test_endpoint "POST" "/api/v0/ca/areas" "CA areas submission (multiple)"
 
 # Summary
 echo

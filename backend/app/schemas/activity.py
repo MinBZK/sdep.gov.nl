@@ -1,4 +1,4 @@
-"""Pydantic schemas for ActivityData API requests and responses."""
+"""Pydantic schemas for Activity API requests and responses."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def validate_year_ge_2025(v: datetime) -> datetime:
 
 
 class AddressRequest(BaseModel):
-    """Address composite schema for activity data requests.
+    """Address composite schema for activity requests.
 
     Validation Layer:
     - All syntax validation (lengths, types, constraints) happens here
@@ -24,7 +24,7 @@ class AddressRequest(BaseModel):
     """
 
     model_config = ConfigDict(
-        title="activityData.AddressRequest",
+        title="activity.AddressRequest",
         populate_by_name=True,  # Allow both snake_case and camelCase
     )
 
@@ -93,7 +93,7 @@ class AddressRequest(BaseModel):
 
 
 class TemporalRequest(BaseModel):
-    """Temporal composite schema for activity data requests.
+    """Temporal composite schema for activity requests.
 
     Validation Layer:
     - Validates datetime formats
@@ -102,7 +102,7 @@ class TemporalRequest(BaseModel):
     """
 
     model_config = ConfigDict(
-        title="activityData.TemporalRequest",
+        title="activity.TemporalRequest",
         populate_by_name=True,
     )
 
@@ -130,7 +130,7 @@ class TemporalRequest(BaseModel):
 
 
 class MetaDataRequest(BaseModel):
-    """Metadata schema for activity data batch submissions.
+    """Metadata schema for activity batch submissions.
 
     Contains metadata that applies to all activities in a batch submission.
     Platform ID and name are now extracted from the JWT token (client_id and client_name claims).
@@ -140,13 +140,13 @@ class MetaDataRequest(BaseModel):
     """
 
     model_config = ConfigDict(
-        title="activityData.MetaDataRequest",
+        title="activity.MetaDataRequest",
         populate_by_name=True,
     )
 
 
-class ActivityDataRequest(BaseModel):
-    """ActivityData request schema for creating rental activity data.
+class ActivityRequest(BaseModel):
+    """Activity request schema for creating rental activities.
 
     Validation Layer:
     - Validates all syntax constraints (lengths, ranges, types)
@@ -158,7 +158,7 @@ class ActivityDataRequest(BaseModel):
     """
 
     model_config = ConfigDict(
-        title="activityData.ActivityDataRequest",
+        title="activity.ActivityRequest",
         populate_by_name=True,  # Allow both snake_case and camelCase
     )
 
@@ -277,8 +277,8 @@ class ActivityDataRequest(BaseModel):
         }
 
 
-class ActivityDataListRequest(BaseModel):
-    """List of activity data for bulk submission.
+class ActivityListRequest(BaseModel):
+    """List of activities for bulk submission.
 
     Validation Layer:
     - Validates the entire list
@@ -286,18 +286,18 @@ class ActivityDataListRequest(BaseModel):
     - Platform (from token) is normalized to each activity in to_service_list()
     """
 
-    model_config = ConfigDict(title="activityData.ActivityDataListRequest")
+    model_config = ConfigDict(title="activity.ActivityListRequest")
 
     metadata: MetaDataRequest = Field(
         ...,
         description="Metadata that applies to all activities in this batch (placeholder for future use)",
     )
 
-    activities: list[ActivityDataRequest] = Field(
+    activities: list[ActivityRequest] = Field(
         ...,
         min_length=1,
         max_length=100,
-        description="List of activity data to process (max 100 per batch)",
+        description="List of activities to process (max 100 per batch)",
     )
 
     def to_service_list(self, platform_id: str, platform_name: str) -> list[dict]:
@@ -323,10 +323,10 @@ class ActivityDataListRequest(BaseModel):
 
 
 class AddressResponse(BaseModel):
-    """Address composite schema for activity data responses."""
+    """Address composite schema for activity responses."""
 
     model_config = ConfigDict(
-        title="activityData.AddressResponse",
+        title="activity.AddressResponse",
         populate_by_name=True,
     )
 
@@ -343,10 +343,10 @@ class AddressResponse(BaseModel):
 
 
 class TemporalResponse(BaseModel):
-    """Temporal composite schema for activity data responses."""
+    """Temporal composite schema for activity responses."""
 
     model_config = ConfigDict(
-        title="activityData.TemporalResponse",
+        title="activity.TemporalResponse",
         populate_by_name=True,
     )
 
@@ -360,15 +360,27 @@ class TemporalResponse(BaseModel):
     )  # Attribute
 
 
-class ActivityDataResponse(BaseModel):
-    """ActivityData response schema."""
+class ActivityResponse(BaseModel):
+    """Activity response schema."""
 
     model_config = ConfigDict(
-        title="activityData.ActivityDataResponse",
+        title="activity.ActivityResponse",
         from_attributes=True,
         populate_by_name=True,
     )
 
+    activity_id: str = Field(
+        ..., alias="activityId", description="Activity identifier"
+    )  # Attribute - response only
+    platformId: str = Field(
+        ..., alias="platformId", description="Platform ID"
+    )  # Attribute
+    platformName: str = Field(
+        ..., alias="platformName", description="Platform name"
+    )  # Attribute
+    areaId: str = Field(
+        ..., alias="areaId", description="Area ID"
+    )  # Reference - foreign key to Area
     url: str = Field(..., description="URL of the advertisement")  # Attribute
     address: AddressResponse = Field(..., description="Address composite")  # Composite
     registrationNumber: str = Field(
@@ -376,9 +388,6 @@ class ActivityDataResponse(BaseModel):
         alias="registrationNumber",
         description="Registration number for the address",
     )  # Attribute
-    areaId: str = Field(
-        ..., alias="areaId", description="Area ID"
-    )  # Reference - foreign key to Area
     numberOfGuests: int = Field(
         ..., alias="numberOfGuests", description="Number of guests"
     )  # Attribute
@@ -388,35 +397,29 @@ class ActivityDataResponse(BaseModel):
     temporal: TemporalResponse = Field(
         ..., description="Temporal composite"
     )  # Composite
-    platformId: str = Field(
-        ..., alias="platformId", description="Platform ID"
-    )  # Attribute
-    platformName: str = Field(
-        ..., alias="platformName", description="Platform name"
-    )  # Attribute
     createdAt: datetime = Field(
         ..., alias="createdAt", description="Creation timestamp"
     )  # Attribute
 
 
-class ActivityDataListResponse(BaseModel):
-    """List of activity data for GET responses."""
+class ActivityListResponse(BaseModel):
+    """List of activities for GET responses."""
 
-    model_config = ConfigDict(title="activityData.ActivityDataListResponse")
+    model_config = ConfigDict(title="activity.ActivityListResponse")
 
-    activities: list[ActivityDataResponse] = Field(
-        ..., description="List of activity data"
+    activities: list[ActivityResponse] = Field(
+        ..., description="List of activities"
     )
 
 
-class ActivityDataCountResponse(BaseModel):
-    """Count of activity data response schema."""
+class ActivityCountResponse(BaseModel):
+    """Count of activities response schema."""
 
-    model_config = ConfigDict(title="activityData.ActivityDataCountResponse")
+    model_config = ConfigDict(title="activity.ActivityCountResponse")
 
     count: int = Field(
         ...,
         ge=0,
-        description="Total number of activity data records",
+        description="Total number of activity records",
         examples=[42],
     )  # Attribute

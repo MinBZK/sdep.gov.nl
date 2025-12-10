@@ -12,7 +12,7 @@ from app.schemas.validation import HTTPValidationError
 # Create sub-application (v0)
 app_v0 = FastAPI(
     title="Short Term Rental (STR) - Single Digital Entry Point (SDEP)",
-    description="SDEP is a gateway for the electronic transmission of data between online short-term rental platforms and competent authorities, ensuring timely, reliable and efficient data sharing processes.\n\n- [Github (open source)](https://github.com/MinBZK/sdep.gov.nl)\n\n- [EU legislation](https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng)\n\n- [STR Application Profile (STR-AP)](https://semiceu.github.io/STR-AP/releases/1.0.1/)\n\n- [STR prototype v0.0.65](https://eu-str.sdep-pilot.eu/swagger/index.html)\n\nContact:\n\n- [boris.dijkmans@rijksoverheid.nl](mailto:boris.dijkmans@rijksoverheid.nl)",
+    description="SDEP is a gateway for the electronic transmission of data between online short-term rental platforms (STR) and competent authorities (CA), ensuring timely, reliable and efficient data sharing processes.\n\n- [Github (open source)](https://github.com/MinBZK/sdep.gov.nl)\n\n- [EU legislation](https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng)\n\n- [STR Application Profile (STR-AP)](https://semiceu.github.io/STR-AP/releases/1.0.1/)\n\n- [STR prototype v0.0.65](https://eu-str.sdep-pilot.eu/swagger/index.html)\n\nContact:\n\n- [boris.dijkmans@rijksoverheid.nl](mailto:boris.dijkmans@rijksoverheid.nl)",
     version=f"{settings.DTAP}-{settings.IMAGE_TAG}",
     root_path="/api/v0",
     responses={
@@ -66,19 +66,21 @@ app_v0.add_exception_handler(Exception, general_exception_handler)  # Catch-all
 # Register routers from common
 from app.api.common.routers import (
     auth,
-    ca_activitydata,
+    ca_activities,
+    ca_areas,
     health,
     ping,
-    str_activitydata,
+    str_activities,
     str_areas,
 )
 
 # Sort alphabetically
 app_v0.include_router(auth.router, prefix="/auth")
-app_v0.include_router(ca_activitydata.router, prefix="")
+app_v0.include_router(ca_activities.router, prefix="")
+app_v0.include_router(ca_areas.router, prefix="")
 app_v0.include_router(health.router, prefix="")
 app_v0.include_router(ping.router, prefix="")
-app_v0.include_router(str_activitydata.router, prefix="")
+app_v0.include_router(str_activities.router, prefix="")
 app_v0.include_router(str_areas.router, prefix="")
 
 

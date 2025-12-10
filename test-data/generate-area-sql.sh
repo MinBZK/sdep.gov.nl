@@ -35,7 +35,7 @@ encode_file_to_hex() {
     echo "decode('${hex_data}', 'hex')::bytea"
 }
 
-# Define area data
+# Define area
 # Format: "area_id|filename|zipfile|competent_authority_id|comment"
 declare -a AREAS=(
     "amsterdam-area-0363|Amsterdam-dummy.zip|Amsterdam-dummy.zip|sdep-ca-0363|Amsterdam area"
@@ -112,7 +112,7 @@ VALUES (
   (SELECT id FROM competent_authority WHERE competent_authority_id = '${ca_id}'),
   NOW()
 )
-ON CONFLICT (area_id) DO NOTHING;
+ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
 
 EOF
 done

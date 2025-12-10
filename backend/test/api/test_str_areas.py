@@ -20,7 +20,7 @@ def mock_verify_bearer_token() -> dict[str, Any]:
 
 
 @pytest.mark.database
-class TestStrAreasAPI:
+class TestStrAreaAPI:
     """Test suite for GET /str/areas API endpoint."""
 
     @pytest.fixture
@@ -430,7 +430,7 @@ class TestStrAreasAPI:
             )
 
         # Assert
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     async def test_get_areas_pagination_invalid_limit(
         self, async_session: AsyncSession, setup_overrides
@@ -446,7 +446,7 @@ class TestStrAreasAPI:
             )
 
         # Assert
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     async def test_get_areas_pagination_limit_exceeds_max(
         self, async_session: AsyncSession, setup_overrides
@@ -462,7 +462,7 @@ class TestStrAreasAPI:
             )
 
         # Assert
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     async def test_count_areas_empty_database(
         self, async_session: AsyncSession, setup_overrides
@@ -598,17 +598,17 @@ class TestStrAreasAPI:
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_get_area_data_not_found(
+    async def test_get_area_not_found(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test GET /str/area/{areaId} when area does not exist."""
+        """Test GET /str/areas/{areaId} when area does not exist."""
         # Arrange
         async with AsyncClient(
             transport=ASGITransport(app=app_v0), base_url="http://test"
         ) as client:
             # Act
             response = await client.get(
-                "/str/area/nonexistent-area-id",
+                "/str/areas/nonexistent-area-id",
                 headers={"Authorization": "Bearer test_token"},
             )
 
@@ -621,10 +621,10 @@ class TestStrAreasAPI:
         assert len(data["detail"]) > 0
         assert "nonexistent-area-id" in data["detail"][0]["msg"]
 
-    async def test_get_area_data_with_data(
+    async def test_get_area_with_data(
         self, async_session: AsyncSession, setup_overrides, competent_authority
     ):
-        """Test GET /str/area/{areaId} with area containing data."""
+        """Test GET /str/areas/{areaId} with area containing data."""
         # Arrange
         test_data = b"test_binary_data"
         test_filename = "test_area.zip"
@@ -640,7 +640,7 @@ class TestStrAreasAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/area/{area.area_id}",
+                f"/str/areas/{area.area_id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 
@@ -652,10 +652,10 @@ class TestStrAreasAPI:
             "content-disposition", ""
         )
 
-    async def test_get_area_data_without_authentication(
+    async def test_get_area_without_authentication(
         self, async_session: AsyncSession, setup_db_only, competent_authority
     ):
-        """Test GET /str/area/{areaId} without authentication token."""
+        """Test GET /str/areas/{areaId} without authentication token."""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -668,15 +668,15 @@ class TestStrAreasAPI:
             transport=ASGITransport(app=app_v0), base_url="http://test"
         ) as client:
             # Act
-            response = await client.get(f"/str/area/{area.area_id}")
+            response = await client.get(f"/str/areas/{area.area_id}")
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_get_area_data_with_invalid_token(
+    async def test_get_area_with_invalid_token(
         self, async_session: AsyncSession, setup_db_only, competent_authority
     ):
-        """Test GET /str/area/{areaId} with invalid authentication token."""
+        """Test GET /str/areas/{areaId} with invalid authentication token."""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -690,17 +690,17 @@ class TestStrAreasAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/area/{area.area_id}",
+                f"/str/areas/{area.area_id}",
                 headers={"Authorization": "Bearer invalid_token"},
             )
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_get_area_data_with_large_binary_data(
+    async def test_get_area_with_large_binary_data(
         self, async_session: AsyncSession, setup_overrides, competent_authority
     ):
-        """Test GET /str/area/{areaId} with large binary content."""
+        """Test GET /str/areas/{areaId} with large binary content."""
         # Arrange
         large_data = b"x" * 10000  # 10KB of data
         area = await AreaFactory.create_async(
@@ -715,7 +715,7 @@ class TestStrAreasAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/area/{area.area_id}",
+                f"/str/areas/{area.area_id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 
@@ -725,10 +725,10 @@ class TestStrAreasAPI:
         assert len(response.content) == 10000
         assert response.headers["content-type"] == "application/octet-stream"
 
-    async def test_get_area_data_multiple_areas_correct_isolation(
+    async def test_get_area_multiple_areas_correct_isolation(
         self, async_session: AsyncSession, setup_overrides, competent_authority
     ):
-        """Test GET /str/area/{areaId} returns correct area when multiple exist."""
+        """Test GET /str/areas/{areaId} returns correct area when multiple exist."""
         # Arrange
         area1 = await AreaFactory.create_async(
             async_session,
@@ -754,7 +754,7 @@ class TestStrAreasAPI:
         ) as client:
             # Act - request middle area
             response = await client.get(
-                f"/str/area/{area2.area_id}",
+                f"/str/areas/{area2.area_id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 

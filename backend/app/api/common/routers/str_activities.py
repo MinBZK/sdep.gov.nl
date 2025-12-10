@@ -1,4 +1,4 @@
-"""STR Activity Data endpoint.
+"""STR activities endpoint.
 
 Transaction Management Architecture (API Layer):
 - This API endpoint uses get_async_db dependency for automatic transaction management
@@ -22,10 +22,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.config import get_async_db
 from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 from app.exceptions.validation import ValidationError
-from app.schemas.activity_data import ActivityDataListRequest
+from app.schemas.activity import ActivityListRequest
 from app.schemas.auth import UnauthorizedError
 from app.security import verify_bearer_token
-from app.services import activity_data as activity_data_service
+from app.services import activity as activity_service
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +33,14 @@ router = APIRouter(tags=["str"])
 
 
 @router.post(
-    "/str/activity-data",
+    "/str/activities",
     status_code=status.HTTP_201_CREATED,
-    summary="Submit activity data",
-    description="Submit a list of rental activity data. All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Requires 'sdep_str' and 'sdep_write' roles. Platform ID and name are extracted from the JWT token.",
-    operation_id="postActivityData",
+    summary="Submit activities for platform (authorized by current bearer token)",
+    description="Submit a list of rental activities for platform (authorized by current bearer token). All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing.",
+    operation_id="postActivity",
     responses={
         "201": {
-            "description": "Activity data successfully processed and saved",
+            "description": "activities successfully processed and saved",
         },
         "400": {
             "description": "Bad Request - Validation error in submitted data",
@@ -50,20 +50,20 @@ router = APIRouter(tags=["str"])
             "description": "Unauthorized - Invalid or missing token",
         },
         "403": {
-            "description": "Forbidden - Missing required 'sdep_str' or 'sdep_write' role",
+            "description": "Forbidden - Missing required authorization roles",
         },
         "409": {
-            "description": "Conflict - Duplicate activity data (same URL and temporal dates) or constraint violation",
+            "description": "Conflict - Duplicate activities (same URL and temporal dates) or constraint violation",
         },
     },
 )
-async def post_activity_data(
-    data: ActivityDataListRequest,
+async def post_activities(
+    data: ActivityListRequest,
     session: AsyncSession = Depends(get_async_db),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
 ) -> dict[str, str]:
     """
-    Submit rental activity data for processing.
+    Submit rental activities for processing.
 
     Transaction Management:
     - API uses get_async_db which provides automatic transaction management
@@ -83,7 +83,7 @@ async def post_activity_data(
 
     Request Body:
     - metadata: Batch-level metadata (placeholder for future use)
-    - activities: List of activity data (minimum 1 required)
+    - activities: List of activities (minimum 1 required)
     - Each activity contains:
       - url: Advertisement URL (max 128 chars, unique in combination with temporal dates)
       - registrationNumber: Registration number (max 32 chars)
@@ -102,8 +102,8 @@ async def post_activity_data(
 
     Raises:
         HTTPException 400: Validation error
-        HTTPException 403: Forbidden - Missing required "sdep_str" role
-        HTTPException 409: Duplicate activity data (same URL and temporal dates) or constraint violation
+        HTTPException 403: Forbidden - Missing required authorization roles
+        HTTPException 409: Duplicate activities (same URL and temporal dates) or constraint violation
         HTTPException 500: Internal server error
     """
 
@@ -152,10 +152,11 @@ async def post_activity_data(
 
         # Call service layer with injected session
         # Transaction is managed by get_async_db dependency (auto-commit on success)
-        await activity_data_service.process_activity_data_list(session, activities_dict)
+        await activity_service.process_activity_list(session, activities_dict)
 
+        # Align response message with API contract used in tests
         return {
-            "message": f"Successfully processed {len(data.activities)} activity data record(s)"
+            "message": f"Successfully processed {len(data.activities)} activities record(s)"
         }
 
     except DuplicateResourceError as e:
@@ -175,5 +176,5 @@ async def post_activity_data(
         # Global handler logs with full stack trace
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process activity data",
+            detail="Failed to process activities",
         ) from e

@@ -1,4 +1,4 @@
-"""Tests for Areas business service"""
+"""Tests for Area business service"""
 
 import pytest
 from app.services import area
@@ -8,8 +8,8 @@ from test.fixtures.factories import AreaFactory
 
 
 @pytest.mark.database
-class TestAreasService:
-    """Test suite for Areas business service"""
+class TestAreaService:
+    """Test suite for Area business service"""
 
     async def test_get_areas_empty(self, async_session: AsyncSession):
         """Test getting areas when database is empty"""
@@ -423,3 +423,103 @@ class TestAreasService:
         assert result3 is not None
         assert result3["filename"] == "area3.zip"
         assert result3["filedata"] == b"data3"
+
+    # Tests for process_area_list
+
+    async def test_process_area_list_single_area(self, async_session: AsyncSession):
+        """Test processing a single area in a list"""
+        # Arrange
+        areas_list = [
+            {
+                "area_id": "list-area-001",
+                "filename": "ListArea001.zip",
+                "filedata": b"data1",
+                "competent_authority_id_str": "0363",
+                "competent_authority_name": "Gemeente Amsterdam",
+            }
+        ]
+
+        # Act
+        await area.process_area_list(async_session, areas_list)
+
+        # Assert
+        count = await area.count_areas(async_session)
+        assert count == 1
+
+    async def test_process_area_list_multiple_areas(
+        self, async_session: AsyncSession
+    ):
+        """Test processing multiple areas in a list"""
+        # Arrange
+        areas_list = [
+            {
+                "area_id": f"area-{i:03d}",
+                "filename": f"Area{i:03d}.zip",
+                "filedata": f"data{i}".encode(),
+                "competent_authority_id_str": "0363",
+                "competent_authority_name": "Gemeente Amsterdam",
+            }
+            for i in range(1, 6)
+        ]
+
+        # Act
+        await area.process_area_list(async_session, areas_list)
+
+        # Assert
+        count = await area.count_areas(async_session)
+        assert count == 5
+
+    async def test_process_area_list_creates_competent_authority_if_not_exists(
+        self, async_session: AsyncSession
+    ):
+        """Test that competent authority is created if it doesn't exist"""
+        # Arrange
+        areas_list = [
+            {
+                "area_id": "new-ca-area-001",
+                "filename": "NewCA001.zip",
+                "filedata": b"data1",
+                "competent_authority_id_str": "8888",
+                "competent_authority_name": "Test Authority",
+            }
+        ]
+
+        # Act
+        await area.process_area_list(async_session, areas_list)
+
+        # Assert - verify competent authority was created
+        from app.crud import competent_authority as ca_crud
+
+        cas = await ca_crud.get_by_competent_authority_id(async_session, "8888")
+        assert len(cas) == 1
+        assert cas[0].competent_authority_name == "Test Authority"
+
+    async def test_process_area_list_multiple_areas_same_authority(
+        self, async_session: AsyncSession
+    ):
+        """Test processing multiple areas from the same competent authority"""
+        # Arrange
+        areas_list = [
+            {
+                "area_id": f"amsterdam-{i}",
+                "filename": f"Amsterdam{i}.zip",
+                "filedata": f"data{i}".encode(),
+                "competent_authority_id_str": "0363",
+                "competent_authority_name": "Gemeente Amsterdam",
+            }
+            for i in range(1, 4)
+        ]
+
+        # Act
+        await area.process_area_list(async_session, areas_list)
+
+        # Assert
+        from app.models.competent_authority import CompetentAuthority
+        from sqlalchemy import select
+
+        cas = await async_session.execute(select(CompetentAuthority))
+        ca_count = len(cas.scalars().all())
+        assert ca_count == 1  # Only one CA should be created
+
+        area_count = await area.count_areas(async_session)
+        assert area_count == 3  # But three areas
