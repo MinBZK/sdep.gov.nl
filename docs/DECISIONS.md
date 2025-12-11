@@ -14,8 +14,8 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 **Table of content**
 
 - [Approach](#approach)
-- [API](#api)
-- [Security](#security)
+- [API decisions](#api-decisions)
+- [Security decisions](#security-decisions)
 - [Discussed but pending](#discussed-but-pending)
 
 ## Approach
@@ -27,26 +27,26 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 - Use GitHub tags for initial versioning
 - Use API versioning later (once CAs and platforms are connected)
 
-## API
+## API decisions
 
 For motivation, see below table.
 
-| #               | Decision                            | Example                                                                           |
-| :-------------- | :---------------------------------- | :-------------------------------------------------------------------------------- |
-| **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                   |
-| **API&nbsp;02** | Nouns instead of verbs              | `/ca/areas`                                                                       |
-| **API&nbsp;03** | Plurals for resources               | `/ca/areas`                                                                       |
-| **API&nbsp;04** | Consistent datamodel                | `Activity`, `Area`                                                                |
-| **API&nbsp;05** | Consistent endpoints                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                     |
-| **API&nbsp;06** | Consistent pagination               | `offset`, `limit`, all endpoints                                                  |
-| **API&nbsp;07** | Syntax validation                   | `postal code`                                                                     |
-| **API&nbsp;08** | Semantical validation               | `begin timestamp < end timestamp`                                                 |
-| **API&nbsp;09** | Integrity validation                | Duplicate key error                                                                                  |
-| **API&nbsp;10** | Transaction size constraints (POST) |                                                                                   |
-| **API&nbsp;11** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                    |
-| **API&nbsp;12** | Logical ordening => readability     |                                                                                   |
-| **API&nbsp;13** | Essentiality                        | `POST /str/activities` => `areaId` and `competentAuthorityId` (unique constraint) |
-| **API&nbsp;14** | Consistent HTTP response codes      | 200, 201                                                                          |
+| #               | Decision                            | Example                                                                                          |
+| :-------------- | :---------------------------------- | :----------------------------------------------------------------------------------------------- |
+| **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                                  |
+| **API&nbsp;02** | Nouns instead of verbs              | `/ca/areas`                                                                                      |
+| **API&nbsp;03** | Plurals for resources               | `/ca/areas`                                                                                      |
+| **API&nbsp;04** | Consistent datamodel                | `Activity`, `Area`                                                                               |
+| **API&nbsp;05** | Consistent endpoints                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                    |
+| **API&nbsp;06** | Consistent pagination               | `offset`, `limit`, all endpoints                                                                 |
+| **API&nbsp;07** | Syntax validation                   | `postal code`                                                                                    |
+| **API&nbsp;08** | Semantical validation               | `begin timestamp < end timestamp`                                                                |
+| **API&nbsp;09** | Integrity validation                | Duplicate key error                                                                              |
+| **API&nbsp;10** | Transaction size constraints (POST) |                                                                                                  |
+| **API&nbsp;11** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                                   |
+| **API&nbsp;12** | Logical ordening => readability     |                                                                                                  |
+| **API&nbsp;13** | Essentiality                        | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`) |
+| **API&nbsp;14** | Consistent HTTP response codes      | 200, 201                                                                                         |
 
 Motivation:
 
@@ -65,7 +65,7 @@ Motivation:
 
 **API 12** For POST, only ids, no redundant names
 
-## Security
+## Security decisions
 
 For motivation, see below table.
 
