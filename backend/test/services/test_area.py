@@ -490,9 +490,9 @@ class TestAreaService:
         # Assert - verify competent authority was created
         from app.crud import competent_authority as ca_crud
 
-        cas = await ca_crud.get_by_competent_authority_id(async_session, "8888")
-        assert len(cas) == 1
-        assert cas[0].competent_authority_name == "Test Authority"
+        ca = await ca_crud.get_by_competent_authority_id(async_session, "8888")
+        assert ca is not None
+        assert ca.competent_authority_name == "Test Authority"
 
     async def test_process_area_list_multiple_areas_same_authority(
         self, async_session: AsyncSession

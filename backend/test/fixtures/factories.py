@@ -69,8 +69,8 @@ class AreaFactory(AsyncSQLAlchemyFactory):
             # Try to find existing CompetentAuthority by competent_authority_id
             if ca_id:
                 existing = await ca_crud.get_by_competent_authority_id(session, ca_id)
-                if existing:
-                    ca = existing[0]  # get_by_competent_authority_id returns a list
+                if existing is not None:
+                    ca = existing  # get_by_competent_authority_id returns a single instance or None
                 else:
                     ca = await CompetentAuthorityFactory.create_async(
                         session,
@@ -137,7 +137,9 @@ class TemporalFactory(factory.Factory):
 class ActivityFactory(AsyncSQLAlchemyFactory):
     """Factory for Activity model.
 
-    Note: The combination of url, temporal_start_date_time, and temporal_end_date_time must be unique.
+    Note: Two unique constraints apply:
+    1. The combination of url, temporal_start_date_time, and temporal_end_date_time must be unique.
+    2. The combination of activity_id and platform_id must be unique.
     The factory uses sequences to ensure uniqueness.
     """
 
@@ -145,8 +147,8 @@ class ActivityFactory(AsyncSQLAlchemyFactory):
         model = Activity
 
     activity_id = factory.Sequence(
-        lambda n: f"activity{n:016x}"[:20]
-    )  # Lowercase hex, e.g. "activity00000000001"
+        lambda n: f"activity-{n:08d}"
+    )  # e.g. "activity-00000001", "activity-00000002", etc.
     url = factory.Sequence(lambda n: f"http://example.com/listing-{n}")
     # Address composite fields (street, number, postal_code, city are mandatory)
     address_street = Faker("street_name")

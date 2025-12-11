@@ -22,6 +22,9 @@ class Area(Base):
     An area constitutes a unit of short-term rental regulation (STR).
     An area is supplied by (regulated by) a competent authority (CA).
     An area is expressed as a binary (shapefile).
+
+    The combination of area_id and competent_authority_id must be unique.
+    This allows the same area_id to be reused across different competent authorities.
     """
 
     __tablename__ = "area"

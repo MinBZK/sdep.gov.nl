@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help up down restart status test logs postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
+.PHONY: help up down restart status test test-quiet logs postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
         postgres-reset .build .is-up .clean-stale .drop-database .migrate-database .load-test-data .generate-area-sql \
         .keycloak-wait .keycloak-realm .keycloak-admin .keycloak-roles .keycloak-clients \
         .check-client-credentials test-security test-str test-ca \
@@ -326,7 +326,7 @@ test-str: .check-client-credentials .is-up ## Test STR endpoints
 	./test/str-activities.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ STR endpoints tested"
 
-test: .check-client-credentials .is-up ## Test all
+test-verbose: .check-client-credentials .is-up ## Test all (verbose)
 	@if [ -z "$$ENV_LOADED" ]; then set -a && source ./.env && set +a; fi && set -o pipefail && \
 	RESULTS_FILE=$$(mktemp) && \
 	FAILED_TESTS_FILE=$$(mktemp) && \
@@ -380,6 +380,11 @@ test: .check-client-credentials .is-up ## Test all
 	else \
 		echo "✅ All tests passed!"; \
 	fi
+
+test: .check-client-credentials .is-up ## Test all (quiet)
+	@if [ -z "$$ENV_LOADED" ]; then set -a && source ./.env && set +a; fi && \
+	set -o pipefail && \
+	$(MAKE) --no-print-directory test-verbose 2>&1 | tail -20
 
 ##@ Help
 

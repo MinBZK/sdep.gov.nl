@@ -191,6 +191,58 @@ class TestActivityCRUD:
             )
             await async_session.flush()
 
+    async def test_create_activity_with_duplicate_activity_id_platform_constraint(
+        self, async_session: AsyncSession
+    ):
+        """Test that duplicate activity_id+platform_id combination raises IntegrityError."""
+        # Arrange
+        area = await AreaFactory.create_async(async_session)
+        platform = await PlatformFactory.create_async(async_session)
+        activity_id_value = "test-activity-duplicate-id"
+
+        # Create first activity
+        await activity.create(
+            session=async_session,
+            activity_id=activity_id_value,
+            url="http://example.com/first-listing",
+            address_street="First Street",
+            address_number=100,
+            address_letter=None,
+            address_addition=None,
+            address_postal_code="1111AA",
+            address_city="FirstCity",
+            registration_number="REG111",
+            area_id=area.id,
+            number_of_guests=3,
+            country_of_guests=["NLD"],
+            temporal_start_date_time=datetime(2025, 8, 1, 10, 0, 0),
+            temporal_end_date_time=datetime(2025, 8, 7, 10, 0, 0),
+            platform_id=platform.id,
+        )
+        await async_session.flush()
+
+        # Act & Assert - Try to create another activity with same activity_id and platform_id
+        with pytest.raises(IntegrityError):
+            await activity.create(
+                session=async_session,
+                activity_id=activity_id_value,  # Same activity_id
+                url="http://example.com/second-listing",  # Different URL
+                address_street="Second Street",
+                address_number=200,
+                address_letter=None,
+                address_addition=None,
+                address_postal_code="2222BB",
+                address_city="SecondCity",
+                registration_number="REG222",
+                area_id=area.id,
+                number_of_guests=5,
+                country_of_guests=["DEU"],
+                temporal_start_date_time=datetime(2025, 9, 1, 10, 0, 0),  # Different dates
+                temporal_end_date_time=datetime(2025, 9, 7, 10, 0, 0),
+                platform_id=platform.id,  # Same platform_id
+            )
+            await async_session.flush()
+
     async def test_update_activity(self, async_session: AsyncSession):
         """Test updating an existing activity."""
         # Arrange
@@ -388,6 +440,54 @@ class TestActivityCRUD:
         """Test getting activity by non-existent activity_id."""
         # Act
         result = await activity.get_by_activity_id(async_session, "nonexistent-id")
+
+        # Assert
+        assert result is None
+
+    async def test_get_by_activity_id_and_platform_id(self, async_session: AsyncSession):
+        """Test getting activity by activity_id and platform_id (unique constraint)."""
+        # Arrange
+        platform1 = await PlatformFactory.create_async(async_session)
+        platform2 = await PlatformFactory.create_async(async_session)
+        test_activity_id = "my-shared-activity-id"
+
+        # Create two activities with the same activity_id but different platforms
+        act1 = await ActivityFactory.create_async(
+            async_session,
+            activity_id=test_activity_id,
+            platform_id=platform1.id
+        )
+        act2 = await ActivityFactory.create_async(
+            async_session,
+            activity_id=test_activity_id,
+            platform_id=platform2.id
+        )
+
+        # Act
+        result1 = await activity.get_by_activity_id_and_platform_id(
+            async_session, test_activity_id, platform1.id
+        )
+        result2 = await activity.get_by_activity_id_and_platform_id(
+            async_session, test_activity_id, platform2.id
+        )
+
+        # Assert
+        assert result1 is not None
+        assert result1.id == act1.id
+        assert result1.platform_id == platform1.id
+
+        assert result2 is not None
+        assert result2.id == act2.id
+        assert result2.platform_id == platform2.id
+
+    async def test_get_by_activity_id_and_platform_id_not_found(
+        self, async_session: AsyncSession
+    ):
+        """Test getting activity by non-existent activity_id and platform_id combination."""
+        # Act
+        result = await activity.get_by_activity_id_and_platform_id(
+            async_session, "nonexistent-id", 99999
+        )
 
         # Assert
         assert result is None

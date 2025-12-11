@@ -67,7 +67,7 @@ class TestSTRActivitiesAPI:
         # Create a single competent authority for all test areas
         ca = await CompetentAuthorityFactory.create_async(
             async_session,
-            competent_authority_id="TEST",
+            competent_authority_id="test",
             competent_authority_name="Test Authority",
         )
 
@@ -114,6 +114,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0363",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD", "DEU", "BEL"],
                     "numberOfGuests": 4,
                 }
@@ -165,6 +166,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0363",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 },
@@ -183,6 +185,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-08T10:00:00Z",
                     },
                     "areaId": "0363",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["DEU", "BEL"],
                     "numberOfGuests": 4,
                 },
@@ -232,6 +235,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-07-07T11:00:00Z",
                     },
                     "areaId": "0344",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD", "DEU", "BEL", "FRA"],
                     "numberOfGuests": 8,
                 }
@@ -281,6 +285,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -340,6 +345,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0363",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -409,6 +415,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0363",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -457,6 +464,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -498,6 +506,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -541,6 +550,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-01T11:00:00Z",  # Before start!
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -583,6 +593,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 },
@@ -600,6 +611,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",  # Same temporal!
                     },
                     "areaId": "0002",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["DEU"],
                     "numberOfGuests": 4,
                 },
@@ -657,6 +669,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 },
@@ -674,6 +687,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-14T11:00:00Z",  # Different temporal!
                     },
                     "areaId": "0002",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["DEU"],
                     "numberOfGuests": 4,
                 },
@@ -748,6 +762,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": f"{i:04d}",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -794,6 +809,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -844,6 +860,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -895,6 +912,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca-4d8a",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -943,6 +961,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca-4d8a",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -988,6 +1007,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca-4d8a",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1036,6 +1056,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "CEABA747-15CA",  # Invalid: uppercase
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1086,6 +1107,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "area_123",  # Invalid: contains underscore
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1134,6 +1156,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca-4d8a-81f7",  # Valid: alphanumeric with hyphens
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1177,6 +1200,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": [
                         "nld"
                     ],  # Invalid: lowercase (ISO 3166-1 alpha-3)
@@ -1224,6 +1248,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NL"],  # Invalid: 2 characters instead of 3
                     "numberOfGuests": 2,
                 }
@@ -1269,6 +1294,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["ABCD"],  # Invalid: 4 characters instead of 3
                     "numberOfGuests": 2,
                 }
@@ -1314,6 +1340,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["N1D"],  # Invalid: contains number
                     "numberOfGuests": 2,
                 }
@@ -1359,6 +1386,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "ceaba747-15ca",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": [
                         "NLD",
                         "USA",
@@ -1407,6 +1435,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
                     "areaId": "0363",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1464,6 +1493,7 @@ class TestSTRActivitiesAPI:
                         "endDatetime": "2025-01-07T11:00:00Z",
                     },
                     "areaId": "0001",
+                    "competentAuthorityId": "test",
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1486,3 +1516,57 @@ class TestSTRActivitiesAPI:
         assert "detail" in data
         error = data["detail"][0]
         assert "2025" in error["msg"]
+
+    async def test_post_activities_with_activity_id(
+        self, async_session: AsyncSession, setup_overrides, test_areas
+    ):
+        """Test POST /str/activities with optional activityId field provided."""
+        # Arrange
+        payload = {
+            "metadata": {},
+            "activities": [
+                {
+                    "activityId": "custom-activity-id-001",
+                    "url": "http://example.com/listing-with-id",
+                    "registrationNumber": "REG123456",
+                    "address": {
+                        "street": "Turfmarkt",
+                        "number": 147,
+                        "postalCode": "2500EA",
+                        "city": "Den Haag",
+                    },
+                    "temporal": {
+                        "startDatetime": "2025-06-01T14:00:00Z",
+                        "endDatetime": "2025-06-07T11:00:00Z",
+                    },
+                    "areaId": "0363",
+                    "competentAuthorityId": "test",
+                    "countryOfGuests": ["NLD", "DEU", "BEL"],
+                    "numberOfGuests": 4,
+                }
+            ],
+        }
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            # Act
+            response = await client.post(
+                "/str/activities",
+                json=payload,
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        # Assert
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert "message" in data
+        assert "1" in data["message"]
+
+        # Verify data was saved with the specified activity_id
+        saved = await activity_crud.get_by_url(
+            async_session, "http://example.com/listing-with-id"
+        )
+        assert len(saved) == 1
+        assert saved[0].activity_id == "custom-activity-id-001"
+        assert saved[0].registration_number == "REG123456"

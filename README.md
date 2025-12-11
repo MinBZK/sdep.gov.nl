@@ -10,7 +10,7 @@ Overview:
 - [Background](#background)
 - [Main functionality](#main-functionality)
 - [Design decisions](#design-decisions)
-- [Integration test](#integration-test)
+- [Test package](#test-package)
 - [Documentation](#documentation)
 
 ## Quick start (local workstation)
@@ -84,13 +84,13 @@ https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng
 
 - [Design decisions](./docs/DECISIONS.md)
 
-## Integration test
+## Test package
 
-The local integration tests (`make test`) are also run against deployment in Kubernetes (TST, ACC, PRE, PRD)
+The integration tests (`make test`) test the API in real life (local).
 
-This deployment is out of the scope of this project.
+These tests can also be run against real deployments (TST, ACC, PRE, PRD).
 
-Inquire SDEP NL for tips how to re-use.
+Inquire SDEP NL for more info/re-use.
 
 ## Documentation
 

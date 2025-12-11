@@ -152,15 +152,83 @@ class ActivityRequest(BaseModel):
     - Validates all syntax constraints (lengths, ranges, types)
     - Converts camelCase (API) to snake_case (internal Python)
 
-    Constraints:
-    - Unique constraint: { url, temporal.startDatetime, temporal.endDatetime }
-      (enforced at database level, returns 409 Conflict on violation)
+    Activity ID:
+    - Optional: If not provided, will be auto-generated (UUID-based)
+    - If provided: Must be lowercase alphanumeric with dashes (max 64 chars)
+
+    Constraints (enforced at database level, returns 409 Conflict on violation):
+    - Unique constraint 1: { url, temporal.startDatetime, temporal.endDatetime }
+    - Unique constraint 2: { activityId, platform } (platform from JWT token)
     """
 
     model_config = ConfigDict(
         title="activity.ActivityRequest",
         populate_by_name=True,  # Allow both snake_case and camelCase
     )
+
+    activity_id: str | None = Field(
+        None,
+        alias="activityId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Activity identifier (optional, auto-generated if not provided). Lowercase alphanumeric with dashes.",
+        examples=["activity-amsterdam-0363-001"],
+    )  # Attribute
+
+    @field_validator("activity_id")
+    @classmethod
+    def validate_activity_id_alphanumeric(cls, v: str | None) -> str | None:
+        """Validate activity_id is lowercase alphanumeric with dashes."""
+        if v is not None:
+            allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
+            if not all(c in allowed_chars for c in v):
+                raise ValueError(
+                    "Activity ID must contain only lowercase alphanumeric characters and dashes"
+                )
+        return v
+
+    area_id: str = Field(
+        ...,
+        alias="areaId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Area identifier string (lowercase alphanumeric with dashes)",
+        examples=["amsterdam-area-0363"],
+    )  # Attribute
+
+    @field_validator("area_id")
+    @classmethod
+    def validate_area_id_alphanumeric(cls, v: str) -> str:
+        """Validate area_id is lowercase alphanumeric with dashes."""
+        allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
+        if not all(c in allowed_chars for c in v):
+            raise ValueError(
+                "Area ID must contain only lowercase alphanumeric characters and dashes"
+            )
+        return v
+
+    competent_authority_id: str = Field(
+        ...,
+        alias="competentAuthorityId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Competent authority identifier string (lowercase alphanumeric with dashes)",
+        examples=["sdep-ca-0363"],
+    )  # Attribute
+
+    @field_validator("competent_authority_id")
+    @classmethod
+    def validate_competent_authority_id_alphanumeric(cls, v: str) -> str:
+        """Validate competent_authority_id is lowercase alphanumeric with dashes."""
+        allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
+        if not all(c in allowed_chars for c in v):
+            raise ValueError(
+                "Competent authority ID must contain only lowercase alphanumeric characters and dashes"
+            )
+        return v
 
     url: str = Field(
         ...,
@@ -183,27 +251,6 @@ class ActivityRequest(BaseModel):
         description="Registration number for the address",
         examples=["REG0001"],
     )  # Attribute
-
-    area_id: str = Field(
-        ...,
-        alias="areaId",
-        min_length=1,
-        max_length=64,
-        pattern=r"^[a-z0-9-]+$",
-        description="Area identifier string (lowercase alphanumeric with dashes)",
-        examples=["amsterdam-area-0363"],
-    )  # Attribute
-
-    @field_validator("area_id")
-    @classmethod
-    def validate_area_id_alphanumeric(cls, v: str) -> str:
-        """Validate area_id is lowercase alphanumeric with dashes."""
-        allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
-        if not all(c in allowed_chars for c in v):
-            raise ValueError(
-                "Area ID must contain only lowercase alphanumeric characters and dashes"
-            )
-        return v
 
     number_of_guests: int = Field(
         ...,
@@ -259,6 +306,7 @@ class ActivityRequest(BaseModel):
             Dictionary with snake_case keys and flattened structure
         """
         return {
+            "activity_id": self.activity_id,
             "url": self.url,
             "registration_number": self.registration_number,
             "platform_id_str": platform_id,
@@ -272,6 +320,7 @@ class ActivityRequest(BaseModel):
             "temporal_start_date_time": self.temporal.start_date_time,
             "temporal_end_date_time": self.temporal.end_date_time,
             "area_id": self.area_id,
+            "competent_authority_id": self.competent_authority_id,
             "country_of_guests": self.country_of_guests,
             "number_of_guests": self.number_of_guests,
         }

@@ -16,6 +16,7 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 - [Approach](#approach)
 - [API](#api)
 - [Security](#security)
+- [Discussed but pending](#discussed-but-pending)
 
 ## Approach
 
@@ -30,7 +31,7 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 For motivation, see below table.
 
-| #               | Pattern                             | Example                                                                           |
+| #               | Decision                            | Example                                                                           |
 | :-------------- | :---------------------------------- | :-------------------------------------------------------------------------------- |
 | **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                   |
 | **API&nbsp;02** | Nouns instead of verbs              | `/ca/areas`                                                                       |
@@ -40,7 +41,7 @@ For motivation, see below table.
 | **API&nbsp;06** | Consistent pagination               | `offset`, `limit`, all endpoints                                                  |
 | **API&nbsp;07** | Syntax validation                   | `postal code`                                                                     |
 | **API&nbsp;08** | Semantical validation               | `begin timestamp < end timestamp`                                                 |
-| **API&nbsp;09** | Integrity validation                |                                                                                   |
+| **API&nbsp;09** | Integrity validation                | Duplicate key error                                                                                  |
 | **API&nbsp;10** | Transaction size constraints (POST) |                                                                                   |
 | **API&nbsp;11** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                    |
 | **API&nbsp;12** | Logical ordening => readability     |                                                                                   |
@@ -53,11 +54,14 @@ Motivation:
 
 **API 02** Best practice - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
 
-**API 04.a** Avoid code duplication (let CA filter out activityId for reporting when needed, as exception to the rule)
+**API 04**
 
-**API 04.b** Consistent use of Address (or consistently choose Unit)
+- No code duplication ca-area/str-area (let CA filter on areaId when needed)
+- Consistent use of Address only (units are covered by unicity of advertisement URL?)
 
-**API 09** Duplicate key error, to avoid reporting inconsistencies (add versioning later on?)
+**API 09**
+
+- If CA or STR have (wants to submit) double-entries (from their own database), they can optionally use `Area.areaId` or `Activity.activityId`
 
 **API 12** For POST, only ids, no redundant names
 
@@ -65,13 +69,26 @@ Motivation:
 
 For motivation, see below table.
 
-| #               | Pattern                  | Example |
-| :-------------- | :----------------------- | :------ |
-| **SEC&nbsp;01** | oAuth2 with JWT          |         |
-| **SEC&nbsp;02** | client credentials grant |         |
+| #               | Decision                                             | Example |
+| :-------------- | :--------------------------------------------------- | :------ |
+| **SEC&nbsp;01** | oAuth2 with JWT                                      |         |
+| **SEC&nbsp;02** | client credentials grant                             |         |
+| **SEC&nbsp;03** | Support for delegated API-invocation (third-parties) |         |
 
 Motivation:
 
 **SEC 01** - For trusted machine-to-machine (M2M) interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 
 **SEC 02** - Implicit flow (obtain access token directly, without backend secret) is deprecated
+
+**SEC 03** - Smaller platforms may deliver rental activities to third-parties, and delegate API invocation those parties. Those parties will be registered as the platform client.
+
+## Discussed but pending
+
+- Option: for POST requests, instead of "all are processed atomically (all succeed or all fail)", allow partial failures
+  - Pro: more efficient on resubmit
+  - Con: more complex (maintaining state, what do you do with these failures, which ones to re-submit, ...)
+  - Alternative: use smaller transaction batches
+- Option: async requests (acknowledge receipt, handle processing asynchrously)
+  - Con: API becomes more complex (report back functionality required)
+  - Consideration: expect no performance gain (storaging temporarily or directly permanently makes no difference)

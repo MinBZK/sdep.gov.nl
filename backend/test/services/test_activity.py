@@ -7,7 +7,12 @@ from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 from app.services import activity as activity_service
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import ActivityFactory, AreaFactory, PlatformFactory
+from test.fixtures.factories import (
+    ActivityFactory,
+    AreaFactory,
+    CompetentAuthorityFactory,
+    PlatformFactory,
+)
 
 
 @pytest.mark.database
@@ -37,6 +42,7 @@ class TestActivityService:
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
                 "area_id": area.area_id,
+                "competent_authority_id": "0363",
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -76,6 +82,7 @@ class TestActivityService:
                 "address_city": "Amsterdam",
                 "registration_number": f"REG{i:03d}",
                 "area_id": area.area_id,
+                "competent_authority_id": "0363",
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0)
@@ -103,6 +110,9 @@ class TestActivityService:
         """Test that platform is created if it doesn't exist"""
         # Arrange
         area = await AreaFactory.create_async(async_session)
+        # Need to refresh to get the competent_authority relationship loaded
+        await async_session.refresh(area, ["competent_authority"])
+
         activities = [
             {
                 "url": "http://example.com/listing-1",
@@ -114,6 +124,7 @@ class TestActivityService:
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
                 "area_id": area.area_id,
+                "competent_authority_id": area.competent_authority.competent_authority_id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -141,6 +152,9 @@ class TestActivityService:
         """Test that existing platform is reused if it exists"""
         # Arrange
         area = await AreaFactory.create_async(async_session)
+        # Need to refresh to get the competent_authority relationship loaded
+        await async_session.refresh(area, ["competent_authority"])
+
         existing_platform = await PlatformFactory.create_async(
             async_session,
             platform_id="existing_platform",
@@ -157,6 +171,7 @@ class TestActivityService:
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
                 "area_id": area.area_id,
+                "competent_authority_id": area.competent_authority.competent_authority_id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -184,7 +199,11 @@ class TestActivityService:
     ):
         """Test processing activities with optional address fields"""
         # Arrange
-        area = await AreaFactory.create_async(async_session)
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
         activities = [
             {
                 "url": "http://example.com/listing-1",
@@ -196,6 +215,7 @@ class TestActivityService:
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
                 "area_id": area.area_id,
+                "competent_authority_id": "0363",
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -218,7 +238,11 @@ class TestActivityService:
         self, async_session: AsyncSession
     ):
         """Test that processing fails when area doesn't exist"""
-        # Arrange
+        # Arrange - create competent authority so that area lookup is reached
+        await CompetentAuthorityFactory.create_async(
+            async_session, competent_authority_id="test"
+        )
+
         activities = [
             {
                 "url": "http://example.com/listing-1",
@@ -230,6 +254,7 @@ class TestActivityService:
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
                 "area_id": "nonexistent-area-id",
+                "competent_authority_id": "test",
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -245,17 +270,24 @@ class TestActivityService:
                 async_session, activities
             )
 
-        assert "Area with area_id 'nonexistent-area-id' not found" in str(
+        assert "Area with area_id 'nonexistent-area-id' and competent_authority_id 'test' not found" in str(
             exc_info.value
         )
-        assert exc_info.value.details == {"area_id": "nonexistent-area-id"}
+        assert exc_info.value.details == {
+            "area_id": "nonexistent-area-id",
+            "competent_authority_id": "test",
+        }
 
     async def test_process_activity_list_raises_error_for_duplicate(
         self, async_session: AsyncSession
     ):
         """Test that processing fails when duplicate activity is submitted"""
         # Arrange
-        area = await AreaFactory.create_async(async_session)
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
         platform = await PlatformFactory.create_async(async_session)
 
         # Create first activity
@@ -280,6 +312,7 @@ class TestActivityService:
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
                 "area_id": area.area_id,
+                "competent_authority_id": "0363",
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -564,7 +597,7 @@ class TestActivityService:
         assert isinstance(activity_dict["address_postal_code"], str)
         assert isinstance(activity_dict["address_city"], str)
         assert isinstance(activity_dict["registration_number"], str)
-        assert isinstance(activity_dict["area_id"], int)
+        assert isinstance(activity_dict["area_id"], str)  # area_id is string business identifier
         assert isinstance(activity_dict["number_of_guests"], int)
         assert isinstance(activity_dict["country_of_guests"], list)
         assert isinstance(activity_dict["temporal_start_date_time"], datetime)
@@ -793,3 +826,53 @@ class TestActivityService:
         assert len(result) == 1
         assert result[0]["platform_id"] == "platform99"
         assert result[0]["platform_name"] == "Super Platform"
+
+    async def test_process_activity_list_with_activity_id(
+        self, async_session: AsyncSession
+    ):
+        """Test processing activity with optional activity_id provided"""
+        # Arrange
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        activities = [
+            {
+                "activity_id": "custom-activity-123",
+                "url": "http://example.com/listing-with-id",
+                "address_street": "Damstraat",
+                "address_number": "1",
+                "address_letter": None,
+                "address_addition": None,
+                "address_postal_code": "1012JS",
+                "address_city": "Amsterdam",
+                "registration_number": "REG001",
+                "area_id": area.area_id,
+                "competent_authority_id": "0363",
+                "number_of_guests": 4,
+                "country_of_guests": ["NLD", "DEU"],
+                "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
+                "temporal_end_date_time": datetime(2025, 6, 8, 12, 0, 0),
+                "platform_id_str": "platform01",
+                "platform_name": "Booking Platform",
+            }
+        ]
+
+        # Act
+        await activity_service.process_activity_list(
+            async_session, activities
+        )
+
+        # Assert
+        count = await activity_service.count_activity(async_session)
+        assert count == 1
+
+        # Verify activity was created with the specified activity_id
+        from app.crud import activity as activity_crud
+
+        saved = await activity_crud.get_by_url(
+            async_session, "http://example.com/listing-with-id"
+        )
+        assert len(saved) == 1
+        assert saved[0].activity_id == "custom-activity-123"

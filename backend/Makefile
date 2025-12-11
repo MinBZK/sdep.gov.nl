@@ -157,6 +157,9 @@ test: ## Run all tests
 	uv run python -m pytest
 	@echo "✅ All tests completed!"
 
+test-quiet: ## Run all tests (quiet)
+	@uv run python -m pytest -q --tb=line --no-header 2>&1 | tail -20
+
 test-coverage: ## Run tests with coverage report
 	@echo "🧪 Running tests with coverage..."
 	uv run python -m pytest --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml

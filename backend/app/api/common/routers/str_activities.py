@@ -36,7 +36,7 @@ router = APIRouter(tags=["str"])
     "/str/activities",
     status_code=status.HTTP_201_CREATED,
     summary="Submit activities for platform (authorized by current bearer token)",
-    description="Submit a list of rental activities for platform (authorized by current bearer token). All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing.",
+    description="Submit a list of rental activities for platform (authorized by current bearer token). All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use activityId (functional, optional, otherwise randomized) when having (wanting to submit) double-entries from your own adminstation.",
     operation_id="postActivity",
     responses={
         "201": {
@@ -53,7 +53,7 @@ router = APIRouter(tags=["str"])
             "description": "Forbidden - Missing required authorization roles",
         },
         "409": {
-            "description": "Conflict - Duplicate activities (same URL and temporal dates) or constraint violation",
+            "description": "Conflict - Duplicate activities violating unique constraints: (URL + temporal dates) or (activityId + platform)",
         },
     },
 )
@@ -85,6 +85,7 @@ async def post_activities(
     - metadata: Batch-level metadata (placeholder for future use)
     - activities: List of activities (minimum 1 required)
     - Each activity contains:
+      - activityId: Activity identifier (optional, max 64 chars, auto-generated if not provided)
       - url: Advertisement URL (max 128 chars, unique in combination with temporal dates)
       - registrationNumber: Registration number (max 32 chars)
       - address: Street, number, postalCode, city (all mandatory), letter and addition (optional)

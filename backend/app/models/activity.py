@@ -70,7 +70,9 @@ class Activity(Base):
     in case the address is advertised in parts.
     The registration number is consequently replicated in each Activity.
 
-    An Activity is made unique through the combination of URL, start datetime, and end datetime.
+    An Activity has two unique constraints:
+    1. The combination of URL, start datetime, and end datetime must be unique
+    2. The combination of activity_id and platform_id must be unique
     Although registrationNumber is a string, it still is commonly referred to as "number".
     """
 
@@ -81,6 +83,11 @@ class Activity(Base):
             "temporal_start_date_time",
             "temporal_end_date_time",
             name="uq_activity_url_temporal",
+        ),
+        UniqueConstraint(
+            "activity_id",
+            "platform_id",
+            name="uq_activity_activity_id_platform",
         ),
         CheckConstraint(
             "number_of_guests >= 1 AND number_of_guests <= 1024",

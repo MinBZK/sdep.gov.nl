@@ -54,7 +54,9 @@ async def create(
         Created Activity instance
 
     Note:
-        The combination of url, temporal_start_date_time, and temporal_end_date_time must be unique.
+        Two unique constraints apply:
+        1. The combination of url, temporal_start_date_time, and temporal_end_date_time must be unique.
+        2. The combination of activity_id and platform_id must be unique.
     """
     # Only set activity_id if explicitly provided; otherwise let the model default handle it
     if activity_id is not None:
@@ -283,8 +285,35 @@ async def get_by_activity_id(session: AsyncSession, activity_id: str) -> Activit
 
     Returns:
         Activity instance or None if not found
+
+    Note:
+        This function returns the first activity with the given activity_id.
+        Since activity_id alone is not unique (the unique constraint is activity_id + platform_id),
+        use get_by_activity_id_and_platform_id() to get a specific activity by the unique constraint.
     """
     stmt = select(Activity).where(Activity.activity_id == activity_id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_by_activity_id_and_platform_id(
+    session: AsyncSession, activity_id: str, platform_id: int
+) -> Activity | None:
+    """
+    Get an activity by the unique constraint (activity_id, platform_id).
+
+    Args:
+        session: Async database session
+        activity_id: Activity identifier (lowercase alphanumeric string)
+        platform_id: Platform id (foreign key to Platform)
+
+    Returns:
+        Activity instance or None if not found
+    """
+    stmt = select(Activity).where(
+        Activity.activity_id == activity_id,
+        Activity.platform_id == platform_id,
+    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -445,8 +474,9 @@ async def get_by_competent_authority_id(
     stmt = (
         select(Activity)
         .options(
-            selectinload(Activity.platform)
-        )  # Eagerly load platform relationship
+            selectinload(Activity.platform),  # Eagerly load platform relationship
+            selectinload(Activity.area)  # Eagerly load area relationship
+        )
         .join(Area, Activity.area_id == Area.id)
         .join(CompetentAuthority, Area.competent_authority_id == CompetentAuthority.id)
         .where(CompetentAuthority.competent_authority_id == competent_authority_id)

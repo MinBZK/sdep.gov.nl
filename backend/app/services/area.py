@@ -146,16 +146,14 @@ async def process_area_list(session: AsyncSession, areas: list[dict]) -> None:
             competent_authority_id_str = area_dict["competent_authority_id_str"]
             competent_authority_name = area_dict["competent_authority_name"]
 
-            # Get the first matching competent authority (should be unique)
-            competent_authorities = (
+            # Get competent authority by ID (should be unique)
+            competent_authority = (
                 await competent_authority_crud.get_by_competent_authority_id(
-                    session, competent_authority_id_str, limit=1
+                    session, competent_authority_id_str
                 )
             )
 
-            if competent_authorities:
-                competent_authority = competent_authorities[0]
-            else:
+            if competent_authority is None:
                 # Create competent authority if it doesn't exist
                 competent_authority = await competent_authority_crud.create(
                     session=session,

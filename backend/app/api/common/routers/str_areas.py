@@ -23,7 +23,7 @@ router = APIRouter(tags=["str"])
     "/str/areas",
     response_model=AreasListResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get areas (areaId, competent authority, creation timestamp)",
+    summary="Get areas",
     description="Get areas in context of the current SDEP/member state. By default, returns all areas(unlimited). Use optional pagination parameters to limit results.",
     operation_id="getAreas",
     responses={

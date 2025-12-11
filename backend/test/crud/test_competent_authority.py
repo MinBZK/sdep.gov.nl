@@ -168,32 +168,32 @@ class TestCompetentAuthorityCRUD:
         assert result is None
 
     async def test_get_by_competent_authority_id(self, async_session: AsyncSession):
-        """Test getting competent authorities by competent_authority_id."""
+        """Test getting competent authority by competent_authority_id."""
         # Arrange
         ca = await CompetentAuthorityFactory.create_async(
             async_session, competent_authority_id="0363"
         )
 
         # Act
-        results = await competent_authority.get_by_competent_authority_id(
+        result = await competent_authority.get_by_competent_authority_id(
             async_session, "0363"
         )
 
         # Assert
-        assert len(results) == 1
-        assert results[0].id == ca.id
+        assert result is not None
+        assert result.id == ca.id
 
     async def test_get_by_competent_authority_id_not_found(
         self, async_session: AsyncSession
     ):
-        """Test getting competent authorities by non-existent competent_authority_id."""
+        """Test getting competent authority by non-existent competent_authority_id."""
         # Act
-        results = await competent_authority.get_by_competent_authority_id(
+        result = await competent_authority.get_by_competent_authority_id(
             async_session, "9999"
         )
 
         # Assert
-        assert len(results) == 0
+        assert result is None
 
     async def test_get_by_competent_authority_name(self, async_session: AsyncSession):
         """Test getting competent authorities by name."""

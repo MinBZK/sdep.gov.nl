@@ -25,6 +25,9 @@ async def create(
 
     Returns:
         Created Area instance
+
+    Note:
+        The combination of area_id and competent_authority_id must be unique.
     """
     # Only set area_id if explicitly provided; otherwise let the model default handle it
     if area_id is not None:
@@ -177,16 +180,43 @@ async def get_by_id(session: AsyncSession, area_id: int) -> Area | None:
 
 async def get_by_area_id(session: AsyncSession, area_id: str) -> Area | None:
     """
-    Get an area by area_id (unique identifier).
+    Get an area by area_id (business identifier).
 
     Args:
         session: Async database session
-        area_id: Area identifier (lowercase alphanumeric string with dashes, unique)
+        area_id: Area identifier (lowercase alphanumeric string with dashes)
+
+    Returns:
+        Area instance or None if not found
+
+    Note:
+        This function returns the first area with the given area_id.
+        Since area_id alone is not unique (the unique constraint is area_id + competent_authority_id),
+        use get_by_area_id_and_competent_authority_id() to get a specific area by the unique constraint.
+    """
+    stmt = select(Area).where(Area.area_id == area_id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_by_area_id_and_competent_authority_id(
+    session: AsyncSession, area_id: str, competent_authority_id: int
+) -> Area | None:
+    """
+    Get an area by area_id and competent_authority_id (unique constraint).
+
+    Args:
+        session: Async database session
+        area_id: Area identifier (lowercase alphanumeric string with dashes)
+        competent_authority_id: Competent authority id (foreign key)
 
     Returns:
         Area instance or None if not found
     """
-    stmt = select(Area).where(Area.area_id == area_id)
+    stmt = select(Area).where(
+        Area.area_id == area_id,
+        Area.competent_authority_id == competent_authority_id,
+    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 

@@ -156,31 +156,22 @@ async def get_by_id(session: AsyncSession, id: int) -> CompetentAuthority | None
 async def get_by_competent_authority_id(
     session: AsyncSession,
     competent_authority_id: str,
-    offset: int = 0,
-    limit: int | None = None,
-) -> list[CompetentAuthority]:
+) -> CompetentAuthority | None:
     """
-    Get competent authorities by competent_authority_id with pagination.
+    Get a competent authority by competent_authority_id (unique identifier).
 
     Args:
         session: Async database session
-        competent_authority_id: Competent authority identifier
-        offset: Number of records to skip (default: 0)
-        limit: Maximum number of records to return (default: no limit)
+        competent_authority_id: Competent authority identifier (unique)
 
     Returns:
-        List of CompetentAuthority instances matching the competent_authority_id
+        CompetentAuthority instance or None if not found
     """
-    stmt = (
-        select(CompetentAuthority)
-        .where(CompetentAuthority.competent_authority_id == competent_authority_id)
-        .offset(offset)
+    stmt = select(CompetentAuthority).where(
+        CompetentAuthority.competent_authority_id == competent_authority_id
     )
-    if limit is not None:
-        stmt = stmt.limit(limit)
-
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return result.scalar_one_or_none()
 
 
 async def get_by_competent_authority_name(

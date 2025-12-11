@@ -161,7 +161,6 @@ class AreaResponse(BaseModel):
         from_attributes=True,
         populate_by_name=True,
     )
-
     area_id: str = Field(
         ...,
         alias="areaId",
@@ -174,7 +173,7 @@ class AreaResponse(BaseModel):
         alias="competentAuthorityId",
         max_length=64,
         description="Competent authority id who submitted the area",
-        examples=["0363"],
+        examples=["sdep-ca-0363"],
     )  # Attribute
     competent_authority_name: str = Field(
         ...,

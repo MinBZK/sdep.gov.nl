@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud import activity as activity_crud
 from app.crud import area as area_crud
+from app.crud import competent_authority as competent_authority_crud
 from app.crud import platform as platform_crud
 from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 
@@ -47,6 +48,7 @@ async def process_activity_list(
     Args:
         session: Async database session (transaction managed by API layer)
         activities: List of validated activity dictionaries (validated by Pydantic), each containing:
+            - activity_id: Activity ID string (optional, auto-generated if not provided)
             - url: Unique URL
             - address_street: Street name
             - address_number: House number
@@ -55,7 +57,8 @@ async def process_activity_list(
             - address_postal_code: Postal code
             - address_city: City name
             - registration_number: Registration number
-            - area_id: Area ID (foreign key reference to Area)
+            - area_id: Area ID string
+            - competent_authority_id: Competent Authority ID string
             - number_of_guests: Number of guests
             - country_of_guests: Array of country codes
             - temporal_start_date_time: Start datetime
@@ -72,14 +75,31 @@ async def process_activity_list(
     # Service layer contains business logic only (no transaction management)
     try:
         for activity in activities:
-            # Look up Area by area_id string to get the FK
+            # Look up CompetentAuthority by competent_authority_id string to get the FK
+            competent_authority_id_str = activity["competent_authority_id"]
+            competent_authority = await competent_authority_crud.get_by_competent_authority_id(
+                session, competent_authority_id_str
+            )
+
+            if competent_authority is None:
+                raise BusinessLogicError(
+                    f"Competent authority with competent_authority_id '{competent_authority_id_str}' not found",
+                    details={"competent_authority_id": competent_authority_id_str},
+                )
+
+            # Look up Area by area_id string and competent_authority FK to get the Area FK
             area_id_str = activity["area_id"]
-            area = await area_crud.get_by_area_id(session, area_id_str)
+            area = await area_crud.get_by_area_id_and_competent_authority_id(
+                session, area_id_str, competent_authority.id
+            )
 
             if area is None:
                 raise BusinessLogicError(
-                    f"Area with area_id '{area_id_str}' not found",
-                    details={"area_id": area_id_str},
+                    f"Area with area_id '{area_id_str}' and competent_authority_id '{competent_authority_id_str}' not found",
+                    details={
+                        "area_id": area_id_str,
+                        "competent_authority_id": competent_authority_id_str,
+                    },
                 )
 
             # Look up or create Platform by platform_id string
@@ -98,7 +118,7 @@ async def process_activity_list(
             # Save to database using CRUD layer (which only flushes)
             await activity_crud.create(
                 session=session,
-                activity_id=None,  # Let the model generate it
+                activity_id=activity.get("activity_id"),  # Use provided ID or let model generate it
                 url=activity["url"],
                 address_street=activity["address_street"],
                 address_number=activity["address_number"],
@@ -212,7 +232,7 @@ async def get_activity_list(
             "address_postal_code": activity.address_postal_code,
             "address_city": activity.address_city,
             "registration_number": activity.registration_number,
-            "area_id": activity.area_id,
+            "area_id": activity.area.area_id,  # Access via relationship to get string area_id
             "number_of_guests": activity.number_of_guests,
             "country_of_guests": activity.country_of_guests,
             "temporal_start_date_time": activity.temporal_start_date_time,

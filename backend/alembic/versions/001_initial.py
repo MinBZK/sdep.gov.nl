@@ -111,6 +111,11 @@ def upgrade() -> None:
             "temporal_end_date_time",
             name="uq_activity_url_temporal",
         ),
+        sa.UniqueConstraint(
+            "activity_id",
+            "platform_id",
+            name="uq_activity_activity_id_platform",
+        ),
     )
     op.create_index(
         op.f("ix_activity_id"), "activity", ["id"], unique=False
