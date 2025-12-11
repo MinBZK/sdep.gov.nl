@@ -14,6 +14,8 @@ from app.models.competent_authority import CompetentAuthority
 async def create(
     session: AsyncSession,
     activity_id: str | None,
+    platform_id: int,
+    area_id: int,
     url: str,
     address_street: str,
     address_number: int,
@@ -22,12 +24,10 @@ async def create(
     address_postal_code: str,
     address_city: str,
     registration_number: str,
-    area_id: int,
     number_of_guests: int,
     country_of_guests: list[str],
     temporal_start_date_time: datetime,
     temporal_end_date_time: datetime,
-    platform_id: int,
 ) -> Activity:
     """
     Create a new activity.
@@ -35,6 +35,8 @@ async def create(
     Args:
         session: Async database session
         activity_id: Optional activity identifier (64 characters max, lowercase alphanumeric). If not provided, a random value will be generated.
+        platform_id: Platform id (foreign key to Platform, mandatory)
+        area_id: Area id (foreign key to Area, mandatory)
         url: URL (128 characters, mandatory)
         address_street: Address street (mandatory, max 64 chars)
         address_number: Address number (mandatory)
@@ -43,25 +45,23 @@ async def create(
         address_postal_code: Address postal code (mandatory, max 8 chars)
         address_city: Address city (mandatory, max 64 chars)
         registration_number: Registration number (mandatory, max 32 chars)
-        area_id: Area id (foreign key to Area, mandatory)
         number_of_guests: Number of guests (mandatory)
         country_of_guests: Array of country codes (mandatory)
         temporal_start_date_time: Temporal start datetime (mandatory)
         temporal_end_date_time: Temporal end datetime (mandatory)
-        platform_id: Platform id (foreign key to Platform, mandatory)
 
     Returns:
         Created Activity instance
 
     Note:
-        Two unique constraints apply:
-        1. The combination of url, temporal_start_date_time, and temporal_end_date_time must be unique.
-        2. The combination of activity_id and platform_id must be unique.
+        The combination of activity_id, platform_id, url, temporal_start_date_time, and temporal_end_date_time must be unique.
     """
     # Only set activity_id if explicitly provided; otherwise let the model default handle it
     if activity_id is not None:
         activity = Activity(
             activity_id=activity_id,
+            platform_id=platform_id,
+            area_id=area_id,
             url=url,
             address_street=address_street,
             address_number=address_number,
@@ -70,15 +70,15 @@ async def create(
             address_postal_code=address_postal_code,
             address_city=address_city,
             registration_number=registration_number,
-            area_id=area_id,
             number_of_guests=number_of_guests,
             country_of_guests=country_of_guests,
             temporal_start_date_time=temporal_start_date_time,
             temporal_end_date_time=temporal_end_date_time,
-            platform_id=platform_id,
         )
     else:
         activity = Activity(
+            platform_id=platform_id,
+            area_id=area_id,
             url=url,
             address_street=address_street,
             address_number=address_number,
@@ -87,12 +87,10 @@ async def create(
             address_postal_code=address_postal_code,
             address_city=address_city,
             registration_number=registration_number,
-            area_id=area_id,
             number_of_guests=number_of_guests,
             country_of_guests=country_of_guests,
             temporal_start_date_time=temporal_start_date_time,
             temporal_end_date_time=temporal_end_date_time,
-            platform_id=platform_id,
         )
     session.add(activity)
     await session.flush()
@@ -104,20 +102,20 @@ async def update(
     session: AsyncSession,
     activity_id: int,
     activity_id_value: str | None = None,
-    url: str | None = None,
-    registration_number: str | None = None,
     platform_id: int | None = None,
-    address_street: str | None = None,
-    temporal_start_date_time: datetime | None = None,
-    temporal_end_date_time: datetime | None = None,
     area_id: int | None = None,
-    country_of_guests: list[str] | None = None,
-    number_of_guests: int | None = None,
+    url: str | None = None,
+    address_street: str | None = None,
     address_number: int | None = None,
     address_letter: str | None = None,
     address_addition: str | None = None,
     address_postal_code: str | None = None,
     address_city: str | None = None,
+    registration_number: str | None = None,
+    number_of_guests: int | None = None,
+    country_of_guests: list[str] | None = None,
+    temporal_start_date_time: datetime | None = None,
+    temporal_end_date_time: datetime | None = None,
 ) -> Activity | None:
     """
     Update an existing activity by id.
@@ -126,20 +124,20 @@ async def update(
         session: Async database session
         activity_id: Activity id (primary key)
         activity_id_value: New activity identifier (lowercase alphanumeric)
-        url: New URL
-        registration_number: New registration number
         platform_id: New platform id (foreign key to Platform)
-        address_street: New address street
-        temporal_start_date_time: New temporal start datetime
-        temporal_end_date_time: New temporal end datetime
         area_id: New area id (foreign key to Area)
-        country_of_guests: New array of country codes
-        number_of_guests: New number of guests
+        url: New URL
+        address_street: New address street
         address_number: New address number
         address_letter: New address letter
         address_addition: New address addition
         address_postal_code: New address postal code
         address_city: New address city
+        registration_number: New registration number
+        number_of_guests: New number of guests
+        country_of_guests: New array of country codes
+        temporal_start_date_time: New temporal start datetime
+        temporal_end_date_time: New temporal end datetime
 
     Returns:
         Updated Activity instance or None if not found
@@ -150,24 +148,14 @@ async def update(
 
     if activity_id_value is not None:
         activity.activity_id = activity_id_value
-    if url is not None:
-        activity.url = url
-    if registration_number is not None:
-        activity.registration_number = registration_number
     if platform_id is not None:
         activity.platform_id = platform_id
-    if address_street is not None:
-        activity.address_street = address_street
-    if temporal_start_date_time is not None:
-        activity.temporal_start_date_time = temporal_start_date_time
-    if temporal_end_date_time is not None:
-        activity.temporal_end_date_time = temporal_end_date_time
     if area_id is not None:
         activity.area_id = area_id
-    if country_of_guests is not None:
-        activity.country_of_guests = country_of_guests
-    if number_of_guests is not None:
-        activity.number_of_guests = number_of_guests
+    if url is not None:
+        activity.url = url
+    if address_street is not None:
+        activity.address_street = address_street
     if address_number is not None:
         activity.address_number = address_number
     if address_letter is not None:
@@ -178,6 +166,16 @@ async def update(
         activity.address_postal_code = address_postal_code
     if address_city is not None:
         activity.address_city = address_city
+    if registration_number is not None:
+        activity.registration_number = registration_number
+    if number_of_guests is not None:
+        activity.number_of_guests = number_of_guests
+    if country_of_guests is not None:
+        activity.country_of_guests = country_of_guests
+    if temporal_start_date_time is not None:
+        activity.temporal_start_date_time = temporal_start_date_time
+    if temporal_end_date_time is not None:
+        activity.temporal_end_date_time = temporal_end_date_time
 
     await session.flush()
     await session.refresh(activity)

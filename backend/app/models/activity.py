@@ -70,24 +70,20 @@ class Activity(Base):
     in case the address is advertised in parts.
     The registration number is consequently replicated in each Activity.
 
-    An Activity has two unique constraints:
-    1. The combination of URL, start datetime, and end datetime must be unique
-    2. The combination of activity_id and platform_id must be unique
+    An Activity has a unique constraint:
+    - The combination of activity_id, platform_id, url, temporal start datetime, and temporal end datetime must be unique
     Although registrationNumber is a string, it still is commonly referred to as "number".
     """
 
     __tablename__ = "activity"
     __table_args__ = (
         UniqueConstraint(
+            "activity_id",
+            "platform_id",
             "url",
             "temporal_start_date_time",
             "temporal_end_date_time",
-            name="uq_activity_url_temporal",
-        ),
-        UniqueConstraint(
-            "activity_id",
-            "platform_id",
-            name="uq_activity_activity_id_platform",
+            name="uq_activity_all",
         ),
         CheckConstraint(
             "number_of_guests >= 1 AND number_of_guests <= 1024",
@@ -108,6 +104,14 @@ class Activity(Base):
         String(64), nullable=False, default=generate_activity_id, index=True
     )  # Lowercase alphanumeric, auto-generated if not supplied, for example "sdep-str01-001"
 
+    platform_id: Mapped[int] = mapped_column(
+        ForeignKey("platform.id"), nullable=False, index=True
+    )  # Reference - foreign key to Platform
+
+    area_id: Mapped[int] = mapped_column(
+        ForeignKey("area.id"), nullable=False, index=True
+    )  # Reference - foreign key to Area
+
     url: Mapped[str] = mapped_column(
         String(128), nullable=False
     )  # Mandatory, for example "http://example.com/my-advertisement"
@@ -124,10 +128,6 @@ class Activity(Base):
         String(32), nullable=False
     )  # Mandatory, for example "REG123456"
 
-    area_id: Mapped[int] = mapped_column(
-        ForeignKey("area.id"), nullable=False, index=True
-    )  # Reference - foreign key to Area
-
     number_of_guests: Mapped[int] = mapped_column(
         Integer, nullable=False
     )  # Mandatory, min 1, max 1024
@@ -143,10 +143,6 @@ class Activity(Base):
     temporal_end_date_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-
-    platform_id: Mapped[int] = mapped_column(
-        ForeignKey("platform.id"), nullable=False, index=True
-    )  # Reference - foreign key to Platform
 
     # Audit attributes
     created_at: Mapped[datetime] = mapped_column(

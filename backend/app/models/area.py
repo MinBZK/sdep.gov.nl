@@ -48,6 +48,10 @@ class Area(Base):
         String(64), nullable=False, default=generate_area_id, index=True
     )  # Lowercase alphanumeric with dashes, auto-generated if not supplied, for example "amsterdam-area-0363"
 
+    competent_authority_id: Mapped[int] = mapped_column(
+        ForeignKey("competent_authority.id"), nullable=False, index=True
+    )  # Reference - foreign key to CompetentAuthority
+
     filename: Mapped[str] = mapped_column(
         String(64), nullable=False
     )  # Mandatory, for example "Amsterdam.zip"
@@ -55,10 +59,6 @@ class Area(Base):
     filedata: Mapped[bytes] = mapped_column(
         LargeBinary, nullable=False
     )  # Mandatory, max size 1 MiB, for example: a .zip with a collection of ESRI shapefile files
-
-    competent_authority_id: Mapped[int] = mapped_column(
-        ForeignKey("competent_authority.id"), nullable=False, index=True
-    )  # Reference - foreign key to CompetentAuthority
 
     # Audit attributes
     created_at: Mapped[datetime] = mapped_column(

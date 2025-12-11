@@ -289,10 +289,12 @@ class TestActivityService:
             competent_authority_name="Gemeente Amsterdam",
         )
         platform = await PlatformFactory.create_async(async_session)
+        duplicate_activity_id = "duplicate-activity-id-001"
 
-        # Create first activity
+        # Create first activity with specific activity_id
         await ActivityFactory.create_async(
             async_session,
+            activity_id=duplicate_activity_id,
             url="http://example.com/listing-1",
             temporal_start_date_time=datetime(2025, 6, 1, 12, 0, 0),
             temporal_end_date_time=datetime(2025, 6, 8, 12, 0, 0),
@@ -300,10 +302,11 @@ class TestActivityService:
             platform_id=platform.id,
         )
 
-        # Try to create duplicate
+        # Try to create duplicate with same activity_id, url, and temporal
         activities = [
             {
-                "url": "http://example.com/listing-1",
+                "activity_id": duplicate_activity_id,  # Same activity_id!
+                "url": "http://example.com/listing-1",  # Same URL!
                 "address_street": "Damstraat",
                 "address_number": "1",
                 "address_letter": None,
@@ -315,9 +318,9 @@ class TestActivityService:
                 "competent_authority_id": "0363",
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
-                "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
-                "temporal_end_date_time": datetime(2025, 6, 8, 12, 0, 0),
-                "platform_id_str": platform.platform_id,
+                "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),  # Same temporal!
+                "temporal_end_date_time": datetime(2025, 6, 8, 12, 0, 0),  # Same temporal!
+                "platform_id_str": platform.platform_id,  # Same platform!
                 "platform_name": platform.platform_name,
             }
         ]

@@ -9,9 +9,9 @@ from app.models.area import Area
 async def create(
     session: AsyncSession,
     area_id: str | None,
+    competent_authority_id: int,
     filename: str,
     filedata: bytes,
-    competent_authority_id: int,
 ) -> Area:
     """
     Create a new area.
@@ -19,9 +19,9 @@ async def create(
     Args:
         session: Async database session
         area_id: Optional area identifier (64 characters max, lowercase alphanumeric with dashes). If not provided, a random value will be generated.
+        competent_authority_id: Foreign key to CompetentAuthority
         filename: Filename (64 characters max)
         filedata: File data (binary)
-        competent_authority_id: Foreign key to CompetentAuthority
 
     Returns:
         Created Area instance
@@ -33,15 +33,15 @@ async def create(
     if area_id is not None:
         area = Area(
             area_id=area_id,
+            competent_authority_id=competent_authority_id,
             filename=filename,
             filedata=filedata,
-            competent_authority_id=competent_authority_id,
         )
     else:
         area = Area(
+            competent_authority_id=competent_authority_id,
             filename=filename,
             filedata=filedata,
-            competent_authority_id=competent_authority_id,
         )
     session.add(area)
     await session.flush()
@@ -53,9 +53,9 @@ async def update(
     session: AsyncSession,
     area_id: int,
     area_id_value: str | None = None,
+    competent_authority_id: int | None = None,
     filename: str | None = None,
     filedata: bytes | None = None,
-    competent_authority_id: int | None = None,
 ) -> Area | None:
     """
     Update an existing area by id.
@@ -64,9 +64,9 @@ async def update(
         session: Async database session
         area_id: Area id (primary key)
         area_id_value: New area identifier (lowercase alphanumeric with dashes)
+        competent_authority_id: Foreign key to CompetentAuthority
         filename: New filename
         filedata: New filedata (binary)
-        competent_authority_id: Foreign key to CompetentAuthority
 
     Returns:
         Updated Area instance or None if not found
@@ -77,12 +77,12 @@ async def update(
 
     if area_id_value is not None:
         area.area_id = area_id_value
+    if competent_authority_id is not None:
+        area.competent_authority_id = competent_authority_id
     if filename is not None:
         area.filename = filename
     if filedata is not None:
         area.filedata = filedata
-    if competent_authority_id is not None:
-        area.competent_authority_id = competent_authority_id
 
     await session.flush()
     await session.refresh(area)

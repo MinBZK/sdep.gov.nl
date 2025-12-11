@@ -25,9 +25,9 @@ class TestAreaCRUD:
         result = await area.create(
             async_session,
             area_id=None,
+            competent_authority_id=ca.id,
             filename=filename,
             filedata=filedata,
-            competent_authority_id=ca.id,
         )
 
         # Assert
@@ -53,9 +53,9 @@ class TestAreaCRUD:
         result = await area.create(
             async_session,
             area_id=explicit_area_id,
+            competent_authority_id=ca.id,
             filename=filename,
             filedata=filedata,
-            competent_authority_id=ca.id,
         )
 
         # Assert
@@ -344,9 +344,9 @@ class TestAreaCRUD:
         await area.create(
             async_session,
             area_id=duplicate_area_id,
+            competent_authority_id=ca.id,
             filename="area1.geojson",
             filedata=b"data1",
-            competent_authority_id=ca.id,
         )
         await async_session.flush()
 
@@ -356,9 +356,9 @@ class TestAreaCRUD:
             await area.create(
                 async_session,
                 area_id=duplicate_area_id,
+                competent_authority_id=ca.id,
                 filename="area2.geojson",
                 filedata=b"data2",
-                competent_authority_id=ca.id,
             )
             await async_session.flush()
 

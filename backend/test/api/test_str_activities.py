@@ -574,12 +574,13 @@ class TestSTRActivitiesAPI:
     async def test_post_activities_duplicate_constraint(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activities with duplicate unique constraint (url + temporal dates)."""
-        # Arrange - post same URL with same temporal dates twice
+        """Test POST /str/activities with duplicate unique constraint (activityId + url + temporal dates)."""
+        # Arrange - post same activityId, URL, and temporal dates twice
         payload = {
             "metadata": {},
             "activities": [
                 {
+                    "activityId": "duplicate-activity-id",  # Same activityId!
                     "url": "http://example.com/duplicate",
                     "registrationNumber": "REG001",
                     "address": {
@@ -598,6 +599,7 @@ class TestSTRActivitiesAPI:
                     "numberOfGuests": 2,
                 },
                 {
+                    "activityId": "duplicate-activity-id",  # Same activityId!
                     "url": "http://example.com/duplicate",  # Same URL!
                     "registrationNumber": "REG002",
                     "address": {

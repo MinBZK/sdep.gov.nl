@@ -35,6 +35,8 @@ class TestActivityCRUD:
         result = await activity.create(
             session=async_session,
             activity_id=activity_id,
+            platform_id=platform.id,
+            area_id=area.id,
             url=url,
             address_street=address_street,
             address_number=address_number,
@@ -43,12 +45,10 @@ class TestActivityCRUD:
             address_postal_code=address_postal_code,
             address_city=address_city,
             registration_number=registration_number,
-            area_id=area.id,
             number_of_guests=number_of_guests,
             country_of_guests=country_of_guests,
             temporal_start_date_time=temporal_start,
             temporal_end_date_time=temporal_end,
-            platform_id=platform.id,
         )
 
         # Assert
@@ -83,6 +83,8 @@ class TestActivityCRUD:
         result = await activity.create(
             session=async_session,
             activity_id=None,
+            platform_id=platform.id,
+            area_id=area.id,
             url="http://example.com/listing-autogen",
             address_street="Auto Street",
             address_number=999,
@@ -91,12 +93,10 @@ class TestActivityCRUD:
             address_postal_code="9999ZZ",
             address_city="AutoCity",
             registration_number="REGAUTO",
-            area_id=area.id,
             number_of_guests=2,
             country_of_guests=["NLD"],
             temporal_start_date_time=datetime(2025, 6, 1, 12, 0, 0),
             temporal_end_date_time=datetime(2025, 6, 8, 12, 0, 0),
-            platform_id=platform.id,
         )
 
         # Assert
@@ -117,6 +117,8 @@ class TestActivityCRUD:
         result = await activity.create(
             session=async_session,
             activity_id="test-activity-002",
+            platform_id=platform.id,
+            area_id=area.id,
             url="http://example.com/listing-2",
             address_street="Side Street",
             address_number=456,
@@ -125,12 +127,10 @@ class TestActivityCRUD:
             address_postal_code="5678CD",
             address_city="Rotterdam",
             registration_number="REG789012",
-            area_id=area.id,
             number_of_guests=2,
             country_of_guests=["BEL"],
             temporal_start_date_time=datetime(2025, 7, 1, 14, 0, 0),
             temporal_end_date_time=datetime(2025, 7, 5, 14, 0, 0),
-            platform_id=platform.id,
         )
 
         # Assert
@@ -140,10 +140,11 @@ class TestActivityCRUD:
     async def test_create_activity_with_duplicate_unique_constraint(
         self, async_session: AsyncSession
     ):
-        """Test that duplicate url+temporal combination raises IntegrityError."""
+        """Test that duplicate activity_id+platform_id+url+temporal combination raises IntegrityError."""
         # Arrange
         area = await AreaFactory.create_async(async_session)
         platform = await PlatformFactory.create_async(async_session)
+        activity_id_value = "test-activity-003"
         url = "http://example.com/same-listing"
         temporal_start = datetime(2025, 8, 1, 10, 0, 0)
         temporal_end = datetime(2025, 8, 7, 10, 0, 0)
@@ -151,7 +152,9 @@ class TestActivityCRUD:
         # Create first activity
         await activity.create(
             session=async_session,
-            activity_id="test-activity-003",
+            activity_id=activity_id_value,
+            platform_id=platform.id,
+            area_id=area.id,
             url=url,
             address_street="Test Street",
             address_number=100,
@@ -160,21 +163,21 @@ class TestActivityCRUD:
             address_postal_code="1111AA",
             address_city="TestCity",
             registration_number="REG111",
-            area_id=area.id,
             number_of_guests=3,
             country_of_guests=["NLD"],
             temporal_start_date_time=temporal_start,
             temporal_end_date_time=temporal_end,
-            platform_id=platform.id,
         )
         await async_session.flush()
 
-        # Act & Assert - Try to create duplicate
+        # Act & Assert - Try to create duplicate (all 5 unique constraint fields are the same)
         with pytest.raises(IntegrityError):
             await activity.create(
                 session=async_session,
-                activity_id="test-activity-004",
-                url=url,
+                activity_id=activity_id_value,  # Same activity_id
+                platform_id=platform.id,  # Same platform_id
+                area_id=area.id,
+                url=url,  # Same URL
                 address_street="Different Street",
                 address_number=200,
                 address_letter=None,
@@ -182,64 +185,10 @@ class TestActivityCRUD:
                 address_postal_code="2222BB",
                 address_city="OtherCity",
                 registration_number="REG222",
-                area_id=area.id,
                 number_of_guests=5,
                 country_of_guests=["DEU"],
-                temporal_start_date_time=temporal_start,
-                temporal_end_date_time=temporal_end,
-                platform_id=platform.id,
-            )
-            await async_session.flush()
-
-    async def test_create_activity_with_duplicate_activity_id_platform_constraint(
-        self, async_session: AsyncSession
-    ):
-        """Test that duplicate activity_id+platform_id combination raises IntegrityError."""
-        # Arrange
-        area = await AreaFactory.create_async(async_session)
-        platform = await PlatformFactory.create_async(async_session)
-        activity_id_value = "test-activity-duplicate-id"
-
-        # Create first activity
-        await activity.create(
-            session=async_session,
-            activity_id=activity_id_value,
-            url="http://example.com/first-listing",
-            address_street="First Street",
-            address_number=100,
-            address_letter=None,
-            address_addition=None,
-            address_postal_code="1111AA",
-            address_city="FirstCity",
-            registration_number="REG111",
-            area_id=area.id,
-            number_of_guests=3,
-            country_of_guests=["NLD"],
-            temporal_start_date_time=datetime(2025, 8, 1, 10, 0, 0),
-            temporal_end_date_time=datetime(2025, 8, 7, 10, 0, 0),
-            platform_id=platform.id,
-        )
-        await async_session.flush()
-
-        # Act & Assert - Try to create another activity with same activity_id and platform_id
-        with pytest.raises(IntegrityError):
-            await activity.create(
-                session=async_session,
-                activity_id=activity_id_value,  # Same activity_id
-                url="http://example.com/second-listing",  # Different URL
-                address_street="Second Street",
-                address_number=200,
-                address_letter=None,
-                address_addition=None,
-                address_postal_code="2222BB",
-                address_city="SecondCity",
-                registration_number="REG222",
-                area_id=area.id,
-                number_of_guests=5,
-                country_of_guests=["DEU"],
-                temporal_start_date_time=datetime(2025, 9, 1, 10, 0, 0),  # Different dates
-                temporal_end_date_time=datetime(2025, 9, 7, 10, 0, 0),
-                platform_id=platform.id,  # Same platform_id
+                temporal_start_date_time=temporal_start,  # Same temporal
+                temporal_end_date_time=temporal_end,  # Same temporal
             )
             await async_session.flush()
 
