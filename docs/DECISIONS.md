@@ -91,5 +91,6 @@ Motivation:
   - Alternative: use smaller transaction batches
 - Option: async requests (acknowledge receipt, handle processing asynchrously)
   - Con: API becomes more complex (report back functionality required)
+  - Question: ios there a functional need
   - Consideration: expect no performance gain (storaging temporarily or directly permanently makes no difference)
 - Option: `Activity.purposeOfStay`
