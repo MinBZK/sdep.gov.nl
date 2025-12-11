@@ -11,20 +11,56 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 **Table of content**
 
-- [API best-practice](#api-best-practice)
+- [Approach](#approach)
+- [API](#api)
+- [Security](#security)
 
-## API best-practice
+## Approach
 
-| Pattern                                      | OK in SDEP NL ?         | OK in prototype?           |
-| -------------------------------------------- | ----------------------- | -------------------------- |
-| Use nouns instead of verbs in endpoint paths | Yes, GET /ca/activities | Yes, GET /ca/activity-data |
-| Use of plurals in API endpoint               | Yes, GET /ca/activities | **No, GET /ca/activity-data**  |
+- Work technically together with actively participating EU Member States
+- Work technically together with actively participating platforms
+- Take shared, commonly supported design decisions
+- Implement changes quick, to stay agile
+- Use GitHub tags for initial versioning
+- Use API versioning later (once CAs and platforms are connected)
 
+## API
 
-https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
+For motivation, see below table.
 
-https://restfulapi.net/resource-naming/
+| #      | Pattern                           | Example                                                                                |
+| ------ | --------------------------------- | -------------------------------------------------------------------------------------- |
+| API-01 | OpenAPI 3.1.0                     |                                                                                        |
+| API-02 | Nouns instead of verbs            | `/ca/areas`                                                                            |
+| API-03 | Plurals for resources             | `/ca/areas`                                                                            |
+| API-04 | Consistent datamodel              | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                          |
+| API-05 | Consistent pagination             | `offset`, `limit`                                                                      |
+| API-06 | Syntax validation                 | `postal code`                                                                          |
+| API-07 | Semantical validation             | `begin timestamp < end timestamp`                                                      |
+| API-08 | Integrity validation              |                                                                                        |
+| API-08 | POST transaction size constraints |                                                                                        |
+| API-09 | Consistent, functional ids        | `competentAuthorityId`, `platformId`, `areaId`                                         |
+| API-10 | Logical ordening => readability   |                                                                                        |
+| API-11 | Essentiality                      | `POST /str/activities` => only `areaId` and `competentAuthorityId` (unique constraint) |
+|        |                                   |                                                                                        |
 
-https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
+[API-01] Swagger 2.0 is legacy - https://swagger.io/specification/
 
-https://logius-standaarden.github.io/API-Design-Rules
+[API-02] Best practice - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
+
+[API-04] Avoid code duplication, let CA filter out activityId for reporting (is exception to the rule)
+
+[API-08] Duplicate key error, to avoid reporting inconsistencies (add versioning later on?)
+
+## Security
+
+For motivation, see below table.
+
+| #      | Pattern                  | Example |
+| ------ | ------------------------ | ------- |
+| SEC-01 | oAuth2 with JWT          |         |
+| SEC-02 | client credentials grant |         |
+
+[SEC-01] - For trusted machine-to-machine (M2M) interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
+
+[SEC-02] - Implicit flow (obtain access token directly, without backend secret) is deprecated
