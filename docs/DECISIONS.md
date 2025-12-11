@@ -56,8 +56,8 @@ Motivation:
 
 **API 04**
 
-- No code duplication ca-area/str-area (let CA filter on areaId when needed)
-- Consistent use of Address only (units are covered by unicity of advertisement URL?)
+- No code duplication between `ca-area` and `str-area`, if CA requires activity subset, then filter out themselves (activities.activity.areaId)
+- Consistent use of Address only (units can be covered by unicity of advertisement URL)
 
 **API 09**
 
