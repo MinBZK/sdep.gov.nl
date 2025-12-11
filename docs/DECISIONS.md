@@ -28,29 +28,33 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 For motivation, see below table.
 
-| #                                                  | Pattern                             | Example                                                                                |
-| -------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------- |
-| <span style="white-space:nowrap">**API-01**</span> | OpenAPI 3.1.0                       |                                                                                        |
-| **API-02**                                         | Nouns instead of verbs              | `/ca/areas`                                                                            |
-| **API-03**                                         | Plurals for resources               | `/ca/areas`                                                                            |
-| **API-04**                                         | Consistent datamodel                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                          |
-| **API-05**                                         | Consistent pagination               | `offset`, `limit`                                                                      |
-| **API-06**                                         | Syntax validation                   | `postal code`                                                                          |
-| **API-07**                                         | Semantical validation               | `begin timestamp < end timestamp`                                                      |
-| **API-08**                                         | Integrity validation                |                                                                                        |
-| **API-09**                                         | Transaction size constraints (POST) |                                                                                        |
-| **API-10**                                         | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                         |
-| **API-11**                                         | Logical ordening => readability     |                                                                                        |
-| **API-12**                                         | Essentiality                        | `POST /str/activities` => only `areaId` and `competentAuthorityId` (unique constraint) |
-|                                                    |                                     |                                                                                        |
+| #               | Pattern                             | Example                                                                           |
+| --------------- | ----------------------------------- | --------------------------------------------------------------------------------- |
+| **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                   |
+| **API-02**      | Nouns instead of verbs              | `/ca/areas`                                                                       |
+| **API-03**      | Plurals for resources               | `/ca/areas`                                                                       |
+| **API-04**      | Consistent datamodel                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                     |
+| **API-05**      | Consistent pagination               | `offset`, `limit`                                                                 |
+| **API-06**      | Syntax validation                   | `postal code`                                                                     |
+| **API-07**      | Semantical validation               | `begin timestamp < end timestamp`                                                 |
+| **API-08**      | Integrity validation                |                                                                                   |
+| **API-09**      | Transaction size constraints (POST) |                                                                                   |
+| **API-10**      | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                    |
+| **API-11**      | Logical ordening => readability     |                                                                                   |
+| **API-12**      | Essentiality                        | `POST /str/activities` => `areaId` and `competentAuthorityId` (unique constraint) |
+
 
 **API-01** Swagger 2.0 is legacy - https://swagger.io/specification/
 
 **API-02** Best practice - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
 
-**API-04** Avoid code duplication (let CA filter out activityId for reporting when needed / exception?)
+**API-04.a** Avoid code duplication (let CA filter out activityId for reporting when needed / exception?)
+
+**API-04.b** Consistent use of Address
 
 **API-08** Duplicate key error, to avoid reporting inconsistencies (add versioning later on?)
+
+**API-12** For POST, only ids, no redundant names
 
 ## Security
 
