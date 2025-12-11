@@ -35,15 +35,17 @@ For motivation, see below table.
 | **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                   |
 | **API&nbsp;02** | Nouns instead of verbs              | `/ca/areas`                                                                       |
 | **API&nbsp;03** | Plurals for resources               | `/ca/areas`                                                                       |
-| **API&nbsp;04** | Consistent datamodel                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                     |
-| **API&nbsp;05** | Consistent pagination               | `offset`, `limit`                                                                 |
-| **API&nbsp;06** | Syntax validation                   | `postal code`                                                                     |
-| **API&nbsp;07** | Semantical validation               | `begin timestamp < end timestamp`                                                 |
-| **API&nbsp;08** | Integrity validation                |                                                                                   |
-| **API&nbsp;09** | Transaction size constraints (POST) |                                                                                   |
-| **API&nbsp;10** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                    |
-| **API&nbsp;11** | Logical ordening => readability     |                                                                                   |
-| **API&nbsp;12** | Essentiality                        | `POST /str/activities` => `areaId` and `competentAuthorityId` (unique constraint) |
+| **API&nbsp;04** | Consistent datamodel                | `Activity`, `Area`                                                                |
+| **API&nbsp;05** | Consistent endpoints                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                     |
+| **API&nbsp;06** | Consistent pagination               | `offset`, `limit`, all endpoints                                                  |
+| **API&nbsp;07** | Syntax validation                   | `postal code`                                                                     |
+| **API&nbsp;08** | Semantical validation               | `begin timestamp < end timestamp`                                                 |
+| **API&nbsp;09** | Integrity validation                |                                                                                   |
+| **API&nbsp;10** | Transaction size constraints (POST) |                                                                                   |
+| **API&nbsp;11** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                    |
+| **API&nbsp;12** | Logical ordening => readability     |                                                                                   |
+| **API&nbsp;13** | Essentiality                        | `POST /str/activities` => `areaId` and `competentAuthorityId` (unique constraint) |
+| **API&nbsp;14** | Consistent HTTP response codes      | 200, 201                                                                          |
 
 Motivation:
 
@@ -53,9 +55,9 @@ Motivation:
 
 **API 04.a** Avoid code duplication (let CA filter out activityId for reporting when needed, as exception to the rule)
 
-**API 04.b** Consistent use of Address
+**API 04.b** Consistent use of Address (or consistently choose Unit)
 
-**API 08** Duplicate key error, to avoid reporting inconsistencies (add versioning later on?)
+**API 09** Duplicate key error, to avoid reporting inconsistencies (add versioning later on?)
 
 **API 12** For POST, only ids, no redundant names
 
