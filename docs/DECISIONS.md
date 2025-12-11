@@ -31,7 +31,7 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 For motivation, see below table.
 
 | #               | Pattern                             | Example                                                                           |
-| --------------- | ----------------------------------- | --------------------------------------------------------------------------------- |
+| :-------------- | :---------------------------------- | :-------------------------------------------------------------------------------- |
 | **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                   |
 | **API&nbsp;02** | Nouns instead of verbs              | `/ca/areas`                                                                       |
 | **API&nbsp;03** | Plurals for resources               | `/ca/areas`                                                                       |
@@ -66,7 +66,7 @@ Motivation:
 For motivation, see below table.
 
 | #               | Pattern                  | Example |
-| --------------- | ------------------------ | ------- |
+| :-------------- | :----------------------- | :------ |
 | **SEC&nbsp;01** | oAuth2 with JWT          |         |
 | **SEC&nbsp;02** | client credentials grant |         |
 
