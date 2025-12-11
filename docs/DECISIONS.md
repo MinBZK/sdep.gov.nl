@@ -45,6 +45,7 @@ For motivation, see below table.
 | **API&nbsp;11** | Logical ordening => readability     |                                                                                   |
 | **API&nbsp;12** | Essentiality                        | `POST /str/activities` => `areaId` and `competentAuthorityId` (unique constraint) |
 
+Motivation:
 
 **API 01** Swagger 2.0 is legacy - https://swagger.io/specification/
 
@@ -66,6 +67,8 @@ For motivation, see below table.
 | --------------- | ------------------------ | ------- |
 | **SEC&nbsp;01** | oAuth2 with JWT          |         |
 | **SEC&nbsp;02** | client credentials grant |         |
+
+Motivation:
 
 **SEC 01** - For trusted machine-to-machine (M2M) interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 
