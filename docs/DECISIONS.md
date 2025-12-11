@@ -51,11 +51,17 @@ For motivation, see below table.
 
 Motivation:
 
-**API 01** Swagger 2.0 is **legacy** - https://swagger.io/specification/
+**API 01**
 
-**API 03** Endpoints with request/reponse parameters => **self-explanatory** and easy to understand.
+- Swagger 2.0 is **legacy** - https://swagger.io/specification/
 
-**API 03** **Best practice** - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
+**API 03**
+
+- Endpoints with request/reponse parameters => **self-explanatory** and easy to understand.
+
+**API 03**
+
+- **Best practice** - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
 
 **API 05**
 
@@ -78,11 +84,17 @@ For motivation, see below table.
 
 Motivation:
 
-**SEC 01** - **Trusted machine-to-machine (M2M)** interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
+**SEC 01**
 
-**SEC 02** - Implicit flow (obtain access token directly, without backend secret) is **deprecated**
+- **Trusted machine-to-machine (M2M)** interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 
-**SEC 03** - Smaller platforms may deliver rental activities to third-parties, and **delegate API invocation** those parties. Those parties will be registered as the platform client.
+**SEC 02**
+
+- Implicit flow (obtain access token directly, without backend secret) is **deprecated**
+
+**SEC 03**
+
+- Smaller platforms may deliver rental activities to third-parties, and **delegate API invocation** those parties. Those parties will be registered as the platform client.
 
 ## Discussed but pending
 
