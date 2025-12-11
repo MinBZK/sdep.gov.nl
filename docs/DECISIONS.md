@@ -46,7 +46,7 @@ For motivation, see below table.
 | **API&nbsp;11** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                                   |
 | **API&nbsp;12** | Logical ordening => readability     |                                                                                                  |
 | **API&nbsp;13** | Essentiality                        | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`) |
-| **API&nbsp;14** | Consistent HTTP response codes      | 200, 201                                                                                         |
+| **API&nbsp;14** | Consistent HTTP response codes      | 200, 201, 400, 401, 403, 409, 422                                                                |
 
 Motivation:
 
