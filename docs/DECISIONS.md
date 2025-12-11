@@ -63,8 +63,6 @@ Motivation:
 
 - If CA or STR have (wants to submit) double-entries (from their own database), they can optionally use `Area.areaId` or `Activity.activityId`
 
-**API 12** For POST, only ids, no redundant names
-
 ## Security decisions
 
 For motivation, see below table.
