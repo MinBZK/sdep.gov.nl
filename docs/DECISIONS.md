@@ -1,5 +1,7 @@
 <h1>Design decisions</h1>
 
+**Keep the API as simple and concise as possible**.
+
 *REST APIs are one of the most common kinds of web interfaces available today. Therefore, it's very important to design REST APIs properly so that we won't run into problems down the road.*
 
 *Otherwise, we create problems for clients that use our APIs, which isn’t pleasant and detracts people from using our API.*
@@ -31,24 +33,24 @@ For motivation, see below table.
 | #               | Pattern                             | Example                                                                           |
 | --------------- | ----------------------------------- | --------------------------------------------------------------------------------- |
 | **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                   |
-| **API&nbsp;02**      | Nouns instead of verbs              | `/ca/areas`                                                                       |
-| **API&nbsp;03**      | Plurals for resources               | `/ca/areas`                                                                       |
-| **API&nbsp;04**      | Consistent datamodel                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                     |
-| **API&nbsp;05**      | Consistent pagination               | `offset`, `limit`                                                                 |
-| **API&nbsp;06**      | Syntax validation                   | `postal code`                                                                     |
-| **API&nbsp;07**      | Semantical validation               | `begin timestamp < end timestamp`                                                 |
-| **API&nbsp;08**      | Integrity validation                |                                                                                   |
-| **API&nbsp;09**      | Transaction size constraints (POST) |                                                                                   |
-| **API-10**      | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                    |
-| **API-11**      | Logical ordening => readability     |                                                                                   |
-| **API-12**      | Essentiality                        | `POST /str/activities` => `areaId` and `competentAuthorityId` (unique constraint) |
+| **API&nbsp;02** | Nouns instead of verbs              | `/ca/areas`                                                                       |
+| **API&nbsp;03** | Plurals for resources               | `/ca/areas`                                                                       |
+| **API&nbsp;04** | Consistent datamodel                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                     |
+| **API&nbsp;05** | Consistent pagination               | `offset`, `limit`                                                                 |
+| **API&nbsp;06** | Syntax validation                   | `postal code`                                                                     |
+| **API&nbsp;07** | Semantical validation               | `begin timestamp < end timestamp`                                                 |
+| **API&nbsp;08** | Integrity validation                |                                                                                   |
+| **API&nbsp;09** | Transaction size constraints (POST) |                                                                                   |
+| **API&nbsp;10** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                    |
+| **API&nbsp;11** | Logical ordening => readability     |                                                                                   |
+| **API&nbsp;12** | Essentiality                        | `POST /str/activities` => `areaId` and `competentAuthorityId` (unique constraint) |
 
 
 **API 01** Swagger 2.0 is legacy - https://swagger.io/specification/
 
 **API 02** Best practice - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
 
-**API 04.a** Avoid code duplication (let CA filter out activityId for reporting when needed / exception?)
+**API 04.a** Avoid code duplication (let CA filter out activityId for reporting when needed, as exception to the rule)
 
 **API 04.b** Consistent use of Address
 
