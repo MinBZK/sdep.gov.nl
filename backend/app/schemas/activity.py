@@ -157,8 +157,9 @@ class ActivityRequest(BaseModel):
     - If provided: Must be lowercase alphanumeric with dashes (max 64 chars)
 
     Constraints (enforced at database level, returns 409 Conflict on violation):
-    - Unique constraint 1: { url, temporal.startDatetime, temporal.endDatetime }
-    - Unique constraint 2: { activityId, platform } (platform from JWT token)
+    - Unique constraint: { activityId, platform, url, temporal.startDatetime, temporal.endDatetime }
+      The combination of all five fields must be unique. This allows submitting the same
+      (platform, url, temporal) with different activityId values.
     """
 
     model_config = ConfigDict(

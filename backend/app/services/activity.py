@@ -139,12 +139,14 @@ async def process_activity_list(
         error_message = str(e).lower()
         if "unique constraint" in error_message or "duplicate" in error_message:
             # Extract details from activity for better error message
+            activity_id = activity.get("activity_id", "auto-generated")
+            platform_id = activity.get("platform_id_str", "unknown")
             url = activity.get("url", "unknown")
             start_time = activity.get("temporal_start_date_time", "unknown")
             end_time = activity.get("temporal_end_date_time", "unknown")
             raise DuplicateResourceError(
-                f"Activity with URL '{url}', start time '{start_time}', "
-                f"and end time '{end_time}' already exists"
+                f"Activity with activityId '{activity_id}', platform '{platform_id}', "
+                f"URL '{url}', start time '{start_time}', and end time '{end_time}' already exists"
             ) from e
         # Other integrity errors (foreign key, check constraints, etc.)
         raise BusinessLogicError(f"Database constraint violation: {e}") from e

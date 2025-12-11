@@ -106,15 +106,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["platform_id"], ["platform.id"], name=op.f("fk_activity_platform_id_platform")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_activity")),
         sa.UniqueConstraint(
+            "activity_id",
+            "platform_id",
             "url",
             "temporal_start_date_time",
             "temporal_end_date_time",
-            name="uq_activity_url_temporal",
-        ),
-        sa.UniqueConstraint(
-            "activity_id",
-            "platform_id",
-            name="uq_activity_activity_id_platform",
+            name="uq_activity_all",
         ),
     )
     op.create_index(

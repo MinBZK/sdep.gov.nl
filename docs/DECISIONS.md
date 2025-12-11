@@ -34,34 +34,37 @@ For motivation, see below table.
 | #               | Decision                            | Example                                                                                          |
 | :-------------- | :---------------------------------- | :----------------------------------------------------------------------------------------------- |
 | **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                                  |
-| **API&nbsp;02** | Nouns instead of verbs              | `/ca/areas`                                                                                      |
-| **API&nbsp;03** | Plurals for resources               | `/ca/areas`                                                                                      |
-| **API&nbsp;04** | Consistent datamodel                | `Activity`, `Area`                                                                               |
-| **API&nbsp;05** | Consistent endpoints                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                    |
-| **API&nbsp;06** | Consistent pagination               | `offset`, `limit`, all endpoints                                                                 |
-| **API&nbsp;07** | Syntax validation                   | `postal code`                                                                                    |
-| **API&nbsp;08** | Semantical validation               | `begin timestamp < end timestamp`                                                                |
-| **API&nbsp;09** | Integrity validation                | Duplicate key error                                                                              |
-| **API&nbsp;10** | Transaction size constraints (POST) |                                                                                                  |
-| **API&nbsp;11** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                                   |
-| **API&nbsp;12** | Logical ordening => readability     |                                                                                                  |
-| **API&nbsp;13** | Essentiality                        | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`) |
-| **API&nbsp;14** | Consistent HTTP response codes      | 200, 201, 400, 401, 403, 409, 422                                                                |
+| **API&nbsp;02** | All endpoints are well-documented   |                                                                                                  |
+| **API&nbsp;03** | Nouns instead of verbs              | `/ca/areas`                                                                                      |
+| **API&nbsp;04** | Plurals for resources               | `/ca/areas`                                                                                      |
+| **API&nbsp;05** | Consistent datamodel                | `Activity`, `Area`                                                                               |
+| **API&nbsp;06** | Consistent endpoints                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                    |
+| **API&nbsp;07** | Consistent pagination               | `offset`, `limit`, all endpoints                                                                 |
+| **API&nbsp;08** | Syntax validation                   | `postal code`                                                                                    |
+| **API&nbsp;09** | Semantical validation               | `begin timestamp < end timestamp`                                                                |
+| **API&nbsp;10** | Integrity validation                | Duplicate key error                                                                              |
+| **API&nbsp;11** | Transaction size constraints (POST) |                                                                                                  |
+| **API&nbsp;12** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                                   |
+| **API&nbsp;13** | Logical ordening => readability     |                                                                                                  |
+| **API&nbsp;14** | Essentiality                        | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`) |
+| **API&nbsp;15** | Consistent HTTP response codes      | 200, 201, 400, 401, 403, 409, 422                                                                |
 
 Motivation:
 
-**API 01** Swagger 2.0 is legacy - https://swagger.io/specification/
+**API 01** Swagger 2.0 is **legacy** - https://swagger.io/specification/
 
-**API 02** Best practice - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
+**API 03** Endpoints with request/reponse parameters => **self-explanatory** and easy to understand.
 
-**API 04**
+**API 03** **Best practice** - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
 
-- No code duplication between `ca-area` and `str-area`, if CA requires activity subset, then filter out themselves (activities.activity.areaId)
-- Consistent use of Address only (units can be covered by unicity of advertisement URL)
+**API 05**
 
-**API 09**
+- **No code duplication** between `ca-area` and `str-area`, if CA requires activity subset, then filter out themselves (activities.activity.areaId)
+- **Consistent use** of Address only (units can be covered by unicity of advertisement URL)
 
-- If CA or STR have (wants to submit) double-entries (from their own database), they can optionally use `Area.areaId` or `Activity.activityId`
+**API 10**
+
+- If CA or STR have (wants to submit) **double-entries** (from their own database), they can optionally use `Area.areaId` or `Activity.activityId`
 
 ## Security decisions
 
@@ -75,20 +78,20 @@ For motivation, see below table.
 
 Motivation:
 
-**SEC 01** - For trusted machine-to-machine (M2M) interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
+**SEC 01** - **Trusted machine-to-machine (M2M)** interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 
-**SEC 02** - Implicit flow (obtain access token directly, without backend secret) is deprecated
+**SEC 02** - Implicit flow (obtain access token directly, without backend secret) is **deprecated**
 
-**SEC 03** - Smaller platforms may deliver rental activities to third-parties, and delegate API invocation those parties. Those parties will be registered as the platform client.
+**SEC 03** - Smaller platforms may deliver rental activities to third-parties, and **delegate API invocation** those parties. Those parties will be registered as the platform client.
 
 ## Discussed but pending
 
-- Option: for POST requests, instead of "all are processed atomically (all succeed or all fail)", allow partial failures
+- **Discuss**: for POST requests, instead of "all are processed atomically (all succeed or all fail)", **allow partial failures**
   - Pro: more efficient on resubmit
   - Con: more complex (maintaining state, what do you do with these failures, which ones to re-submit, ...)
   - Alternative: use smaller transaction batches
-- Option: async requests (acknowledge receipt, handle processing asynchrously)
+- **Discuss**: support **async requests** => acknowledge receipt, handle processing asynchrously
   - Con: API becomes more complex (report back functionality required)
   - Question: ios there a functional need
   - Consideration: expect no performance gain (storaging temporarily or directly permanently makes no difference)
-- Option: `Activity.purposeOfStay`
+- **Discuss**: `Activity.purposeOfStay`

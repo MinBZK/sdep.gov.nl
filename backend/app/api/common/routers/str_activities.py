@@ -36,7 +36,7 @@ router = APIRouter(tags=["str"])
     "/str/activities",
     status_code=status.HTTP_201_CREATED,
     summary="Submit activities for platform (authorized by current bearer token)",
-    description="Submit a list of rental activities for platform (authorized by current bearer token). All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use activityId (functional, optional, otherwise randomized) when having (wanting to submit) double-entries from your own adminstation.",
+    description="Submit a list of rental activities for platform (authorized by current bearer token). All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use activityId (functional, optional, otherwise randomized) to distinguish multiple activities with the same URL and temporal period.",
     operation_id="postActivity",
     responses={
         "201": {
@@ -53,7 +53,7 @@ router = APIRouter(tags=["str"])
             "description": "Forbidden - Missing required authorization roles",
         },
         "409": {
-            "description": "Conflict - Duplicate activities violating unique constraints: (URL + temporal dates) or (activityId + platform)",
+            "description": "Conflict - Duplicate activity violating unique constraint: (activityId + platform + URL + temporal dates)",
         },
     },
 )
@@ -86,13 +86,17 @@ async def post_activities(
     - activities: List of activities (minimum 1 required)
     - Each activity contains:
       - activityId: Activity identifier (optional, max 64 chars, auto-generated if not provided)
-      - url: Advertisement URL (max 128 chars, unique in combination with temporal dates)
+      - url: Advertisement URL (max 128 chars)
       - registrationNumber: Registration number (max 32 chars)
       - address: Street, number, postalCode, city (all mandatory), letter and addition (optional)
       - areaId: Area identifier (max 64 chars)
       - numberOfGuests: Number of guests (1-1024)
       - countryOfGuests: List of country codes (1-1024 items)
       - temporal: Start and end datetime (end must be after start)
+
+    Unique Constraint:
+    - The combination of (activityId, platform, url, temporal dates) must be unique
+    - This allows submitting the same (platform, url, temporal) with different activityId
 
     Note: Platform ID and name (from token) are normalized to each activity at the API layer before passing
     to service layer. This keeps service layer focused on business logic. The platform is created
@@ -104,7 +108,7 @@ async def post_activities(
     Raises:
         HTTPException 400: Validation error
         HTTPException 403: Forbidden - Missing required authorization roles
-        HTTPException 409: Duplicate activities (same URL and temporal dates) or constraint violation
+        HTTPException 409: Duplicate activity (same activityId + platform + URL + temporal dates)
         HTTPException 500: Internal server error
     """
 

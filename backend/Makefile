@@ -152,13 +152,15 @@ test-security: ## Run security tests only
 	uv run python -m pytest test/security/
 	@echo "✅ Security tests completed!"
 
-test: ## Run all tests
+test-verbose: ## Run all tests
 	@echo "🧪 Running tests..."
 	uv run python -m pytest
 	@echo "✅ All tests completed!"
 
-test-quiet: ## Run all tests (quiet)
+test: ## Run all tests (quiet)
+	@echo "🧪 Running tests..."
 	@uv run python -m pytest -q --tb=line --no-header 2>&1 | tail -20
+	@echo "✅ All tests completed!"
 
 test-coverage: ## Run tests with coverage report
 	@echo "🧪 Running tests with coverage..."

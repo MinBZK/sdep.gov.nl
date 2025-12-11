@@ -286,8 +286,8 @@ async def get_by_activity_id(session: AsyncSession, activity_id: str) -> Activit
 
     Note:
         This function returns the first activity with the given activity_id.
-        Since activity_id alone is not unique (the unique constraint is activity_id + platform_id),
-        use get_by_activity_id_and_platform_id() to get a specific activity by the unique constraint.
+        Since activity_id alone is not unique (the unique constraint is activity_id + platform_id + url + temporal_start_date_time + temporal_end_date_time),
+        use get_by_unique_constraint() to get a specific activity by the full unique constraint.
     """
     stmt = select(Activity).where(Activity.activity_id == activity_id)
     result = await session.execute(stmt)
@@ -298,7 +298,7 @@ async def get_by_activity_id_and_platform_id(
     session: AsyncSession, activity_id: str, platform_id: int
 ) -> Activity | None:
     """
-    Get an activity by the unique constraint (activity_id, platform_id).
+    Get an activity by activity_id and platform_id (partial match).
 
     Args:
         session: Async database session
@@ -307,6 +307,10 @@ async def get_by_activity_id_and_platform_id(
 
     Returns:
         Activity instance or None if not found
+
+    Note:
+        This is a partial match function. The full unique constraint includes url and temporal dates.
+        Use get_by_unique_constraint() for the complete unique constraint match.
     """
     stmt = select(Activity).where(
         Activity.activity_id == activity_id,
@@ -343,15 +347,19 @@ async def get_by_url(
 
 async def get_by_unique_constraint(
     session: AsyncSession,
+    activity_id: str,
+    platform_id: int,
     url: str,
     temporal_start_date_time: datetime,
     temporal_end_date_time: datetime,
 ) -> Activity | None:
     """
-    Get activity by unique constraint (url + temporal dates).
+    Get activity by unique constraint (activity_id + platform_id + url + temporal dates).
 
     Args:
         session: Async database session
+        activity_id: Activity identifier (lowercase alphanumeric string)
+        platform_id: Platform id (foreign key to Platform)
         url: URL
         temporal_start_date_time: Temporal start datetime
         temporal_end_date_time: Temporal end datetime
@@ -360,6 +368,8 @@ async def get_by_unique_constraint(
         Activity instance or None if not found
     """
     stmt = select(Activity).where(
+        Activity.activity_id == activity_id,
+        Activity.platform_id == platform_id,
         Activity.url == url,
         Activity.temporal_start_date_time == temporal_start_date_time,
         Activity.temporal_end_date_time == temporal_end_date_time,

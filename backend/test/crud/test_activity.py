@@ -490,13 +490,15 @@ class TestActivityCRUD:
         assert len(results) == 0
 
     async def test_get_by_unique_constraint(self, async_session: AsyncSession):
-        """Test getting activity by unique constraint."""
+        """Test getting activity by unique constraint (all 5 fields)."""
         # Arrange
+        test_activity_id = "test-activity-unique-001"
         test_url = "http://example.com/unique-listing"
         test_start = datetime(2025, 9, 1, 10, 0, 0)
         test_end = datetime(2025, 9, 7, 10, 0, 0)
         act = await ActivityFactory.create_async(
             async_session,
+            activity_id=test_activity_id,
             url=test_url,
             temporal_start_date_time=test_start,
             temporal_end_date_time=test_end,
@@ -504,7 +506,7 @@ class TestActivityCRUD:
 
         # Act
         result = await activity.get_by_unique_constraint(
-            async_session, test_url, test_start, test_end
+            async_session, test_activity_id, act.platform_id, test_url, test_start, test_end
         )
 
         # Assert
@@ -516,9 +518,14 @@ class TestActivityCRUD:
         self, async_session: AsyncSession
     ):
         """Test getting activity by non-existent unique constraint."""
+        # Arrange
+        platform = await PlatformFactory.create_async(async_session)
+
         # Act
         result = await activity.get_by_unique_constraint(
             async_session,
+            "nonexistent-activity-id",
+            platform.id,
             "http://example.com/nonexistent",
             datetime(2025, 10, 1, 10, 0, 0),
             datetime(2025, 10, 7, 10, 0, 0),
