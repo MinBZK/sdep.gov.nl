@@ -92,3 +92,4 @@ Motivation:
 - Option: async requests (acknowledge receipt, handle processing asynchrously)
   - Con: API becomes more complex (report back functionality required)
   - Consideration: expect no performance gain (storaging temporarily or directly permanently makes no difference)
+- Option: `Activity.purposeOfStay`
