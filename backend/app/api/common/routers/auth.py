@@ -28,7 +28,7 @@ async def post_auth_token(
         None, description="OAuth2 grant type (client_credentials)"
     ),
 ) -> TokenResponse:
-    """Issue a bearer token for M2M authentication by forwarding the request to Keycloak
+    """Issue a JWT bearer token for M2M authentication by forwarding the request to Keycloak
 
     Supports two authentication methods per RFC 6749:
     1. HTTP Basic Authentication (Authorization header)

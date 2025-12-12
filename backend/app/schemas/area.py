@@ -23,7 +23,7 @@ class MetaDataRequest(BaseModel):
 
 
 class AreaRequest(BaseModel):
-    """Area request schema for creating geographical areas.
+    """Area request schema for creating areas (shapefiles).
 
     Validation Layer:
     - Validates all syntax constraints (lengths, types)

@@ -24,8 +24,8 @@ async def create(
     address_postal_code: str,
     address_city: str,
     registration_number: str,
-    number_of_guests: int,
-    country_of_guests: list[str],
+    number_of_guests: int | None,
+    country_of_guests: list[str] | None,
     temporal_start_date_time: datetime,
     temporal_end_date_time: datetime,
 ) -> Activity:
@@ -45,8 +45,8 @@ async def create(
         address_postal_code: Address postal code (mandatory, max 8 chars)
         address_city: Address city (mandatory, max 64 chars)
         registration_number: Registration number (mandatory, max 32 chars)
-        number_of_guests: Number of guests (mandatory)
-        country_of_guests: Array of country codes (mandatory)
+        number_of_guests: Number of guests (optional)
+        country_of_guests: Array of country codes (optional)
         temporal_start_date_time: Temporal start datetime (mandatory)
         temporal_end_date_time: Temporal end datetime (mandatory)
 

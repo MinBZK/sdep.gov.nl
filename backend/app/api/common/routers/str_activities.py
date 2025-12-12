@@ -90,8 +90,8 @@ async def post_activities(
       - registrationNumber: Registration number (max 32 chars)
       - address: Street, number, postalCode, city (all mandatory), letter and addition (optional)
       - areaId: Area identifier (max 64 chars)
-      - numberOfGuests: Number of guests (1-1024)
-      - countryOfGuests: List of country codes (1-1024 items)
+      - numberOfGuests: Number of guests (optional, 1-1024 when provided)
+      - countryOfGuests: List of country codes (optional, 1-1024 items when provided)
       - temporal: Start and end datetime (end must be after start)
 
     Unique Constraint:

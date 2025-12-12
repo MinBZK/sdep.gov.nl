@@ -16,7 +16,7 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 - [Approach](#approach)
 - [API decisions](#api-decisions)
 - [Security decisions](#security-decisions)
-- [Discussed but pending](#discussed-but-pending)
+- [Discussion list](#discussion-list)
 
 ## Approach
 
@@ -31,23 +31,24 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 For motivation, see below table.
 
-| #               | Decision                            | Example                                                                                          |
-| :-------------- | :---------------------------------- | :----------------------------------------------------------------------------------------------- |
-| **API&nbsp;01** | OpenAPI 3.1.0                       |                                                                                                  |
-| **API&nbsp;02** | All endpoints are well-documented   |                                                                                                  |
-| **API&nbsp;03** | Nouns instead of verbs              | `/ca/areas`                                                                                      |
-| **API&nbsp;04** | Plurals for resources               | `/ca/areas`                                                                                      |
-| **API&nbsp;05** | Consistent datamodel                | `Activity`, `Area`                                                                               |
-| **API&nbsp;06** | Consistent endpoints                | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                    |
-| **API&nbsp;07** | Consistent pagination               | `offset`, `limit`, all endpoints                                                                 |
-| **API&nbsp;08** | Syntax validation                   | `postal code`                                                                                    |
-| **API&nbsp;09** | Semantical validation               | `begin timestamp < end timestamp`                                                                |
-| **API&nbsp;10** | Integrity validation                | Duplicate key error                                                                              |
-| **API&nbsp;11** | Transaction size constraints (POST) |                                                                                                  |
-| **API&nbsp;12** | Consistent, functional ids          | `competentAuthorityId`, `platformId`, `areaId`                                                   |
-| **API&nbsp;13** | Logical ordening => readability     |                                                                                                  |
-| **API&nbsp;14** | Essentiality                        | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`) |
-| **API&nbsp;15** | Consistent HTTP response codes      | 200, 201, 400, 401, 403, 409, 422                                                                |
+| #               | Decision                                              | Example                                                                                          |
+| :-------------- | :---------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
+| **API&nbsp;01** | OpenAPI 3.1.0                                         |                                                                                                  |
+| **API&nbsp;02** | All endpoints are well-documented                     |                                                                                                  |
+| **API&nbsp;03** | Nouns instead of verbs                                | `/ca/areas`                                                                                      |
+| **API&nbsp;04** | Plurals for resources                                 | `/ca/areas`                                                                                      |
+| **API&nbsp;05** | Consistent datamodel                                  | `Activity`, `Area`                                                                               |
+| **API&nbsp;06** | Consistent endpoints                                  | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                    |
+| **API&nbsp;07** | Consistent pagination                                 | `offset`, `limit`, all endpoints                                                                 |
+| **API&nbsp;08** | Syntax validation                                     | `postal code`                                                                                    |
+| **API&nbsp;09** | Semantical validation                                 | `begin timestamp < end timestamp`                                                                |
+| **API&nbsp;10** | Integrity validation                                  | Duplicate key error                                                                              |
+| **API&nbsp;11** | Transaction size constraints (POST)                   |                                                                                                  |
+| **API&nbsp;12** | Consistent, functional ids                            | `competentAuthorityId`, `platformId`, `areaId`                                                   |
+| **API&nbsp;13** | Logical ordening => readability                       |                                                                                                  |
+| **API&nbsp;14** | Essentiality                                          | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`) |
+| **API&nbsp;15** | Consistent HTTP response codes                        | 200, 201, 400, 401, 403, 409, 422                                                                |
+| **API&nbsp;16** | Activities are always submitted against current areas |                                                                                                  |
 
 Motivation:
 
@@ -71,6 +72,12 @@ Motivation:
 **API 10**
 
 - If CA or STR have (wants to submit) **double-entries** (from their own database), they can optionally use `Area.areaId` or `Activity.activityId`
+
+**API 16**
+
+- When new activities are submitted, first always retrieve the current areas
+- Because areas may change over time
+- This way, activities submitted over time, can always be correlated areas at that moment in time (point-in-time consistency)
 
 ## Security decisions
 
@@ -100,14 +107,45 @@ Motivation:
 - Communication between third party and SDEP happens via the regular SDEP API
 - STR data remains stored per platform
 
-## Discussed but pending
+## Discussion list
 
-- **Discuss**: for POST requests, instead of "all are processed atomically (all succeed or all fail)", **allow partial failures**
-  - Pro: more efficient on resubmit
-  - Con: more complex (maintaining state, what do you do with these failures, which ones to re-submit, ...)
-  - Alternative: use smaller transaction batches
-- **Discuss**: support **async requests** => acknowledge receipt, handle processing asynchrously
-  - Con: API becomes more complex (report back functionality required)
-  - Question: ios there a functional need
-  - Consideration: expect no performance gain (storaging temporarily or directly permanently makes no difference)
-- **Discuss**: `Activity.purposeOfStay`
+Each topic contains an indicator with whom the topic was disucssed:
+
+**D 01**
+- **Topic**: for POST requests, instead of "all are processed atomically (all succeed or all fail)", **allow partial failures**
+- Pro: more efficient on resubmit
+- Con: more complex (maintaining state, what do you do with these failures, which ones to re-submit, ...)
+- Alternative: use smaller transaction batches
+- **Open**
+
+**D 02**
+- **Topic**: support **async requests** => acknowledge receipt, handle processing asynchrously
+- Con: API becomes more complex (report back functionality required)
+- Question: is there a functional need
+- Consideration: expect no performance gain (storaging temporarily or directly permanently makes no difference)
+- **Proposal: don't do**
+
+**D 03**
+- **Topic**: `Activity.purposeOfStay`
+- **Open**
+
+**D 04**
+- **Topic**: propose `Temporal.checkin, checkout` (instead of `Temporal.startDatetime, endDatetime`)
+- **Open**
+
+**D 05**
+- **Topic**: `Activity.purposeOfStay`
+- **Open**
+
+**D 06**
+- **Topic**: query activities by timestamp?
+- **Open**
+
+**D 07**
+- **Topic**: filter activities by areaId (to support CAs who want to have selective reporting)
+- **Open**
+
+**D 08**
+- **Topic**: in activity, make number of guests and country of guests optional
+- Because unavailable in internal administration
+- **Open**

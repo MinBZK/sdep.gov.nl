@@ -118,16 +118,16 @@ def create_verify_bearer_token(
         oauth2_scheme: Version-specific OAuth2 scheme
 
     Returns:
-        Async function that verifies bearer tokens
+        Async function that verifies JWT bearer tokens
     """
 
     async def verify_bearer_token(
         token: str = Depends(oauth2_scheme),
     ) -> dict[str, Any]:
-        """Verify bearer token using the configured OAuth2 scheme.
+        """Verify JWT bearer token using the configured OAuth2 scheme.
 
         Args:
-            token: Bearer token from OAuth2 flow
+            token: JWT Bearer token from OAuth2 flow
 
         Returns:
             Decoded JWT payload

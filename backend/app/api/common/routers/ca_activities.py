@@ -69,8 +69,8 @@ async def get_activities(
     - address: Address composite (street, number, postalCode, city, letter, addition)
     - registrationNumber: Registration number
     - areaId: Area ID (foreign key)
-    - numberOfGuests: Number of guests
-    - countryOfGuests: Array of country codes
+    - numberOfGuests: Number of guests (optional)
+    - countryOfGuests: Array of country codes (optional)
     - temporal: Temporal composite (startDatetime, endDatetime)
     - platformId: Platform ID
     - platformName: Platform name
@@ -148,8 +148,8 @@ async def get_activities(
     "/ca/activities/count",
     response_model=ActivityCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get activities count for the authenticated competent authority",
-    description="Get the total count of activities for competent authority (authorized by the current bearer token).",
+    summary="Get activities count for the authenticated competent authority.",
+    description="Get activities count for the authenticated competent authority.",
     operation_id="countActivity",
     responses={
         "400": {
@@ -170,7 +170,7 @@ async def count_activities(
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
 ) -> ActivityCountResponse:
     """
-    Count activities for competent authority (authorized by the current bearer token).
+    Count activities for the authenticated competent authority.
 
     Authorization:
     - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access

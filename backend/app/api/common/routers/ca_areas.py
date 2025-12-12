@@ -35,8 +35,8 @@ router = APIRouter(tags=["ca"])
 @router.post(
     "/ca/areas",
     status_code=status.HTTP_201_CREATED,
-    summary="Submit areas for the authenticated competent authority",
-    description="Submit a list of geographical areas with shapefile data for competent authority (authorized by the current bearer token). All areas are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use areaId (functional, optional, otherwise randomized) when having (wanting to submit) double-entries from your own adminstation. **IMPORTANT:** The 'filedata' field must contain base64-encoded file data. Use base64 encoding to convert your binary files before sending them in the JSON payload.",
+    summary="Submit areas for the authenticated competent authority.",
+    description="Submit areas for the authenticated competent authority. Each area comprises a shapefile (zip). All areas are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use areaId (functional, optional, otherwise randomized) when having (wanting to submit) double-entries from your own adminstation. **IMPORTANT:** The 'filedata' field must contain base64-encoded file data. Use base64 encoding to convert your binary files before sending them in the JSON payload.",
     operation_id="postAreas",
     responses={
         "201": {
@@ -63,7 +63,7 @@ async def post_areas(
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
 ) -> dict[str, str]:
     """
-    Submit multiple geographical areas for processing.
+    Submit areas for processing.
 
     Transaction Management:
     - API uses get_async_db which provides automatic transaction management

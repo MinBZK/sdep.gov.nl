@@ -41,7 +41,7 @@ Authorize in Swagger UI:
 - Select Authorize
 - Enter client credentials
 - Select Authorize again
-- Swagger will obtain a bearer token "under the hood" (acting on the `token/` endpoint)
+- Swagger will obtain a JWT bearer token "under the hood" (acting on the `token/` endpoint)
 - You are authorized by roles
 
 Explore endpoints in your current role (ca, str).
@@ -76,9 +76,12 @@ https://eur-lex.europa.eu/eli/reg/2024/1028/oj/eng
 
 ## Main functionality
 
+Ingest and expose:
+
 - To **ingest regulated areas** from competent authorities (CA)
-- To **ingest rental activities** from short-term rental platforms (STR)
-- To **expose rental activities** to other stakeholders
+- To **expose regulated areas** to short-term rental platforms (STR)
+- To **ingest rental activities** from short-term rental platforms
+- To **expose rental activities** to competent authorities and other stakeholders
 
 ## Design decisions
 

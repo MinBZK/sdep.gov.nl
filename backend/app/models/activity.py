@@ -86,12 +86,12 @@ class Activity(Base):
             name="uq_activity_all",
         ),
         CheckConstraint(
-            "number_of_guests >= 1 AND number_of_guests <= 1024",
+            "number_of_guests IS NULL OR (number_of_guests >= 1 AND number_of_guests <= 1024)",
             name="ck_activity_number_of_guests_range",
         ),
         # PostgreSQL-specific constraint for array length (array_length function not available in SQLite)
         CheckConstraint(
-            "array_length(country_of_guests, 1) >= 1 AND array_length(country_of_guests, 1) <= 1024",
+            "country_of_guests IS NULL OR (array_length(country_of_guests, 1) >= 1 AND array_length(country_of_guests, 1) <= 1024)",
             name="ck_activity_country_of_guests_length",
         ).ddl_if(dialect="postgresql"),
     )
@@ -128,13 +128,13 @@ class Activity(Base):
         String(32), nullable=False
     )  # Mandatory, for example "REG123456"
 
-    number_of_guests: Mapped[int] = mapped_column(
-        Integer, nullable=False
-    )  # Mandatory, min 1, max 1024
+    number_of_guests: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )  # Optional, min 1, max 1024 when provided
 
-    country_of_guests: Mapped[list[str]] = mapped_column(
-        StringArray, nullable=False
-    )  # Mandatory, min 1, max 1024
+    country_of_guests: Mapped[list[str] | None] = mapped_column(
+        StringArray, nullable=True
+    )  # Optional, min 1, max 1024 when provided
 
     # Composite attributes - Temporal
     temporal_start_date_time: Mapped[datetime] = mapped_column(

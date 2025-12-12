@@ -97,6 +97,7 @@ class TemporalRequest(BaseModel):
 
     Validation Layer:
     - Validates datetime formats
+    - Date-only submissions are permitted, and will be stored internally using a 00:00:00 timestamp
     - Ensures start year is >= 2025
     - Ensures start is before end
     """
@@ -253,28 +254,31 @@ class ActivityRequest(BaseModel):
         examples=["REG0001"],
     )  # Attribute
 
-    number_of_guests: int = Field(
-        ...,
+    number_of_guests: int | None = Field(
+        None,
         alias="numberOfGuests",
         ge=1,
         le=1024,
-        description="Number of guests",
+        description="Number of guests (optional, 1-1024 when provided)",
         examples=[4],
     )  # Attribute
 
-    country_of_guests: list[str] = Field(
-        ...,
+    country_of_guests: list[str] | None = Field(
+        None,
         alias="countryOfGuests",
-        min_length=1,
         max_length=1024,
-        description="Array of country codes of guests (ISO 3166-1 alpha-3: exactly 3 uppercase letters per code)",
+        description="Array of country codes of guests (optional, ISO 3166-1 alpha-3: exactly 3 uppercase letters per code, 1-1024 when provided)",
         examples=[["NLD", "DEU", "BEL"]],
     )  # Attribute
 
     @field_validator("country_of_guests")
     @classmethod
-    def validate_country_codes(cls, v: list[str]) -> list[str]:
+    def validate_country_codes(cls, v: list[str] | None) -> list[str] | None:
         """Validate country codes are ISO 3166-1 alpha-3 (exactly 3 uppercase letters)."""
+        if v is None:
+            return v
+        if len(v) < 1:
+            raise ValueError("Country codes list must contain at least 1 item when provided")
         for country_code in v:
             if len(country_code) != 3:
                 raise ValueError(

@@ -17,7 +17,7 @@ def generate_area_id() -> str:
 
 
 class Area(Base):
-    """Area model representing geographical areas subject to STR regulation.
+    """Area model representing geographical areas (shapefiles) subject to STR regulation.
 
     An area constitutes a unit of short-term rental regulation (STR).
     An area is supplied by (regulated by) a competent authority (CA).

@@ -59,8 +59,8 @@ async def process_activity_list(
             - registration_number: Registration number
             - area_id: Area ID string
             - competent_authority_id: Competent Authority ID string
-            - number_of_guests: Number of guests
-            - country_of_guests: Array of country codes
+            - number_of_guests: Number of guests (optional)
+            - country_of_guests: Array of country codes (optional)
             - temporal_start_date_time: Start datetime
             - temporal_end_date_time: End datetime
             - platform_id_str: Platform ID string from JWT token
