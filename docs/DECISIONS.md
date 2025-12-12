@@ -94,7 +94,10 @@ Motivation:
 
 **SEC 03**
 
-- **Smaller platforms** may deliver rental activities to **third-parties**, and **delegate API invocation** those parties. Those parties will be registered as the platform client.
+- **Smaller platforms** may deliver rental activities to **third-parties** (by mail, excel, ...)
+- These platforms **delegate the API invocation to SDEP** to those parties
+- Such third parties will get a platform client registration in SDEP, one for each platform they serve
+- Communication between third party and SDEP will happen via the regular SDEP API
 
 ## Discussed but pending
 
