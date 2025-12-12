@@ -14,7 +14,7 @@ router = APIRouter(tags=["auth"])
 @router.post(
     "/token",
     response_model=TokenResponse,
-    summary="Get access token (JWT)",
+    summary="Get access token (JWT bearer)",
     description="Token endpoint for machine-to-machine authentication using OAuth 2.0 Client Credentials Grant. Supports both HTTP Basic Authentication and form parameters.",
     operation_id="post_auth_token",
 )

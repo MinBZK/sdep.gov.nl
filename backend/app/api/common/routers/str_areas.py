@@ -23,8 +23,8 @@ router = APIRouter(tags=["str"])
     "/str/areas",
     response_model=AreasListResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get areas",
-    description="Get areas in context of the current SDEP/member state. By default, returns all areas(unlimited). Use optional pagination parameters to limit results.",
+    summary="Get all SDEP areas",
+    description="Get all SDEP areas. By default, returns all areas (unlimited). Use optional pagination parameters to limit results.",
     operation_id="getAreas",
     responses={
         "400": {
@@ -109,8 +109,8 @@ async def get_areas(
     "/str/areas/count",
     response_model=AreasCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get area count",
-    description="Get the total count of areas in context of the current SDEP/member state.",
+    summary="Get total count of all SDEP areas",
+    description="Get total count of all SDEP areas.",
     operation_id="countAreas",
     responses={
         "400": {

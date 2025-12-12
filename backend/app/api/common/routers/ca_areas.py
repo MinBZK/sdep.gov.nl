@@ -35,7 +35,7 @@ router = APIRouter(tags=["ca"])
 @router.post(
     "/ca/areas",
     status_code=status.HTTP_201_CREATED,
-    summary="Submit areas for competent authority (authorized by the current bearer token)",
+    summary="Submit areas for the authenticated competent authority",
     description="Submit a list of geographical areas with shapefile data for competent authority (authorized by the current bearer token). All areas are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use areaId (functional, optional, otherwise randomized) when having (wanting to submit) double-entries from your own adminstation. **IMPORTANT:** The 'filedata' field must contain base64-encoded file data. Use base64 encoding to convert your binary files before sending them in the JSON payload.",
     operation_id="postAreas",
     responses={

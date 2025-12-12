@@ -25,8 +25,8 @@ router = APIRouter(tags=["ca"])
     "/ca/activities",
     response_model=ActivityListResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get activities for competent authority (authorized by the current bearer token)",
-    description="Get activities for competent authority (authorized by the current bearer token). By default, returns all activities (unlimited). Use optional pagination parameters to limit results.",
+    summary="Get activities for the authenticated competent authority",
+    description="Get activities for the authenticated competent authority. By default, returns all activities (unlimited). Use optional pagination parameters to limit results.",
     operation_id="getActivityByCompetentAuthority",
     responses={
         "400": {
@@ -58,7 +58,7 @@ async def get_activities(
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
 ) -> ActivityListResponse:
     """
-    Get activities for competent authority (authorized by the current bearer token).
+    Get activities for the authenticated competent authority.
 
     Authorization:
     - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
@@ -148,7 +148,7 @@ async def get_activities(
     "/ca/activities/count",
     response_model=ActivityCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get activities count for competent authority (authorized by the current bearer token)",
+    summary="Get activities count for the authenticated competent authority",
     description="Get the total count of activities for competent authority (authorized by the current bearer token).",
     operation_id="countActivity",
     responses={

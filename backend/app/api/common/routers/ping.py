@@ -15,7 +15,7 @@ router = APIRouter(tags=["health"])
     "/ping",
     response_model=Status,
     status_code=status.HTTP_200_OK,
-    summary="Ping application",
+    summary="Ping application (authenticated)",
     description="Verify if API is reachable (requires authentication)",
     operation_id="ping",
     responses={

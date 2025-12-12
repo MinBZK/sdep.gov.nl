@@ -35,8 +35,8 @@ router = APIRouter(tags=["str"])
 @router.post(
     "/str/activities",
     status_code=status.HTTP_201_CREATED,
-    summary="Submit activities for platform (authorized by current bearer token)",
-    description="Submit a list of rental activities for platform (authorized by current bearer token). All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use activityId (functional, optional, otherwise randomized) to distinguish multiple activities with the same URL and temporal period.",
+    summary="Submit activities for the authenticated platform",
+    description="Submit activities for the authenticated platform. All activities are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use activityId (functional, optional, otherwise randomized) to distinguish multiple activities with the same URL and temporal period.",
     operation_id="postActivity",
     responses={
         "201": {
