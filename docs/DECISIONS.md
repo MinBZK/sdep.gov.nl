@@ -76,11 +76,11 @@ Motivation:
 
 For motivation, see below table.
 
-| #               | Decision                                             | Example |
-| :-------------- | :--------------------------------------------------- | :------ |
-| **SEC&nbsp;01** | oAuth2 with JWT                                      |         |
-| **SEC&nbsp;02** | client credentials grant                             |         |
-| **SEC&nbsp;03** | Support for delegated API-invocation (third-parties) |         |
+| #               | Decision                                                                   | Example |
+| :-------------- | :------------------------------------------------------------------------- | :------ |
+| **SEC&nbsp;01** | oAuth2 with JWT                                                            |         |
+| **SEC&nbsp;02** | client credentials grant                                                   |         |
+| **SEC&nbsp;03** | Support for delegated API-invocation (smaller platforms via third-parties) |         |
 
 Motivation:
 
@@ -94,7 +94,7 @@ Motivation:
 
 **SEC 03**
 
-- Smaller platforms may deliver rental activities to third-parties, and **delegate API invocation** those parties. Those parties will be registered as the platform client.
+- **Smaller platforms** may deliver rental activities to **third-parties**, and **delegate API invocation** those parties. Those parties will be registered as the platform client.
 
 ## Discussed but pending
 
