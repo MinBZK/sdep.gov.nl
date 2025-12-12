@@ -96,8 +96,9 @@ Motivation:
 
 - **Smaller platforms** may deliver rental activities to **third-parties** (by mail, excel, ...)
 - **API invocation to SDEP** is then **delegated** to those parties
-- Third-party is registered in SDEP, one for each platform they serve
+- Third-party is registered as platform in SDEP => one registration per platform
 - Communication between third party and SDEP happens via the regular SDEP API
+- STR data remains stored per platform
 
 ## Discussed but pending
 
