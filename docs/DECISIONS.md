@@ -77,7 +77,7 @@ Motivation:
 
 - When new activities are submitted, first always retrieve the current areas
 - Because areas may change over time
-- This way, activities submitted over time, can always be correlated areas at that moment in time (point-in-time consistency)
+- This way, activities submitted over time, can always be correlated areas at that moment in time => point-in-time consistency
 
 ## Security decisions
 
