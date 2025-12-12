@@ -146,7 +146,8 @@ Each topic contains an indicator with whom the topic was disucssed:
 - **Topic**: filter activities by areaId (to support CAs who want to have selective reporting)
 - **Open**
 
-**D 08**
-- **Topic**: in activity, make number of guests and country of guests optional
-- Because unavailable in internal administration
+**D 08** (SDEP NL, Booking.com NL)
+- **Topic**: in activity, keep number of guests and country of guests as optional
+- Because these may unavailable in the platform's internal administration
+- Is OK for EU ?
 - **Open**
