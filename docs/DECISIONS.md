@@ -96,7 +96,7 @@ Motivation:
 
 - **Smaller platforms** may deliver rental activities to **third-parties** (by mail, excel, ...)
 - **API invocation to SDEP** is then **delegated** to those parties
-- Third-party will get a platform client registration in SDEP, one for each platform they serve
+- Third-party is registered in SDEP, one for each platform they serve
 - Communication between third party and SDEP happens via the regular SDEP API
 
 ## Discussed but pending
