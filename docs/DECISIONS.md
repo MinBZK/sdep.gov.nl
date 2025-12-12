@@ -139,7 +139,7 @@ Each topic contains an indicator with whom the topic was disucssed:
 
 **D 06**
 - **Topic**: query activities by timestamp?
-- So CA can e.g. get a montly report
+- So CA can e.g. get a monthly report
 - **Open**
 
 **D 07**
