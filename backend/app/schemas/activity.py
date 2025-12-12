@@ -442,11 +442,11 @@ class ActivityResponse(BaseModel):
         alias="registrationNumber",
         description="Registration number for the address",
     )  # Attribute
-    numberOfGuests: int = Field(
-        ..., alias="numberOfGuests", description="Number of guests"
+    numberOfGuests: int | None = Field(
+        None, alias="numberOfGuests", description="Number of guests (optional)"
     )  # Attribute
-    countryOfGuests: list[str] = Field(
-        ..., alias="countryOfGuests", description="Array of country codes of guests"
+    countryOfGuests: list[str] | None = Field(
+        None, alias="countryOfGuests", description="Array of country codes of guests (optional)"
     )  # Attribute
     temporal: TemporalResponse = Field(
         ..., description="Temporal composite"
