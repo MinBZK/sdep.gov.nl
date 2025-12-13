@@ -136,17 +136,19 @@ Each topic contains an indicator with whom the topic was disucssed:
 - **Open**
 
 **D 02**
-- **Topic**: support **async requests** => acknowledge receipt, handle processing asynchrously
+- **Topic**: support **async request/response model** => acknowledge receipt, handle processing asynchrously
 - Con: API becomes more complex (report back functionality required)
-- Consideration: expect no performance gain (storaging temporarily or directly permanently makes no difference)
+- Consideration: expect no performance gain in case of atomic transaction
+- Consideration: expect performance gain in case of 1-1 transactions
 - Consideration: in case SDEP is down => no problem, because it is not a pure OLTP => is a batch-like (periodically used) system
 - Question: is there a functional need
-- **Proposal: for now, don't do in the API** (although individual SDEPs can choose to process async internally)
+- **Open**
 
 **D 01**
 - **Topic**: for POST requests, instead of "all are processed atomically (all succeed or all fail)", **allow partial failures**
 - Pro: more efficient on resubmit
 - Con: more complex (maintaining state, what do you do with these failures, which ones to re-submit, ...)
 - Consideration: this IS implemented in the prototype API
+- Consideration: this may require underlying 1-1 transactions => performance?
 - Consideration: check with platform expecations
-- **Proposal: do**
+- **Open**
