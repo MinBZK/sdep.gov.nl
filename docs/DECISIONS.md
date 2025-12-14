@@ -1,4 +1,4 @@
-<h1>Design decisions</h1>
+<h1>Decision log</h1>
 
 **Keep the API as simple and concise as possible**.
 
@@ -109,4 +109,4 @@ Motivation:
 
 ## Discussion list
 
-Moved to [./DISCUSSION.md](./DISCUSSION.md).
+Moved to [./DISCUSSIONS.md](./DISCUSSIONS.md).

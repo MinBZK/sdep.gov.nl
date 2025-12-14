@@ -1,4 +1,4 @@
-<h1>Discussion</h1>
+<h1>Discussion log</h1>
 
 This page described open and closed discussion items.
 
