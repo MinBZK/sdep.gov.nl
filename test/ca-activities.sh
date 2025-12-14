@@ -10,7 +10,7 @@ if [ -z "$BACKEND_BASE_URL" ]; then
     exit 1
 fi
 
-# CA endpoint requires ca01 client (ca role)
+# CA endpoint requires authorized client
 # Load token from ./tmp/.bearer_token file
 if [ -f ./tmp/.bearer_token ]; then
     BEARER_TOKEN=$(cat ./tmp/.bearer_token)

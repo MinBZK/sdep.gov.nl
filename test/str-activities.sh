@@ -16,7 +16,7 @@ fi
 # Default API version to v0 if not set
 API_VERSION=${API_VERSION:-v0}
 
-# STR endpoint requires str01 client (str role)
+# STR endpoint requires authorized client
 # Load token from ./tmp/.bearer_token file
 if [ -f ./tmp/.bearer_token ]; then
     BEARER_TOKEN=$(cat ./tmp/.bearer_token)

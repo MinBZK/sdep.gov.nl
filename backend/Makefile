@@ -83,7 +83,6 @@ show-postgres-full: .check-postgres ## Smoke test (full)
 	done
 
 ##@ Backend
-# IMPORTANT: Do NOT run 'make up' with sudo. Run as regular user.
 
 clean-stale: # Kill any stale uvicorn/backend processes
 	@echo "🧹 Cleaning stale backend processes..."

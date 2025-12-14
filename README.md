@@ -9,7 +9,7 @@ Overview:
 - [Quick start (local workstation)](#quick-start-local-workstation)
 - [Background](#background)
 - [Main functionality](#main-functionality)
-- [Design decisions](#design-decisions)
+- [Discussion and decisions](#discussion-and-decisions)
 - [Test package](#test-package)
 - [Documentation](#documentation)
 
@@ -83,9 +83,10 @@ Ingest and expose:
 - To **ingest rental activities** from short-term rental platforms
 - To **expose rental activities** to competent authorities and other stakeholders
 
-## Design decisions
+## Discussion and decisions
 
-- [Design decisions](./docs/DECISIONS.md)
+- [Discussion](./docs/DISCUSSION.md)
+- [Decisions](./docs/DECISIONS.md)
 
 ## Test package
 

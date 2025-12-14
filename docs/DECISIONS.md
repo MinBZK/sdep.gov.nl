@@ -29,7 +29,7 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 ## API decisions
 
-For motivation, see below table.
+For additional motivation, see the text below the table.
 
 | #               | Decision                                              | Example                                                                                          |
 | :-------------- | :---------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
@@ -81,7 +81,7 @@ Motivation:
 
 ## Security decisions
 
-For motivation, see below table.
+For additional motivation, see the text below the table.
 
 | #               | Decision                                                                   | Example |
 | :-------------- | :------------------------------------------------------------------------- | :------ |
@@ -109,46 +109,4 @@ Motivation:
 
 ## Discussion list
 
-Each topic contains an indicator with whom the topic was disucssed:
-
-**D 07**
-- **Topic**: in activity, keep number of guests and country of guests as optional
-- Because these may unavailable in the platform's internal administration
-- Is OK for EU ?
-- **Open**
-
-**D 06**
-- **Topic**: filter activities by areaId (to support CAs who want to have selective reporting)
-- **Open**
-
-**D 05**
-- **Topic**: query activities by timestamp?
-- So CA can e.g. get a monthly report
-- **Open**
-
-**D 04**
-- **Topic**: propose `Temporal.checkin, checkout` (instead of `Temporal.startDatetime, endDatetime`)
-- **Open**
-
-**D 03**
-- **Topic**: `Activity.purposeOfStay`
-- Consideration: optional
-- **Open**
-
-**D 02**
-- **Topic**: support **async request/response model** => acknowledge receipt, handle processing asynchrously
-- Con: API becomes more complex (report back functionality required)
-- Consideration: expect no performance gain in case of atomic transaction
-- Consideration: expect performance gain in case of 1-1 transactions
-- Consideration: in case SDEP is down => no problem, because it is not a pure OLTP => is a batch-like (periodically used) system
-- Question: is there a functional need
-- **Open**
-
-**D 01**
-- **Topic**: for POST requests, instead of "all are processed atomically (all succeed or all fail)", **allow partial failures**
-- Pro: more efficient on resubmit
-- Con: more complex (maintaining state, what do you do with these failures, which ones to re-submit, ...)
-- Consideration: this IS implemented in the prototype API
-- Consideration: this may require underlying 1-1 transactions => performance?
-- Consideration: check with platform expecations
-- **Open**
+Moved to [./DISCUSSION.md](./DISCUSSION.md).
