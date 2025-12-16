@@ -42,12 +42,33 @@ router = APIRouter(tags=["ca"])
 
 @router.post(
     "/ca/areas",
-    summary="Submit areas for the authenticated competent authority",
-    description="""Submit areas for the authenticated competent authority (competentAuthorityId).
+    summary="Submit areas for the current authenticated competent authority",
+    description="""Submit areas for the current authenticated competent authority (competentAuthorityId).
 
-Optionally, a `competentAuthorityAreaId` can be supplied for each area as a functional business identifier assigned by the competent authority. If not provided, the field remains null.
+**Batch Size:** Maximum 1000 areas per request (minimum 1).
 
-Areas are processed with partial success/failure support. Each area is validated and processed independently using nested transactions (savepoints). Returns detailed results showing which areas succeeded and which failed.""",
+**ID Pattern:**
+- `areaId` (optional): RFC 4122 UUID, auto-generated if not provided
+- `areaName` (optional): Human-readable name (max 128 chars)
+
+**Versioning:**
+- Same `areaId` can be resubmitted → creates new version with different timestamp
+- Unique constraint: (areaId, createdAt)
+
+**Partial Success/Failure Support:**
+Areas are processed independently using nested transactions (savepoints). Each area is validated and processed separately, allowing some to succeed while others fail.
+
+**Response Codes:**
+- **201 Created:** All areas processed successfully
+- **200 OK:** Mixed results - some areas succeeded, some failed
+- **422 Unprocessable Entity:** All areas failed (or validation error)
+- **401 Unauthorized:** Invalid or missing authentication token
+- **403 Forbidden:** Missing required authorization roles
+
+**Response:**
+- All IDs are functional UUIDs (technical IDs never exposed)
+
+Returns detailed results showing which areas succeeded and which failed, including specific error messages for failures.""",
     operation_id="postAreas",
     response_model=AreaProcessingResponse,
     responses={
@@ -88,7 +109,7 @@ Areas are processed with partial success/failure support. Each area is validated
                             "areas": {
                                 "type": "array",
                                 "minItems": 1,
-                                "maxItems": 100,
+                                "maxItems": 1000,
                                 "items": {
                                     "$ref": "#/components/schemas/AreaRequest"
                                 }
@@ -102,7 +123,8 @@ Areas are processed with partial success/failure support. Each area is validated
                                 "metadata": {},
                                 "areas": [
                                     {
-                                        "competentAuthorityAreaId": "amsterdam-area-0363",
+                                        "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                        "areaName": "Amsterdam Central District",
                                         "filename": "Amsterdam.zip",
                                         "filedata": "UEsDBBQAAAAIAG1heFkAAAAAAAAAAAAAAAAOAAAAQW1zdGVyZGFtLnNocA=="
                                     }
@@ -346,7 +368,8 @@ async def post_areas(
             else:
                 # Convert back from service dict to request schema (business logic failure)
                 area_request = AreaRequest(**{
-                    "competentAuthorityAreaId": area_dict.get("competent_authority_area_id"),
+                    "areaId": area_dict.get("area_id"),
+                    "areaName": area_dict.get("area_name"),
                     "filename": area_dict["filename"],
                     "filedata": area_dict["filedata"],
                 })

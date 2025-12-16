@@ -199,18 +199,18 @@ class TestStrAreaAPI:
         # Verify area structure
         area = data["areas"][0]
         assert "areaId" in area
+        assert "areaName" in area  # Optional functional name
         assert "competentAuthorityId" in area
         assert "competentAuthorityName" in area
-        assert "competentAuthorityAreaId" in area
         assert "filename" in area
         assert "createdAt" in area
 
         # Verify types
         assert isinstance(area["areaId"], str)
-        assert len(area["areaId"]) == 20
+        assert len(area["areaId"]) == 36  # RFC 4122 UUID format
+        assert isinstance(area["areaName"], (str, type(None)))  # Optional field
         assert isinstance(area["competentAuthorityId"], str)
         assert isinstance(area["competentAuthorityName"], str)
-        assert isinstance(area["competentAuthorityAreaId"], (str, type(None)))
         assert isinstance(area["filename"], str)
         assert isinstance(area["createdAt"], str)
 
@@ -643,7 +643,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/areas/{area.id}",
+                f"/str/areas/{area.area_id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 
@@ -671,7 +671,7 @@ class TestStrAreaAPI:
             transport=ASGITransport(app=app_v0), base_url="http://test"
         ) as client:
             # Act
-            response = await client.get(f"/str/areas/{area.id}")
+            response = await client.get(f"/str/areas/{area.area_id}")
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -693,7 +693,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/areas/{area.id}",
+                f"/str/areas/{area.area_id}",
                 headers={"Authorization": "Bearer invalid_token"},
             )
 
@@ -718,7 +718,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/areas/{area.id}",
+                f"/str/areas/{area.area_id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 
@@ -757,7 +757,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act - request middle area
             response = await client.get(
-                f"/str/areas/{area2.id}",
+                f"/str/areas/{area2.area_id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 

@@ -25,15 +25,15 @@ router = APIRouter(tags=["ca"])
     "/ca/activities",
     response_model=ActivityListResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get activities for the authenticated competent authority",
-    description="Get activities for the authenticated competent authority. By default, returns all activities (unlimited). Use optional pagination parameters to limit results.\n\n"
+    summary="Get activities for the current authenticated competent authority",
+    description="Get activities for the current authenticated competent authority. By default, returns all activities (unlimited). Use optional pagination parameters to limit results.\n\n"
     "Each activity contains:\n"
-    "- activityId: Technical ID (20-character UUID string)\n"
+    "- activityId: Functional ID (RFC 4122 UUID) identifying this activity\n"
+    "- activityName: Optional human-readable name for this activity\n"
+    "- createdAt: Timestamp when this activity version was created (UTC); used for versioning or filtering\n"
     "- platformId: Functional ID identifying the platform that submitted this activity\n"
     "- platformName: Display name of the platform\n"
-    "- platformActivityId: Optional functional ID assigned by the platform to identify this activity\n"
-    "- createdAt: Timestamp when this activity version was created (UTC); used for versioning or filtering\n"
-    "- areaId: Technical ID (20-character UUID string) referencing the area where this activity took place",
+    "- areaId: Functional ID (RFC 4122 UUID) referencing the area where this activity took place",
     operation_id="getActivityByCompetentAuthority",
     responses={
         "400": {
@@ -56,11 +56,12 @@ router = APIRouter(tags=["ca"])
                         "example": {
                             "activities": [
                                 {
-                                    "activityId": "a1b2c3d4e5f6a7b8c9d0",
+                                    "activityId": "550e8400-e29b-41d4-a716-446655440000",
+                                    "activityName": "Amsterdam Summer Rental 2025",
+                                    "createdAt": "2025-06-15T14:30:00Z",
                                     "platformId": "sdep-str-01",
                                     "platformName": "Example Platform",
-                                    "platformActivityId": "listing-amsterdam-001",
-                                    "createdAt": "2025-06-15T14:30:00Z",
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
                                     "url": "https://example.com/listing/amsterdam-001",
                                     "address": {
                                         "street": "Prinsengracht",
@@ -71,7 +72,6 @@ router = APIRouter(tags=["ca"])
                                         "city": "Amsterdam"
                                     },
                                     "registrationNumber": "REG-AMS-2025-001",
-                                    "areaId": "f1e2d3c4b5a6f7e8d9c0",
                                     "numberOfGuests": 4,
                                     "countryOfGuests": ["NLD", "DEU", "BEL"],
                                     "temporal": {
@@ -80,11 +80,12 @@ router = APIRouter(tags=["ca"])
                                     }
                                 },
                                 {
-                                    "activityId": "b2c3d4e5f6a7b8c9d0e1",
+                                    "activityId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+                                    "activityName": "Rotterdam City Center Rental",
+                                    "createdAt": "2025-06-16T10:15:00Z",
                                     "platformId": "sdep-str-01",
                                     "platformName": "Example Platform",
-                                    "platformActivityId": "listing-amsterdam-002",
-                                    "createdAt": "2025-06-16T10:15:00Z",
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
                                     "url": "https://example.com/listing/amsterdam-002",
                                     "address": {
                                         "street": "Keizersgracht",
@@ -95,7 +96,6 @@ router = APIRouter(tags=["ca"])
                                         "city": "Amsterdam"
                                     },
                                     "registrationNumber": "REG-AMS-2025-002",
-                                    "areaId": "f1e2d3c4b5a6f7e8d9c0",
                                     "numberOfGuests": 2,
                                     "countryOfGuests": ["FRA", "ITA"],
                                     "temporal": {
@@ -127,23 +127,25 @@ async def get_activities(
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
 ) -> ActivityListResponse:
     """
-    Get activities for the authenticated competent authority.
+    Get activities for the current authenticated competent authority.
 
     Authorization:
     - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
     - Competent authority ID is extracted from token's "client_id" claim
 
     Returns a list of activities, each containing:
+    - activityId: Functional ID (RFC 4122 UUID)
+    - activityName: Optional human-readable name
+    - createdAt: Creation timestamp
+    - platformId: Platform ID
+    - platformName: Platform name
+    - areaId: Functional ID (RFC 4122 UUID)
     - url: URL of the advertisement
     - address: Address composite (street, number, postalCode, city, letter, addition)
     - registrationNumber: Registration number
-    - areaId: Area technical ID (20-character UUID string)
     - numberOfGuests: Number of guests (optional)
     - countryOfGuests: Array of country codes (optional)
     - temporal: Temporal composite (startDatetime, endDatetime)
-    - platformId: Platform ID
-    - platformName: Platform name
-    - createdAt: Creation timestamp
 
     Pagination parameters:
     - offset: Number of records to skip (default: 0)
@@ -186,9 +188,9 @@ async def get_activities(
     activity_responses = [
         ActivityResponse(
             activityId=activity_dict["activity_id"],
+            activityName=activity_dict.get("activity_name"),
             platformId=activity_dict["platform_id"],
             platformName=activity_dict["platform_name"],
-            platformActivityId=activity_dict["platform_activity_id"],
             createdAt=activity_dict["created_at"],
             url=activity_dict["url"],
             address=AddressResponse(
@@ -218,14 +220,10 @@ async def get_activities(
     "/ca/activities/count",
     response_model=ActivityCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get activities count for the authenticated competent authority.",
-    description="Get activities count for the authenticated competent authority.",
+    summary="Get activities count for the current authenticated competent authority.",
+    description="Get activities count for the current authenticated competent authority.",
     operation_id="countActivity",
     responses={
-        "400": {
-            "model": HTTPBadRequestError,
-            "description": "Bad Request - Invalid query parameters",
-        },
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
@@ -240,7 +238,7 @@ async def count_activities(
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
 ) -> ActivityCountResponse:
     """
-    Count activities for the authenticated competent authority.
+    Count activities for the current authenticated competent authority.
 
     Authorization:
     - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access

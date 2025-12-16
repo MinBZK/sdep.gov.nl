@@ -126,28 +126,28 @@ class TestAreaService:
 
         # Verify all required keys are present
         assert "areaId" in area_dict
+        assert "areaName" in area_dict
         assert "competentAuthorityId" in area_dict
         assert "competentAuthorityName" in area_dict
-        assert "competentAuthorityAreaId" in area_dict
         assert "filename" in area_dict
         assert "createdAt" in area_dict
 
         # Verify no extra keys
         assert set(area_dict.keys()) == {
             "areaId",
+            "areaName",
             "competentAuthorityId",
             "competentAuthorityName",
-            "competentAuthorityAreaId",
             "filename",
             "createdAt",
         }
 
         # Verify types
         assert isinstance(area_dict["areaId"], str)
-        assert len(area_dict["areaId"]) == 20
+        assert len(area_dict["areaId"]) == 36  # UUID format
+        assert isinstance(area_dict["areaName"], str) or area_dict["areaName"] is None
         assert isinstance(area_dict["competentAuthorityId"], str)
         assert isinstance(area_dict["competentAuthorityName"], str)
-        assert isinstance(area_dict["competentAuthorityAreaId"], str) or area_dict["competentAuthorityAreaId"] is None
         assert isinstance(area_dict["filename"], str)
 
     async def test_get_areas_with_pagination_offset(self, async_session: AsyncSession):

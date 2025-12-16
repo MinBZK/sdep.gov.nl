@@ -50,13 +50,13 @@ Explore endpoints in your current role (ca, str).
 make test
 ```
 
-**Run only SDEP backend** (without local infra)
+**Run SDEP backend only** (without local infra)
 ```
 cd backend
 make up
 ```
 
-**Run only SDEP backend tests**
+**Run SDEP backend tests only**
 ```
 cd backend
 make test
@@ -99,4 +99,4 @@ Inquire SDEP NLD for more info.
 
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Datamodel](./docs/DATAMODEL.md)
-- [Structure](./docs/CODE.md)
+- [Project (structure)](./docs/PROJECT.md)

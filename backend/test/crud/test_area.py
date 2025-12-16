@@ -15,7 +15,7 @@ class TestAreaCRUD:
     """Test suite for Area CRUD operations."""
 
     async def test_create_area(self, async_session: AsyncSession):
-        """Test creating a new area."""
+        """Test creating a new area with auto-generated area_id (UUID)."""
         # Arrange
         ca = await CompetentAuthorityFactory.create_async(async_session)
         filename = "area1.zip"
@@ -24,7 +24,8 @@ class TestAreaCRUD:
         # Act
         result = await area.create(
             async_session,
-            competent_authority_area_id=None,
+            area_id=None,
+            area_name=None,
             competent_authority_id=ca.id,
             filename=filename,
             filedata=filedata,
@@ -32,25 +33,30 @@ class TestAreaCRUD:
 
         # Assert
         assert result.id is not None
-        assert result.competent_authority_area_id is None  # Should be None when not provided
+        assert isinstance(result.id, int)
+        assert result.area_id is not None  # Should be auto-generated UUID
+        assert len(result.area_id) == 36  # UUID format
+        assert result.area_name is None  # Should be None when not provided
         assert result.competent_authority_id == ca.id
         assert result.filename == filename
         assert result.filedata == filedata
         assert result.created_at is not None
         assert isinstance(result.created_at, datetime)
 
-    async def test_create_area_with_explicit_competent_authority_area_id(self, async_session: AsyncSession):
-        """Test creating a new area with explicit competent_authority_area_id."""
+    async def test_create_area_with_explicit_area_id(self, async_session: AsyncSession):
+        """Test creating a new area with explicit area_id (UUID) and area_name."""
         # Arrange
         ca = await CompetentAuthorityFactory.create_async(async_session)
-        explicit_competent_authority_area_id = "custom-area-123abc"
+        explicit_area_id = "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        area_name = "Amsterdam Central District"
         filename = "area1.zip"
         filedata = b"binary_geo_data"
 
         # Act
         result = await area.create(
             async_session,
-            competent_authority_area_id=explicit_competent_authority_area_id,
+            area_id=explicit_area_id,
+            area_name=area_name,
             competent_authority_id=ca.id,
             filename=filename,
             filedata=filedata,
@@ -58,7 +64,9 @@ class TestAreaCRUD:
 
         # Assert
         assert result.id is not None
-        assert result.competent_authority_area_id == explicit_competent_authority_area_id  # Should use provided value
+        assert isinstance(result.id, int)
+        assert result.area_id == explicit_area_id  # Should use provided UUID
+        assert result.area_name == area_name
         assert result.competent_authority_id == ca.id
         assert result.filename == filename
         assert result.filedata == filedata
@@ -87,7 +95,7 @@ class TestAreaCRUD:
     async def test_delete_area_not_found(self, async_session: AsyncSession):
         """Test deleting a non-existent area."""
         # Act
-        result = await area.delete(async_session, "99999999999999999999")
+        result = await area.delete(async_session, 99999)
 
         # Assert
         assert result is False
@@ -105,7 +113,7 @@ class TestAreaCRUD:
 
         # Act
         exists = await area.exists(async_session, a.id)
-        not_exists = await area.exists(async_session, "99999999999999999999")
+        not_exists = await area.exists(async_session, 99999)
 
         # Assert
         assert exists is True
@@ -197,7 +205,7 @@ class TestAreaCRUD:
     async def test_get_by_id_not_found(self, async_session: AsyncSession):
         """Test getting a non-existent area by id."""
         # Act
-        result = await area.get_by_id(async_session, "99999999999999999999")
+        result = await area.get_by_id(async_session, 99999)
 
         # Assert
         assert result is None
@@ -254,3 +262,68 @@ class TestAreaCRUD:
         # Assert
         assert len(results) == 1
         assert results[0].filename == filename
+
+    async def test_get_by_area_id(self, async_session: AsyncSession):
+        """Test getting area by functional area_id (UUID)."""
+        # Arrange
+        a = await AreaFactory.create_async(async_session)
+        # Store the auto-generated ID
+        generated_id = a.area_id
+
+        # Act
+        result = await area.get_by_area_id(async_session, generated_id)
+
+        # Assert
+        assert result is not None
+        assert result.area_id == generated_id
+        assert result.id == a.id
+
+    async def test_get_by_area_id_not_found(self, async_session: AsyncSession):
+        """Test getting area by non-existent area_id."""
+        # Act
+        result = await area.get_by_area_id(
+            async_session, "00000000-0000-0000-0000-000000000000"
+        )
+
+        # Assert
+        assert result is None
+
+    async def test_unique_constraint_area_id_created_at(
+        self, async_session: AsyncSession
+    ):
+        """Test unique constraint on (area_id, created_at)."""
+        import asyncio
+        import uuid
+
+        # Arrange
+        ca = await CompetentAuthorityFactory.create_async(async_session)
+        area_id = str(uuid.uuid4())
+
+        # Act - Create first area
+        a1 = await area.create(
+            async_session,
+            area_id=area_id,
+            area_name="Version 1",
+            competent_authority_id=ca.id,
+            filename="area_v1.zip",
+            filedata=b"data_v1",
+        )
+        await async_session.commit()
+
+        # Wait to ensure different timestamp (1 second to guarantee SQLite timestamp difference)
+        await asyncio.sleep(1.0)
+
+        # Act - Create second area with same area_id (should work due to different created_at)
+        a2 = await area.create(
+            async_session,
+            area_id=area_id,
+            area_name="Version 2",
+            competent_authority_id=ca.id,
+            filename="area_v2.zip",
+            filedata=b"data_v2",
+        )
+
+        # Assert
+        assert a1.area_id == a2.area_id
+        assert a1.id != a2.id  # Different technical IDs
+        assert a1.created_at != a2.created_at  # Different timestamps

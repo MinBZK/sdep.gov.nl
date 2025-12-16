@@ -23,11 +23,6 @@ from app.models.address import Address
 from app.models.temporal import Temporal
 
 
-def generate_activity_id() -> str:
-    """Generate a random lowercase alphanumeric activity technical ID."""
-    return uuid.uuid4().hex[:20]
-
-
 class StringArray(TypeDecorator):
     """Custom type for storing arrays as JSON in SQLite and ARRAY in PostgreSQL."""
 
@@ -64,17 +59,25 @@ class Activity(Base):
     An Activity represents an actual rental activity.
 
     The host has obtained a registration number for the address (conform legislation).
-    On the platform, the host has replicated the registration number in each advertisement (unit),
-    in case the address is advertised in parts.
+
+    On the platform, the host has replicated the registration number in each advertisement (unit).
+    This covers the case when the address is advertised in parts (units).
+
     The registration number is consequently replicated in each Activity.
 
-    The platform_activity_id is an optional external identifier that platforms may provide.
+    The activity_id is a functional identifier (RFC 4122 UUID) that can be optionally
+    provided by the platform or auto-generated. Combined with created_at, it enables versioning.
 
     Although registrationNumber is a string, it still is commonly referred to as "number".
     """
 
     __tablename__ = "activity"
     __table_args__ = (
+        UniqueConstraint(
+            "activity_id",
+            "created_at",
+            name="uq_activity_activity_id_created_at",
+        ),
         CheckConstraint(
             "number_of_guests IS NULL OR (number_of_guests >= 1 AND number_of_guests <= 1024)",
             name="ck_activity_number_of_guests_range",
@@ -86,23 +89,28 @@ class Activity(Base):
         ).ddl_if(dialect="postgresql"),
     )
 
-    # Primary key
-    id: Mapped[str] = mapped_column(
-        String(20), primary_key=True, index=True, default=generate_activity_id
-    )
+    # Primary key (technical ID, database-internal)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
     # Attributes
+
+    activity_id: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
+        index=True,
+        default=lambda: str(uuid.uuid4()),
+    )  # Functional ID (business-facing, API-exposed, RFC 4122 UUID), e.g., "550e8400-e29b-41d4-a716-446655440000"
+
+    activity_name: Mapped[str | None] = mapped_column(
+        String(128), nullable=True
+    )  # Functional name (optional, human-readable), e.g., "Amsterdam Summer Rental 2025"
 
     platform_id: Mapped[int] = mapped_column(
         ForeignKey("platform.id"), nullable=False, index=True
     )  # Reference - foreign key to Platform
 
-    platform_activity_id: Mapped[str | None] = mapped_column(
-        String(64), nullable=True, index=True
-    )  # Lowercase alphanumeric, optional, for example "sdep-str01-001"
-
-    area_id: Mapped[str] = mapped_column(
-        String(20), ForeignKey("area.id"), nullable=False, index=True
+    area_id: Mapped[int] = mapped_column(
+        ForeignKey("area.id"), nullable=False, index=True
     )  # Reference - foreign key to Area
 
     url: Mapped[str] = mapped_column(
@@ -167,4 +175,4 @@ class Activity(Base):
 
     def __repr__(self) -> str:
         """String representation of Activity."""
-        return f"<Activity(id={self.id}, platform_activity_id='{self.platform_activity_id}', url='{self.url}', registration_number='{self.registration_number}')>"
+        return f"<Activity(id={self.id}, activity_id='{self.activity_id}', url='{self.url}', registration_number='{self.registration_number}')>"

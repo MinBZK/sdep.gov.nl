@@ -43,14 +43,34 @@ router = APIRouter(tags=["str"])
 
 @router.post(
     "/str/activities",
-    summary="Submit activities for the authenticated platform",
-    description="""Submit activities for the authenticated platform (platformId).
+    summary="Submit activities for the current authenticated platform",
+    description="""Submit activities for the current authenticated platform (platformId).
 
-Optionally, a `platformActivityId` can be supplied for each activity as a functional business identifier assigned by the platform. If not provided, the field remains null.
+**Batch Size:** Maximum 1000 activities per request (minimum 1).
 
-Required: Each activity must include an `areaId` (technical ID as a 20-character UUID string referencing an existing area).
+**ID Pattern:**
+- `activityId` (optional): RFC 4122 UUID, auto-generated if not provided
+- `activityName` (optional): Human-readable name (max 128 chars)
+- `areaId` (required): RFC 4122 UUID referencing existing area
 
-Activities are processed with partial success/failure support. Each activity is validated and processed independently using nested transactions (savepoints). Returns detailed results showing which activities succeeded and which failed.""",
+**Versioning:**
+- Same `activityId` can be resubmitted → creates new version with different timestamp
+- Unique constraint: (activityId, createdAt)
+
+**Partial Success/Failure Support:**
+Activities are processed independently using nested transactions (savepoints). Each activity is validated and processed separately, allowing some to succeed while others fail.
+
+**Response Codes:**
+- **201 Created:** All activities processed successfully
+- **200 OK:** Mixed results - some activities succeeded, some failed
+- **422 Unprocessable Entity:** All activities failed (or validation error)
+- **401 Unauthorized:** Invalid or missing authentication token
+- **403 Forbidden:** Missing required authorization roles
+
+**Response:**
+- All IDs are functional UUIDs (technical IDs never exposed)
+
+Returns detailed results showing which activities succeeded and which failed, including specific error messages for failures.""",
     operation_id="postActivity",
     response_model=ActivityProcessingResponse,
     responses={
@@ -91,7 +111,7 @@ Activities are processed with partial success/failure support. Each activity is 
                             "activities": {
                                 "type": "array",
                                 "minItems": 1,
-                                "maxItems": 100,
+                                "maxItems": 1000,
                                 "items": {
                                     "$ref": "#/components/schemas/ActivityRequest"
                                 }
@@ -105,8 +125,9 @@ Activities are processed with partial success/failure support. Each activity is 
                                 "metadata": {},
                                 "activities": [
                                     {
-                                        "platformActivityId": "activity-example-001",
-                                        "areaId": "a1b2c3d4e5f6a7b8c9d0",
+                                        "activityId": "550e8400-e29b-41d4-a716-446655440000",
+                                        "activityName": "Amsterdam Summer Rental 2025",
+                                        "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
                                         "url": "http://example.com/listing-001",
                                         "address": {
                                             "street": "Prinsengracht",

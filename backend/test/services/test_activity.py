@@ -41,7 +41,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.id,
+                "area_id": area.area_id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -82,7 +82,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": f"REG{i:03d}",
-                "area_id": area.id,
+                "area_id": area.area_id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0)
@@ -125,7 +125,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.id,
+                "area_id": area.area_id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -173,7 +173,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.id,
+                "area_id": area.area_id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -218,7 +218,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.id,
+                "area_id": area.area_id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -254,7 +254,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": "99999999999999999999",
+                "area_id": "00000000-0000-0000-0000-000000000000",
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -274,7 +274,7 @@ class TestActivityService:
         assert result["succeeded"] == 0
         assert result["failed"] == 1
         assert len(result["failures"]) == 1
-        assert "Area with id 99999999999999999999 not found" in result["failures"][0]["errors"][0]["msg"]
+        assert "Area with areaId '00000000-0000-0000-0000-000000000000' not found" in result["failures"][0]["errors"][0]["msg"]
 
     # Tests for count_activity
 
@@ -516,9 +516,9 @@ class TestActivityService:
         # Verify all required keys are present
         required_keys = {
             "activity_id",
+            "activity_name",
             "platform_id",
             "platform_name",
-            "platform_activity_id",
             "url",
             "address_street",
             "address_number",
@@ -538,18 +538,18 @@ class TestActivityService:
 
         # Verify types
         assert isinstance(activity_dict["activity_id"], str)
-        assert len(activity_dict["activity_id"]) == 20
+        assert len(activity_dict["activity_id"]) == 36  # RFC 4122 UUID format
+        assert isinstance(activity_dict["activity_name"], (str, type(None)))  # Optional field
         assert isinstance(activity_dict["platform_id"], str)
         assert isinstance(activity_dict["platform_name"], str)
-        assert isinstance(activity_dict["platform_activity_id"], str) or activity_dict["platform_activity_id"] is None
         assert isinstance(activity_dict["url"], str)
         assert isinstance(activity_dict["address_street"], str)
         assert isinstance(activity_dict["address_number"], int)
         assert isinstance(activity_dict["address_postal_code"], str)
         assert isinstance(activity_dict["address_city"], str)
         assert isinstance(activity_dict["registration_number"], str)
-        assert isinstance(activity_dict["area_id"], str)  # area_id is technical ID (20-char UUID)
-        assert len(activity_dict["area_id"]) == 20
+        assert isinstance(activity_dict["area_id"], str)  # area_id is functional UUID
+        assert len(activity_dict["area_id"]) == 36  # RFC 4122 UUID format
         assert isinstance(activity_dict["number_of_guests"], int)
         assert isinstance(activity_dict["country_of_guests"], list)
         assert isinstance(activity_dict["temporal_start_date_time"], datetime)
@@ -779,10 +779,10 @@ class TestActivityService:
         assert result[0]["platform_id"] == "platform99"
         assert result[0]["platform_name"] == "Super Platform"
 
-    async def test_process_activity_list_with_platform_activity_id(
+    async def test_process_activity_list_with_activity_id(
         self, async_session: AsyncSession
     ):
-        """Test processing activity with optional platform_activity_id provided"""
+        """Test processing activity with optional activity_id provided"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -791,7 +791,8 @@ class TestActivityService:
         )
         activities = [
             {
-                "platform_activity_id": "custom-activity-123",
+                "activity_id": "550e8400-e29b-41d4-a716-446655440123",
+                "activity_name": "Custom Activity Name",
                 "url": "http://example.com/listing-with-id",
                 "address_street": "Damstraat",
                 "address_number": "1",
@@ -800,7 +801,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.id,
+                "area_id": area.area_id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -821,11 +822,12 @@ class TestActivityService:
         count = await activity_service.count_activity(async_session)
         assert count == 1
 
-        # Verify activity was created with the specified platform_activity_id
+        # Verify activity was created with the specified activity_id and activity_name
         from app.crud import activity as activity_crud
 
         saved = await activity_crud.get_by_url(
             async_session, "http://example.com/listing-with-id"
         )
         assert len(saved) == 1
-        assert saved[0].platform_activity_id == "custom-activity-123"
+        assert saved[0].activity_id == "550e8400-e29b-41d4-a716-446655440123"
+        assert saved[0].activity_name == "Custom Activity Name"

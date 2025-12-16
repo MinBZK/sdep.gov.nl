@@ -19,7 +19,8 @@ class TestActivityCRUD:
         # Arrange
         area = await AreaFactory.create_async(async_session)
         platform = await PlatformFactory.create_async(async_session)
-        platform_activity_id = "test-activity-001"
+        activity_id = "550e8400-e29b-41d4-a716-446655440000"
+        activity_name = "Amsterdam Summer Rental 2025"
         url = "http://example.com/listing-1"
         address_street = "Main Street"
         address_number = 123
@@ -34,7 +35,8 @@ class TestActivityCRUD:
         # Act
         result = await activity.create(
             session=async_session,
-            platform_activity_id=platform_activity_id,
+            activity_id=activity_id,
+            activity_name=activity_name,
             platform_id=platform.id,
             area_id=area.id,
             url=url,
@@ -53,7 +55,9 @@ class TestActivityCRUD:
 
         # Assert
         assert result.id is not None
-        assert result.platform_activity_id == platform_activity_id
+        assert isinstance(result.id, int)
+        assert result.activity_id == activity_id
+        assert result.activity_name == activity_name
         assert result.url == url
         assert result.address_street == address_street
         assert result.address_number == address_number
@@ -74,7 +78,7 @@ class TestActivityCRUD:
     async def test_create_activity_with_auto_generated_id(
         self, async_session: AsyncSession
     ):
-        """Test creating activity with auto-generated platform_activity_id."""
+        """Test creating activity with auto-generated activity_id (UUID)."""
         # Arrange
         area = await AreaFactory.create_async(async_session)
         platform = await PlatformFactory.create_async(async_session)
@@ -82,7 +86,8 @@ class TestActivityCRUD:
         # Act
         result = await activity.create(
             session=async_session,
-            platform_activity_id=None,
+            activity_id=None,
+            activity_name=None,
             platform_id=platform.id,
             area_id=area.id,
             url="http://example.com/listing-autogen",
@@ -100,7 +105,9 @@ class TestActivityCRUD:
         )
 
         # Assert
-        assert result.platform_activity_id is None  # Should be None when not provided
+        assert result.activity_id is not None  # Should be auto-generated UUID
+        assert len(result.activity_id) == 36  # UUID format
+        assert result.activity_name is None  # Should be None when not provided
 
     async def test_create_activity_with_optional_fields(
         self, async_session: AsyncSession
@@ -115,7 +122,8 @@ class TestActivityCRUD:
         # Act
         result = await activity.create(
             session=async_session,
-            platform_activity_id="test-activity-002",
+            activity_id="7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            activity_name="Rotterdam Rental",
             platform_id=platform.id,
             area_id=area.id,
             url="http://example.com/listing-2",
@@ -152,7 +160,7 @@ class TestActivityCRUD:
     async def test_delete_activity_not_found(self, async_session: AsyncSession):
         """Test deleting a non-existent activity."""
         # Act
-        result = await activity.delete(async_session, "99999999999999999999")
+        result = await activity.delete(async_session, 99999)
 
         # Assert
         assert result is False
@@ -164,7 +172,7 @@ class TestActivityCRUD:
 
         # Act
         exists = await activity.exists(async_session, act.id)
-        not_exists = await activity.exists(async_session, "99999999999999999999")
+        not_exists = await activity.exists(async_session, 99999)
 
         # Assert
         assert exists is True
@@ -229,7 +237,7 @@ class TestActivityCRUD:
     async def test_get_by_id_not_found(self, async_session: AsyncSession):
         """Test getting a non-existent activity by id."""
         # Act
-        result = await activity.get_by_id(async_session, "99999999999999999999")
+        result = await activity.get_by_id(async_session, 99999)
 
         # Assert
         assert result is None
@@ -355,7 +363,7 @@ class TestActivityCRUD:
     async def test_get_by_area_id_not_found(self, async_session: AsyncSession):
         """Test getting activities by non-existent area_id."""
         # Act
-        results = await activity.get_by_area_id(async_session, "99999999999999999999")
+        results = await activity.get_by_area_id(async_session, 99999)
 
         # Assert
         assert len(results) == 0
@@ -422,3 +430,93 @@ class TestActivityCRUD:
 
         # Assert
         assert total == 0
+
+    async def test_get_by_activity_id(self, async_session: AsyncSession):
+        """Test getting activity by functional activity_id (UUID)."""
+        # Arrange
+        activity_id = "550e8400-e29b-41d4-a716-446655440000"
+        act = await ActivityFactory.create_async(async_session)
+        # Store the auto-generated ID
+        generated_id = act.activity_id
+
+        # Act
+        result = await activity.get_by_activity_id(async_session, generated_id)
+
+        # Assert
+        assert result is not None
+        assert result.activity_id == generated_id
+        assert result.id == act.id
+
+    async def test_get_by_activity_id_not_found(self, async_session: AsyncSession):
+        """Test getting activity by non-existent activity_id."""
+        # Act
+        result = await activity.get_by_activity_id(
+            async_session, "00000000-0000-0000-0000-000000000000"
+        )
+
+        # Assert
+        assert result is None
+
+    async def test_unique_constraint_activity_id_created_at(
+        self, async_session: AsyncSession
+    ):
+        """Test unique constraint on (activity_id, created_at)."""
+        import asyncio
+        import uuid
+        from datetime import datetime
+
+        # Arrange
+        area = await AreaFactory.create_async(async_session)
+        platform = await PlatformFactory.create_async(async_session)
+        activity_id = str(uuid.uuid4())
+
+        # Act - Create first activity
+        act1 = await activity.create(
+            session=async_session,
+            activity_id=activity_id,
+            activity_name="Version 1",
+            platform_id=platform.id,
+            area_id=area.id,
+            url="http://example.com/versioned-listing",
+            address_street="Main Street",
+            address_number=123,
+            address_letter=None,
+            address_addition=None,
+            address_postal_code="1234AB",
+            address_city="Amsterdam",
+            registration_number="REG123",
+            number_of_guests=4,
+            country_of_guests=["NLD"],
+            temporal_start_date_time=datetime(2025, 6, 1, 12, 0, 0),
+            temporal_end_date_time=datetime(2025, 6, 8, 12, 0, 0),
+        )
+        await async_session.commit()
+
+        # Wait to ensure different timestamp (1 second to guarantee SQLite timestamp difference)
+        await asyncio.sleep(1.0)
+
+        # Act - Create second activity with same activity_id (should work due to different created_at)
+        act2 = await activity.create(
+            session=async_session,
+            activity_id=activity_id,
+            activity_name="Version 2",
+            platform_id=platform.id,
+            area_id=area.id,
+            url="http://example.com/versioned-listing-v2",
+            address_street="Main Street",
+            address_number=123,
+            address_letter=None,
+            address_addition=None,
+            address_postal_code="1234AB",
+            address_city="Amsterdam",
+            registration_number="REG124",
+            number_of_guests=5,
+            country_of_guests=["NLD", "DEU"],
+            temporal_start_date_time=datetime(2025, 7, 1, 12, 0, 0),
+            temporal_end_date_time=datetime(2025, 7, 8, 12, 0, 0),
+        )
+
+        # Assert
+        assert act1.activity_id == act2.activity_id
+        assert act1.id != act2.id  # Different technical IDs
+        assert act1.created_at != act2.created_at  # Different timestamps

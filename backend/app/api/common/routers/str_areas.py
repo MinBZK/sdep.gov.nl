@@ -26,11 +26,11 @@ router = APIRouter(tags=["str"])
     summary="Get all areas",
     description="Get all areas. By default, returns all areas (unlimited). Use optional pagination parameters to limit results.\n\n"
     "Each area contains:\n"
-    "- areaId: Technical ID (20-character UUID string)\n"
+    "- areaId: Functional ID (RFC 4122 UUID) identifying this area\n"
+    "- areaName: Optional human-readable name for this area\n"
+    "- createdAt: Timestamp when this area version was created (UTC); used for versioning or filtering\n"
     "- competentAuthorityId: Functional ID identifying the competent authority that submitted this area\n"
     "- competentAuthorityName: Display name of the competent authority\n"
-    "- competentAuthorityAreaId: Optional functional ID assigned by the competent authority to identify this area\n"
-    "- createdAt: Timestamp when this area version was created (UTC); used for versioning or filtering\n"
     "- filename: Name of the shapefile (e.g., 'area.zip')",
     operation_id="getAreas",
     responses={
@@ -69,10 +69,12 @@ async def get_areas(
     - Requires valid bearer token with "sdep_str" and "sdep_read" roles in realm_access
 
     Returns a list of areas, each containing:
-    - areaId: Area unique identifier (enables retrieval of area shapefile)
-    - competentAuthorityId: Competent authority (id) who submitted the area
-    - competentAuthorityName: Competent authority (name) who submitted the area
+    - areaId: Functional ID (RFC 4122 UUID) - enables retrieval of area shapefile
+    - areaName: Optional human-readable name
     - createdAt: Timestamp when the area was created
+    - competentAuthorityId: Competent authority functional ID who submitted the area
+    - competentAuthorityName: Competent authority name who submitted the area
+    - filename: Name of the shapefile
 
     Pagination parameters:
     - offset: Number of records to skip (default: 0)
@@ -101,9 +103,9 @@ async def get_areas(
     area_responses = [
         AreaResponse(
             areaId=area_dict["areaId"],
+            areaName=area_dict["areaName"],
             competentAuthorityId=area_dict["competentAuthorityId"],
             competentAuthorityName=area_dict["competentAuthorityName"],
-            competentAuthorityAreaId=area_dict["competentAuthorityAreaId"],
             createdAt=area_dict["createdAt"],
             filename=area_dict["filename"],
         )
@@ -117,14 +119,10 @@ async def get_areas(
     "/str/areas/count",
     response_model=AreasCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get total count of all SDEP areas",
-    description="Get total count of all SDEP areas.",
+    summary="Get total count of all areas",
+    description="Get total count of all areas.",
     operation_id="countAreas",
     responses={
-        "400": {
-            "model": HTTPBadRequestError,
-            "description": "Bad Request - Invalid query parameters",
-        },
         "401": {
             "model": UnauthorizedError,
             "description": "Unauthorized - Invalid or missing token",
@@ -174,7 +172,7 @@ async def count_areas(
     response_class=Response,
     status_code=status.HTTP_200_OK,
     summary="Get area (shapefile)",
-    description="Get area (shapefile) based on technical ID (20-character UUID string).",
+    description="Get area (shapefile) based on functional ID (RFC 4122 UUID).",
     operation_id="getArea",
     responses={
         "200": {

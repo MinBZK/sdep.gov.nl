@@ -9,11 +9,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.config import Base
 
 
-def generate_area_id() -> str:
-    """Generate a random lowercase alphanumeric area_id."""
-    return uuid.uuid4().hex[:20]  # Generate 20 character lowercase alphanumeric string (UUID hex)
-
-
 class Area(Base):
     """Area model representing geographical areas (shapefiles) subject to STR regulation.
 
@@ -21,30 +16,43 @@ class Area(Base):
     An area is supplied by (regulated by) a competent authority (CA).
     An area is expressed as a binary (shapefile).
 
-    Each area has a unique technical ID (20-character UUID) and an optional functional
-    competent_authority_area_id that can be used for business identification.
+    The area_id is a functional identifier (RFC 4122 UUID) that can be optionally
+    provided by the competent authority or auto-generated. Combined with created_at,
+    it enables versioning.
     """
 
     __tablename__ = "area"
     __table_args__ = (
+        UniqueConstraint(
+            "area_id",
+            "created_at",
+            name="uq_area_area_id_created_at",
+        ),
         CheckConstraint(
             "length(filedata) <= 1048576",
             name="ck_area_filedata_max_size",
         ),
     )
 
-    # Primary key
-    id: Mapped[str] = mapped_column(String(20), primary_key=True, index=True, default=generate_area_id)
+    # Primary key (technical ID, database-internal)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
     # Attributes
+
+    area_id: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
+        index=True,
+        default=lambda: str(uuid.uuid4()),
+    )  # Functional ID (business-facing, API-exposed, RFC 4122 UUID) e.g., "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+
+    area_name: Mapped[str | None] = mapped_column(
+        String(128), nullable=True
+    ) # Functional name (optional, human-readable) e.g., "Amsterdam Central District"
 
     competent_authority_id: Mapped[int] = mapped_column(
         ForeignKey("competent_authority.id"), nullable=False, index=True
     )  # Reference - foreign key to CompetentAuthority
-
-    competent_authority_area_id: Mapped[str | None] = mapped_column(
-        String(64), nullable=True, index=True
-    )  # Lowercase alphanumeric with dashes, optional field, for example "amsterdam-area-0363"
 
     filename: Mapped[str] = mapped_column(
         String(64), nullable=False
@@ -70,4 +78,4 @@ class Area(Base):
 
     def __repr__(self) -> str:
         """String representation of Area."""
-        return f"<Area(id={self.id}, competent_authority_area_id='{self.competent_authority_area_id}', filename='{self.filename}')>"
+        return f"<Area(id={self.id}, area_id='{self.area_id}', filename='{self.filename}')>"

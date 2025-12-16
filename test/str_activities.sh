@@ -59,9 +59,9 @@ if [ -n "$BEARER_TOKEN" ]; then
     echo "✅ Fetched area IDs: $AREA_ID_1, $AREA_ID_2, $AREA_ID_3"
 else
     echo "⚠️  No token available, using placeholder IDs (tests will fail)"
-    AREA_ID_1="00000000000000000001"
-    AREA_ID_2="00000000000000000002"
-    AREA_ID_3="00000000000000000003"
+    AREA_ID_1="00000000-0000-0000-0000-000000000001"
+    AREA_ID_2="00000000-0000-0000-0000-000000000002"
+    AREA_ID_3="00000000-0000-0000-0000-000000000003"
 fi
 echo
 
@@ -236,8 +236,8 @@ fi
 
 echo
 
-# Test 3: POST with optional platformActivityId field
-echo "Test 3: POST with optional platformActivityId field"
+# Test 3: POST with optional activityId field
+echo "Test 3: POST with optional activityId field"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
@@ -248,16 +248,16 @@ if [ -n "$BEARER_TOKEN" ]; then
     END_TIME_3=$(date -u -d "+5 hours" +"%Y-%m-%dT%H:%M:%SZ")
 
     # Generate unique URL using epoch timestamp to ensure test idempotence
-    UNIQUE_ID=$(date +%s%N | cut -b1-13)
+    UNIQUE_ID=$(date +%s%N | cut -b1-12)
 
-    # Prepare payload with platformActivityId
+    # Prepare payload with activityId
     read -r -d '' PAYLOAD_WITH_ID <<EOF || true
 {
   "metadata": {
   },
   "activities": [
     {
-      "platformActivityId": "custom-activity-id-$UNIQUE_ID",
+      "activityId": "550e8400-e29b-41d4-a716-$UNIQUE_ID",
       "url": "http://example.com/amsterdam-with-id-$UNIQUE_ID",
       "registrationNumber": "REGID001",
       "address": {
@@ -297,7 +297,7 @@ EOF
         if echo "$body" | grep -q '"totalProcessed":1' && \
            echo "$body" | grep -q '"succeeded":1' && \
            echo "$body" | grep -q '"failed":0'; then
-            echo "✅ Test 3 passed: Activity with custom platformActivityId successfully submitted"
+            echo "✅ Test 3 passed: Activity with custom activityId successfully submitted"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
             echo "❌ Test 3 failed: Expected success response format"
@@ -432,7 +432,7 @@ if [ -n "$BEARER_TOKEN" ]; then
         "startDatetime": "$START_TIME_5",
         "endDatetime": "$END_TIME_5"
       },
-      "areaId": "99999999999999999999",
+      "areaId": "00000000-0000-0000-0000-000000000000",
       "numberOfGuests": 3
     }
   ]

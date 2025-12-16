@@ -2,7 +2,7 @@
 
 Revision ID: 001
 Revises:
-Create Date: 2025-11-12
+Create Date: 2025-12-16
 
 """
 
@@ -21,16 +21,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade database schema."""
-    # Create function to generate 20-char hex UUIDs for area and activity IDs
-    op.execute("""
-        CREATE OR REPLACE FUNCTION generate_uuid_hex_20()
-        RETURNS VARCHAR(20) AS $BODY$
-        BEGIN
-            RETURN substring(replace(gen_random_uuid()::text, '-', ''), 1, 20);
-        END;
-        $BODY$ LANGUAGE plpgsql;
-    """)
-
     # Create competent_authority table
     op.create_table(
         "competent_authority",
@@ -39,26 +29,28 @@ def upgrade() -> None:
         sa.Column("competent_authority_name", sa.String(length=128), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_competent_authority")),
-        sa.UniqueConstraint("competent_authority_id", name=op.f("uq_competent_authority_competent_authority_id")),
+        sa.UniqueConstraint("competent_authority_id", "created_at", name=op.f("uq_competent_authority_competent_authority_id_created_at")),
     )
     op.create_index(op.f("ix_competent_authority_id"), "competent_authority", ["id"], unique=False)
-    op.create_index(op.f("ix_competent_authority_competent_authority_id"), "competent_authority", ["competent_authority_id"], unique=True)
+    op.create_index(op.f("ix_competent_authority_competent_authority_id"), "competent_authority", ["competent_authority_id"], unique=False)
 
     # Create area table
     op.create_table(
         "area",
-        sa.Column("id", sa.String(length=20), nullable=False, server_default=sa.text("generate_uuid_hex_20()")),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("area_id", sa.String(length=36), nullable=False),
+        sa.Column("area_name", sa.String(length=128), nullable=True),
         sa.Column("competent_authority_id", sa.Integer(), nullable=False),
-        sa.Column("competent_authority_area_id", sa.String(length=64), nullable=True),
         sa.Column("filename", sa.String(length=64), nullable=False),
         sa.Column("filedata", sa.LargeBinary(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.CheckConstraint("length(filedata) <= 1048576", name="ck_area_filedata_max_size"),
         sa.ForeignKeyConstraint(["competent_authority_id"], ["competent_authority.id"], name=op.f("fk_area_competent_authority_id_competent_authority")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_area")),
+        sa.UniqueConstraint("area_id", "created_at", name=op.f("uq_area_area_id_created_at")),
     )
     op.create_index(op.f("ix_area_id"), "area", ["id"], unique=False)
-    op.create_index(op.f("ix_area_competent_authority_area_id"), "area", ["competent_authority_area_id"], unique=False)
+    op.create_index(op.f("ix_area_area_id"), "area", ["area_id"], unique=False)
     op.create_index(op.f("ix_area_competent_authority_id"), "area", ["competent_authority_id"], unique=False)
 
     # Create platform table
@@ -69,17 +61,19 @@ def upgrade() -> None:
         sa.Column("platform_name", sa.String(length=128), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_platform")),
-        sa.UniqueConstraint("platform_id", name=op.f("uq_platform_platform_id")),
+        sa.UniqueConstraint("platform_id", "created_at", name=op.f("uq_platform_platform_id_created_at")),
     )
     op.create_index(op.f("ix_platform_id"), "platform", ["id"], unique=False)
-    op.create_index(op.f("ix_platform_platform_id"), "platform", ["platform_id"], unique=True)
+    op.create_index(op.f("ix_platform_platform_id"), "platform", ["platform_id"], unique=False)
 
     # Create activity table
     op.create_table(
         "activity",
-        sa.Column("id", sa.String(length=20), nullable=False, server_default=sa.text("generate_uuid_hex_20()")),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("activity_id", sa.String(length=36), nullable=False),
+        sa.Column("activity_name", sa.String(length=128), nullable=True),
         sa.Column("platform_id", sa.Integer(), nullable=False),
-        sa.Column("platform_activity_id", sa.String(length=64), nullable=True),
+        sa.Column("area_id", sa.Integer(), nullable=False),
         sa.Column("url", sa.String(length=128), nullable=False),
         sa.Column("address_street", sa.String(length=64), nullable=False),
         sa.Column("address_number", sa.Integer(), nullable=False),
@@ -88,7 +82,6 @@ def upgrade() -> None:
         sa.Column("address_postal_code", sa.String(length=8), nullable=False),
         sa.Column("address_city", sa.String(length=64), nullable=False),
         sa.Column("registration_number", sa.String(length=32), nullable=False),
-        sa.Column("area_id", sa.String(length=20), nullable=False),
         sa.Column("number_of_guests", sa.Integer(), nullable=True),
         sa.Column(
             "country_of_guests",
@@ -103,12 +96,13 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["area_id"], ["area.id"], name=op.f("fk_activity_area_id_area")),
         sa.ForeignKeyConstraint(["platform_id"], ["platform.id"], name=op.f("fk_activity_platform_id_platform")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_activity")),
+        sa.UniqueConstraint("activity_id", "created_at", name=op.f("uq_activity_activity_id_created_at")),
     )
     op.create_index(
         op.f("ix_activity_id"), "activity", ["id"], unique=False
     )
     op.create_index(
-        op.f("ix_activity_platform_activity_id"), "activity", ["platform_activity_id"], unique=False
+        op.f("ix_activity_activity_id"), "activity", ["activity_id"], unique=False
     )
     op.create_index(
         op.f("ix_activity_area_id"), "activity", ["area_id"], unique=False
@@ -123,7 +117,7 @@ def downgrade() -> None:
     # Drop activity table
     op.drop_index(op.f("ix_activity_platform_id"), table_name="activity")
     op.drop_index(op.f("ix_activity_area_id"), table_name="activity")
-    op.drop_index(op.f("ix_activity_platform_activity_id"), table_name="activity")
+    op.drop_index(op.f("ix_activity_activity_id"), table_name="activity")
     op.drop_index(op.f("ix_activity_id"), table_name="activity")
     op.drop_table("activity")
 
@@ -134,7 +128,7 @@ def downgrade() -> None:
 
     # Drop area table
     op.drop_index(op.f("ix_area_competent_authority_id"), table_name="area")
-    op.drop_index(op.f("ix_area_competent_authority_area_id"), table_name="area")
+    op.drop_index(op.f("ix_area_area_id"), table_name="area")
     op.drop_index(op.f("ix_area_id"), table_name="area")
     op.drop_table("area")
 
@@ -142,6 +136,3 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_competent_authority_competent_authority_id"), table_name="competent_authority")
     op.drop_index(op.f("ix_competent_authority_id"), table_name="competent_authority")
     op.drop_table("competent_authority")
-
-    # Drop UUID generator function
-    op.execute("DROP FUNCTION IF EXISTS generate_uuid_hex_20()")

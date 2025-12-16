@@ -153,7 +153,7 @@ fi
 
 # Test 4: Verify response structure
 echo ""
-echo "Test 4: Verify response structure (activityId, platformId, platformName, platformActivityId, url, registrationNumber, address, temporal, areaId)"
+echo "Test 4: Verify response structure (activityId, activityName, platformId, platformName, url, registrationNumber, address, temporal, areaId)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
@@ -177,9 +177,9 @@ if [ "$HTTP_STATUS" -eq 200 ]; then
     else
         # Check for required fields
         has_activity_id=$(echo "$BODY" | grep -q '"activityId"' && echo "yes" || echo "no")
+        has_activity_name=$(echo "$BODY" | grep -q '"activityName"' && echo "yes" || echo "no")
         has_platform_id=$(echo "$BODY" | grep -q '"platformId"' && echo "yes" || echo "no")
         has_platform_name=$(echo "$BODY" | grep -q '"platformName"' && echo "yes" || echo "no")
-        has_platform_activity_id=$(echo "$BODY" | grep -q '"platformActivityId"' && echo "yes" || echo "no")
         has_url=$(echo "$BODY" | grep -q '"url"' && echo "yes" || echo "no")
         has_registration_number=$(echo "$BODY" | grep -q '"registrationNumber"' && echo "yes" || echo "no")
         has_address=$(echo "$BODY" | grep -q '"address"' && echo "yes" || echo "no")
@@ -187,18 +187,19 @@ if [ "$HTTP_STATUS" -eq 200 ]; then
         has_area_id=$(echo "$BODY" | grep -q '"areaId"' && echo "yes" || echo "no")
 
         if [ "$has_activity_id" = "yes" ] && [ "$has_platform_id" = "yes" ] && \
-           [ "$has_platform_name" = "yes" ] && [ "$has_platform_activity_id" = "yes" ] && \
+           [ "$has_platform_name" = "yes" ] && \
            [ "$has_url" = "yes" ] && [ "$has_registration_number" = "yes" ] && \
            [ "$has_address" = "yes" ] && [ "$has_temporal" = "yes" ] && \
            [ "$has_area_id" = "yes" ]; then
             echo "✅ Test 4 passed: Response contains all required fields"
+            echo "   Note: activityName is optional and was: $has_activity_name"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
             echo "❌ Test 4 failed: Missing required fields in response"
             echo "   - activityId: $has_activity_id"
+            echo "   - activityName (optional): $has_activity_name"
             echo "   - platformId: $has_platform_id"
             echo "   - platformName: $has_platform_name"
-            echo "   - platformActivityId: $has_platform_activity_id"
             echo "   - url: $has_url"
             echo "   - registrationNumber: $has_registration_number"
             echo "   - address: $has_address"
@@ -311,7 +312,7 @@ echo "Test 7: GET with non-existent areaId filter (should return empty list or 4
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
-NONEXISTENT_AREA_ID="99999999999999999999"
+NONEXISTENT_AREA_ID="00000000-0000-0000-0000-000000000000"
 
 RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -H "Authorization: Bearer ${BEARER_TOKEN}" \

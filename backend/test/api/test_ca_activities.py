@@ -83,14 +83,16 @@ class TestCAActivitiesAPI:
         # Create areas
         area_amsterdam = await AreaFactory.create_async(
             async_session,
-            competent_authority_area_id="0363",
+            area_id="550e8400-e29b-41d4-a716-446655440001",
+            area_name="Amsterdam Area",
             competent_authority_id=ca_amsterdam.id,
             filename="amsterdam.zip",
             filedata=b"amsterdam_data",
         )
         area_denhaag = await AreaFactory.create_async(
             async_session,
-            competent_authority_area_id="0518",
+            area_id="550e8400-e29b-41d4-a716-446655440002",
+            area_name="Den Haag Area",
             competent_authority_id=ca_denhaag.id,
             filename="denhaag.zip",
             filedata=b"denhaag_data",
@@ -390,7 +392,8 @@ class TestCAActivitiesAPI:
         )
         area = await AreaFactory.create_async(
             async_session,
-            competent_authority_area_id="0363",
+            area_id="550e8400-e29b-41d4-a716-446655440003",
+            area_name="Amsterdam Area",
             competent_authority_id=ca.id,
             filename="amsterdam.zip",
             filedata=b"amsterdam_data",

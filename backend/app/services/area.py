@@ -59,12 +59,13 @@ async def get_areas(
     areas = result.scalars().all()
 
     # Transform to business layer response format
+    # Return functional IDs (UUIDs), never expose technical IDs
     return [
         {
-            "areaId": area.id,
+            "areaId": area.area_id,  # Functional UUID
+            "areaName": area.area_name,  # Functional name (optional)
             "competentAuthorityId": area.competent_authority.competent_authority_id,
             "competentAuthorityName": area.competent_authority.competent_authority_name,
-            "competentAuthorityAreaId": area.competent_authority_area_id,
             "filename": area.filename,
             "createdAt": area.created_at,
         }
@@ -87,11 +88,11 @@ async def count_areas(session: AsyncSession) -> int:
 
 async def get_area_by_id(session: AsyncSession, area_id: str) -> dict | None:
     """
-    Get a specific area by technical ID.
+    Get a specific area by functional ID (UUID).
 
     Args:
         session: Async database session
-        area_id: Technical area ID
+        area_id: Functional area ID (UUID string)
 
     Returns:
         Dictionary containing area:
@@ -99,7 +100,7 @@ async def get_area_by_id(session: AsyncSession, area_id: str) -> dict | None:
         - filedata: area filedata (binary)
         Returns None if area not found
     """
-    area = await area_crud.get_by_id(session, area_id)
+    area = await area_crud.get_by_area_id(session, area_id)
 
     if area is None:
         return None
@@ -177,7 +178,8 @@ async def process_single_area(
     # Save area (CRUD only flushes)
     await area_crud.create(
         session=session,
-        competent_authority_area_id=area.get("competent_authority_area_id"),  # Can be None (auto-generated)
+        area_id=area.get("area_id"),  # Can be None (auto-generated UUID)
+        area_name=area.get("area_name"),  # Optional name
         filename=area["filename"],
         filedata=area["filedata"],
         competent_authority_id=competent_authority.id,  # Use the FK (int)
@@ -214,7 +216,8 @@ async def process_area_list(
     Args:
         session: Async database session (manual commit mode)
         areas: List of area dictionaries (may include invalid ones), each containing:
-            - competent_authority_area_id: Optional area identifier (auto-generated if None)
+            - area_id: Optional functional ID (RFC 4122 UUID, auto-generated if None)
+            - area_name: Optional human-readable name
             - filename: Filename (64 characters max)
             - filedata: Binary file data
             - competent_authority_id_str: Competent authority ID from JWT token
@@ -308,8 +311,8 @@ async def process_area_list(
             error_message = str(e).lower()
             if "unique constraint" in error_message or "duplicate" in error_message:
                 error_type = "duplicate_resource"
-                competent_authority_area_id = area.get("competent_authority_area_id", "auto-generated")
-                msg = f"Area with competentAuthorityAreaId '{competent_authority_area_id}' already exists"
+                area_id = area.get("area_id", "auto-generated")
+                msg = f"Area with areaId '{area_id}' and timestamp already exists (versioning constraint violated)"
             else:
                 error_type = "integrity_error"
                 msg = f"Database constraint violation: {str(e)}"

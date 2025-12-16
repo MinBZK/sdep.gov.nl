@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.config import Base
@@ -13,9 +13,17 @@ class CompetentAuthority(Base):
 
     A Competent Authority (CA) is a regulatory body responsible for short-term rental regulation.
     A Competent Authority can regulate multiple areas.
+    The combination of (competent_authority_id, created_at) is unique to enable versioning.
     """
 
     __tablename__ = "competent_authority"
+    __table_args__ = (
+        UniqueConstraint(
+            "competent_authority_id",
+            "created_at",
+            name="uq_competent_authority_competent_authority_id_created_at",
+        ),
+    )
 
     # Primary key
     id: Mapped[int] = mapped_column(primary_key=True, index=True)

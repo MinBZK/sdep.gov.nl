@@ -155,17 +155,18 @@ class ActivityRequest(BaseModel):
     - PlatformName comes from token's client_name claim
     - Will be auto-created if it doesn't exist yet
 
-    Platform activity ID:
-    - Optional: If not provided, will be auto-generated (UUID-based)
-    - If provided: Must be lowercase alphanumeric with dashes (max 64 chars)
+    Activity ID:
+    - Optional: If not provided, will be auto-generated (RFC 4122 UUID)
+    - If provided: Must be RFC 4122 UUID format
+
+    Activity Name:
+    - Optional: Human-readable name (max 128 chars)
 
     Validation Layer:
     - Validates all syntax constraints (lengths, ranges, types)
 
-    Constraints (enforced at database level, returns 409 Conflict on violation):
-    - Unique constraint: { platformActivityId, platform, url, temporal.startDatetime, temporal.endDatetime }
-      The combination of all five fields must be unique. This allows submitting the same
-      (platform, url, temporal) with different platformActivityId values.
+    Constraints (enforced at database level):
+    - Unique constraint: (activityId, createdAt) for versioning support
     """
 
     model_config = ConfigDict(
@@ -173,37 +174,33 @@ class ActivityRequest(BaseModel):
         populate_by_name=True,  # Allow both snake_case and camelCase
     )
 
-    platform_activity_id: str | None = Field(
+    activity_id: str | None = Field(
         None,
-        alias="platformActivityId",
-        min_length=1,
-        max_length=64,
-        pattern=r"^[a-z0-9-]+$",
-        description="Activity identifier (optional, auto-generated if not provided). Lowercase alphanumeric with dashes.",
-        examples=["activity-amsterdam-0363-001"],
-    )  # Attribute
+        alias="activityId",
+        min_length=36,
+        max_length=36,
+        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        description="Activity functional ID (optional, auto-generated RFC 4122 UUID if not provided)",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
+    )  # Functional ID
 
-    @field_validator("platform_activity_id")
-    @classmethod
-    def validate_platform_activity_id_alphanumeric(cls, v: str | None) -> str | None:
-        """Validate platform_activity_id is lowercase alphanumeric with dashes."""
-        if v is not None:
-            allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
-            if not all(c in allowed_chars for c in v):
-                raise ValueError(
-                    "Activity ID must contain only lowercase alphanumeric characters and dashes"
-                )
-        return v
+    activity_name: str | None = Field(
+        None,
+        alias="activityName",
+        max_length=128,
+        description="Activity name (optional, human-readable)",
+        examples=["Amsterdam Summer Rental 2025"],
+    )  # Functional name
 
     area_id: str = Field(
         ...,
         alias="areaId",
-        min_length=20,
-        max_length=20,
-        pattern=r"^[a-f0-9]{20}$",
-        description="Technical area ID (20-character UUID)",
-        examples=["a1b2c3d4e5f6g7h8i9j0"],
-    )  # Attribute - technical ID
+        min_length=36,
+        max_length=36,
+        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        description="Area functional ID (RFC 4122 UUID)",
+        examples=["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
+    )  # Functional ID reference
 
     url: str = Field(
         ...,
@@ -286,7 +283,8 @@ class ActivityRequest(BaseModel):
         return {
             "platform_id_str": platform_id,
             "platform_name": platform_name,
-            "platform_activity_id": self.platform_activity_id,
+            "activity_id": self.activity_id,
+            "activity_name": self.activity_name,
             "url": self.url,
             "registration_number": self.registration_number,
             "address_street": self.address.street,
@@ -322,8 +320,8 @@ class ActivityListRequest(BaseModel):
     activities: list[ActivityRequest] = Field(
         ...,
         min_length=1,
-        max_length=100,
-        description="List of activities to process (max 100 per batch)",
+        max_length=1000,
+        description="List of activities to process (max 1000 per batch)",
     )
 
     def to_service_list(self, platform_id: str, platform_name: str) -> list[dict]:
@@ -398,42 +396,43 @@ class ActivityResponse(BaseModel):
     activity_id: str = Field(
         ...,
         alias="activityId",
-        min_length=20,
-        max_length=20,
-        pattern=r"^[a-f0-9]{20}$",
-        description="Activity technical ID (20-character UUID)",
-        examples=["a1b2c3d4e5f6g7h8i9j0"],
-    )  # Technical key
-    platformId: str = Field(
-        ..., alias="platformId", description="Platform ID"
-    )  # Attribute
-    platformName: str = Field(
-        ..., alias="platformName", description="Platform name"
-    )  # Attribute
-    platform_activity_id: str | None = Field(
-        None, alias="platformActivityId", description="Activity identifier (optional)"
-    )  # Attribute - response only
-    createdAt: datetime = Field(
+        min_length=36,
+        max_length=36,
+        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        description="Activity functional ID (RFC 4122 UUID)",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
+    )  # Functional ID
+    activity_name: str | None = Field(
+        None, alias="activityName", description="Activity name (optional)"
+    )  # Functional name
+    created_at: datetime = Field(
         ..., alias="createdAt", description="Creation timestamp"
     )  # Attribute
-    areaId: str = Field(
+    platform_id: str = Field(
+        ..., alias="platformId", description="Platform functional ID"
+    )  # Attribute
+    platform_name: str = Field(
+        ..., alias="platformName", description="Platform name"
+    )  # Attribute
+    area_id: str = Field(
         ...,
         alias="areaId",
-        min_length=20,
-        max_length=20,
-        description="Area technical ID (20-character UUID, foreign key)"
-    )  # Reference - foreign key to Area (technical ID)
+        min_length=36,
+        max_length=36,
+        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        description="Area functional ID (RFC 4122 UUID)"
+    )  # Functional ID reference
     url: str = Field(..., description="URL of the advertisement")  # Attribute
     address: AddressResponse = Field(..., description="Address composite")  # Composite
-    registrationNumber: str = Field(
+    registration_number: str = Field(
         ...,
         alias="registrationNumber",
         description="Registration number for the address",
     )  # Attribute
-    numberOfGuests: int | None = Field(
+    number_of_guests: int | None = Field(
         None, alias="numberOfGuests", description="Number of guests (optional)"
     )  # Attribute
-    countryOfGuests: list[str] | None = Field(
+    country_of_guests: list[str] | None = Field(
         None, alias="countryOfGuests", description="Array of country codes of guests (optional)"
     )  # Attribute
     temporal: TemporalResponse = Field(

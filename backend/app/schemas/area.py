@@ -31,9 +31,12 @@ class AreaRequest(BaseModel):
     - CompetentAuthorityName comes from token's client_name claim
     - Will be auto-created if it doesn't exist yet
 
-    Competent authority area ID:
-    - Optional: If not provided, will be auto-generated (UUID-based)
-    - If provided: Must be lowercase alphanumeric with dashes (max 64 chars)
+    Area ID:
+    - Optional: If not provided, will be auto-generated (RFC 4122 UUID)
+    - If provided: Must be RFC 4122 UUID format
+
+    Area Name:
+    - Optional: Human-readable name (max 128 chars)
 
     Validation Layer:
     - Validates all syntax constraints (lengths, types)
@@ -44,6 +47,9 @@ class AreaRequest(BaseModel):
     - Pydantic automatically decodes base64 strings to bytes
     - Example (bash): base64 -w 0 yourfile.zip
     - Example (Python): base64.b64encode(file_bytes).decode('utf-8')
+
+    Constraints (enforced at database level):
+    - Unique constraint: (areaId, createdAt) for versioning support
     """
 
     model_config = ConfigDict(
@@ -51,15 +57,23 @@ class AreaRequest(BaseModel):
         populate_by_name=True,
     )
 
-    competent_authority_area_id: str | None = Field(
+    area_id: str | None = Field(
         None,
-        alias="competentAuthorityAreaId",
-        min_length=1,
-        max_length=64,
-        pattern=r"^[a-z0-9-]+$",
-        description="Functional area identifier (optional, auto-generated UUID if not provided). Is combined with competent_authority_id and created_at for versioning/stapling. Lowercase alphanumeric with dashes.",
-        examples=["amsterdam-area-0363"],
-    )  # Attribute - functional ID
+        alias="areaId",
+        min_length=36,
+        max_length=36,
+        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        description="Area functional ID (optional, auto-generated RFC 4122 UUID if not provided)",
+        examples=["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
+    )  # Functional ID
+
+    area_name: str | None = Field(
+        None,
+        alias="areaName",
+        max_length=128,
+        description="Area name (optional, human-readable)",
+        examples=["Amsterdam Central District"],
+    )  # Functional name
 
     filename: str = Field(
         ...,
@@ -94,7 +108,8 @@ class AreaRequest(BaseModel):
         return {
             "competent_authority_id_str": competent_authority_id,
             "competent_authority_name": competent_authority_name,
-            "competent_authority_area_id": self.competent_authority_area_id,
+            "area_id": self.area_id,
+            "area_name": self.area_name,
             "filename": self.filename,
             "filedata": self.filedata,
         }
@@ -123,8 +138,8 @@ class AreaListRequest(BaseModel):
     areas: list[AreaRequest] = Field(
         ...,
         min_length=1,
-        max_length=100,
-        description="List of areas to process (max 100 per batch)",
+        max_length=1000,
+        description="List of areas to process (max 1000 per batch)",
     )
 
     def to_service_list(
@@ -163,17 +178,29 @@ class AreaResponse(BaseModel):
     area_id: str = Field(
         ...,
         alias="areaId",
-        min_length=20,
-        max_length=20,
-        pattern=r"^[a-f0-9]{20}$",
-        description="Area technical ID (20-character UUID)",
-        examples=["a1b2c3d4e5f6g7h8i9j0"],
-    )  # Technical key
+        min_length=36,
+        max_length=36,
+        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        description="Area functional ID (RFC 4122 UUID)",
+        examples=["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
+    )  # Functional ID
+    area_name: str | None = Field(
+        None,
+        alias="areaName",
+        description="Area name (optional)",
+        examples=["Amsterdam Central District"],
+    )  # Functional name
+    created_at: datetime = Field(
+        ...,
+        alias="createdAt",
+        description="Timestamp when the area was created",
+        examples=["2025-01-15T10:30:00Z"],
+    )  # Attribute
     competent_authority_id: str = Field(
         ...,
         alias="competentAuthorityId",
         max_length=64,
-        description="Competent authority id who submitted the area",
+        description="Competent authority functional ID who submitted the area",
         examples=["sdep-ca-0363"],
     )  # Attribute
     competent_authority_name: str = Field(
@@ -182,19 +209,6 @@ class AreaResponse(BaseModel):
         max_length=128,
         description="Competent authority name (for convenience)",
         examples=["Gemeente Amsterdam"],
-    )  # Attribute
-    competent_authority_area_id: str | None = Field(
-        None,
-        alias="competentAuthorityAreaId",
-        max_length=64,
-        description="Functional area identifier (optional business key)",
-        examples=["amsterdam-area-0363"],
-    )  # Attribute - functional ID
-    created_at: datetime = Field(
-        ...,
-        alias="createdAt",
-        description="Timestamp when the area was created",
-        examples=["2025-01-15T10:30:00Z"],
     )  # Attribute
     filename: str = Field(
         ...,

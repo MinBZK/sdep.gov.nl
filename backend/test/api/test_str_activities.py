@@ -65,6 +65,7 @@ class TestSTRActivitiesAPI:
     async def test_areas(self, async_session: AsyncSession):
         """Create test areas for activities tests."""
         # Get or create competent authority (may already exist from previous test)
+        from app.crud import area as area_crud
         from app.crud import competent_authority as ca_crud
 
         ca = await ca_crud.get_by_competent_authority_id(async_session, "test")
@@ -75,25 +76,36 @@ class TestSTRActivitiesAPI:
                 competent_authority_name="Test Authority",
             )
 
-        # Create areas with specific competent_authority_area_ids needed by tests
-        competent_authority_area_ids = ["0363", "0344", "ceaba747-15ca-4d8a-81f7", "ceaba747-15ca"]
+        # Create areas with specific area_ids (UUIDs) needed by tests
+        # Use fixed UUIDs for predictable test data
+        area_configs = [
+            ("0363", "550e8400-e29b-41d4-a716-446655440001"),
+            ("0344", "550e8400-e29b-41d4-a716-446655440002"),
+            ("ceaba747-15ca-4d8a-81f7", "550e8400-e29b-41d4-a716-446655440003"),
+            ("ceaba747-15ca", "550e8400-e29b-41d4-a716-446655440004"),
+        ]
 
         # Also create areas for transaction atomicity test (0000-0009)
-        # Note: This already includes "0001" so don't add it separately above
         for i in range(10):
-            competent_authority_area_ids.append(f"{i:04d}")
+            area_configs.append((f"{i:04d}", f"550e8400-e29b-41d4-a716-44665544{i:04d}"))
 
-        # Create areas (each test gets fresh database)
+        # Get or create areas (check if they exist first to avoid unique constraint violations)
         areas = {}
-        for ca_area_id in competent_authority_area_ids:
-            area = await AreaFactory.create_async(
-                async_session,
-                competent_authority_area_id=ca_area_id,
-                competent_authority_id=ca.id,
-                filename=f"{ca_area_id}.zip",
-                filedata=b"test_data",
-            )
-            areas[ca_area_id] = area
+        for key, area_uuid in area_configs:
+            # Check if area already exists
+            existing_area = await area_crud.get_by_area_id(async_session, area_uuid)
+            if existing_area:
+                areas[key] = existing_area
+            else:
+                area = await AreaFactory.create_async(
+                    async_session,
+                    area_id=area_uuid,
+                    area_name=f"Test Area {key}",
+                    competent_authority_id=ca.id,
+                    filename=f"{key}.zip",
+                    filedata=b"test_data",
+                )
+                areas[key] = area
 
         return areas
 
@@ -128,7 +140,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD", "DEU", "BEL"],
                     "numberOfGuests": 4,
                 }
@@ -183,7 +195,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 },
@@ -201,7 +213,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-02T15:00:00Z",
                         "endDatetime": "2025-06-08T10:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["DEU", "BEL"],
                     "numberOfGuests": 4,
                 },
@@ -253,7 +265,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-07-01T14:00:00Z",
                         "endDatetime": "2025-07-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0344"].id,
+                    "areaId": test_areas["0344"].area_id,
                     "countryOfGuests": ["NLD", "DEU", "BEL", "FRA"],
                     "numberOfGuests": 8,
                 }
@@ -365,7 +377,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -434,7 +446,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -610,7 +622,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0001"].id,
+                    "areaId": test_areas["0001"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 },
@@ -627,7 +639,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-08T14:00:00Z",  # Different temporal!
                         "endDatetime": "2025-06-14T11:00:00Z",  # Different temporal!
                     },
-                    "areaId": test_areas["0002"].id,
+                    "areaId": test_areas["0002"].area_id,
                     "countryOfGuests": ["DEU"],
                     "numberOfGuests": 4,
                 },
@@ -704,7 +716,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -991,7 +1003,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1037,7 +1049,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1082,7 +1094,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["ceaba747-15ca-4d8a-81f7"].id,  # Valid: alphanumeric with hyphens
+                    "areaId": test_areas["ceaba747-15ca-4d8a-81f7"].area_id,  # Valid: alphanumeric with hyphens
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1311,7 +1323,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["ceaba747-15ca"].id,
+                    "areaId": test_areas["ceaba747-15ca"].area_id,
                     "countryOfGuests": [
                         "NLD",
                         "USA",
@@ -1359,7 +1371,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }
@@ -1445,16 +1457,17 @@ class TestSTRActivitiesAPI:
         assert data["succeeded"] == 0
         assert data["failed"] == 1
 
-    async def test_post_activities_with_platform_activity_id(
+    async def test_post_activities_with_activity_id(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activities with optional platformActivityId field provided."""
+        """Test POST /str/activities with optional activityId and activityName fields provided."""
         # Arrange
         payload = {
             "metadata": {},
             "activities": [
                 {
-                    "platformActivityId": "custom-activity-id-001",
+                    "activityId": "550e8400-e29b-41d4-a716-446655440999",
+                    "activityName": "Custom Activity Name",
                     "url": "http://example.com/listing-with-id",
                     "registrationNumber": "REG123456",
                     "address": {
@@ -1467,7 +1480,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD", "DEU", "BEL"],
                     "numberOfGuests": 4,
                 }
@@ -1493,12 +1506,13 @@ class TestSTRActivitiesAPI:
         assert data["failed"] == 0
         assert len(data["failures"]) == 0
 
-        # Verify data was saved with the specified platform_activity_id
+        # Verify data was saved with the specified activity_id and activity_name
         saved = await activity_crud.get_by_url(
             async_session, "http://example.com/listing-with-id"
         )
         assert len(saved) == 1
-        assert saved[0].platform_activity_id == "custom-activity-id-001"
+        assert saved[0].activity_id == "550e8400-e29b-41d4-a716-446655440999"
+        assert saved[0].activity_name == "Custom Activity Name"
         assert saved[0].registration_number == "REG123456"
 
     async def test_post_activities_all_succeed(
@@ -1522,7 +1536,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "numberOfGuests": 2,
                 }
                 for i in range(1, 6)
@@ -1573,7 +1587,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-07-01T14:00:00Z",
                         "endDatetime": "2025-07-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].id,
+                    "areaId": test_areas["0363"].area_id,
                     "numberOfGuests": 3,
                 },
                 # Activity 1: Invalid area - should fail validation
@@ -1590,7 +1604,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-08-01T14:00:00Z",
                         "endDatetime": "2025-08-07T11:00:00Z",
                     },
-                    "areaId": "99999999999999999999",  # Non-existent 20-char area ID
+                    "areaId": "99999999-9999-9999-9999-999999999999",  # Non-existent UUID
                     "numberOfGuests": 5,
                 },
             ],
@@ -1648,7 +1662,7 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": f"99999999999999999{i:03d}",  # Non-existent 20-char area IDs
+                    "areaId": f"99999999-9999-9999-9999-99999999999{i}",  # Non-existent UUIDs
                     "numberOfGuests": i,
                 }
                 for i in range(1, 4)

@@ -38,6 +38,7 @@ async def validate_activity(
 
     Phase 1 validation: Check that referenced entities exist.
     Does NOT attempt to save to database.
+    Resolves functional area_id (UUID) to technical ID for later use.
 
     Args:
         session: Async database session
@@ -52,15 +53,18 @@ async def validate_activity(
     """
     errors = []
 
-    # Validate Area exists (using technical ID)
-    area_id = activity["area_id"]
-    area = await area_crud.get_by_id(session, area_id)
+    # Validate Area exists by functional ID (UUID) and resolve to technical ID
+    area_id_uuid = activity["area_id"]  # Functional ID (UUID string)
+    area = await area_crud.get_by_area_id(session, area_id_uuid)
     if area is None:
         errors.append({
             "loc": ["activities", activity_index, "areaId"],
-            "msg": f"Area with id {area_id} not found",
+            "msg": f"Area with areaId '{area_id_uuid}' not found",
             "type": "business_logic_error",
         })
+    else:
+        # Store resolved technical ID for Phase 2 processing
+        activity["_area_technical_id"] = area.id  # Integer FK
 
     return errors
 
@@ -72,17 +76,18 @@ async def process_single_activity(
     Process and save a single activity (assumes validation already passed).
 
     Called within a savepoint context. Raises exceptions on database errors.
+    Uses resolved technical area_id from validation phase.
 
     Args:
         session: Async database session (within savepoint)
-        activity: Activity dictionary (already validated)
+        activity: Activity dictionary (already validated, contains _area_technical_id)
 
     Raises:
         IntegrityError: Database constraint violation
         Any other database error
     """
-    # Get area_id (technical ID, already validated in Phase 1)
-    area_id = activity["area_id"]
+    # Get resolved technical area_id (set in validate_activity)
+    area_technical_id = activity["_area_technical_id"]  # Integer FK
 
     # Look up or create Platform
     platform_id_str = activity["platform_id_str"]
@@ -99,7 +104,8 @@ async def process_single_activity(
     # Save activity (CRUD only flushes)
     await activity_crud.create(
         session=session,
-        platform_activity_id=activity.get("platform_activity_id"),
+        activity_id=activity.get("activity_id"),
+        activity_name=activity.get("activity_name"),
         url=activity["url"],
         address_street=activity["address_street"],
         address_number=activity["address_number"],
@@ -108,7 +114,7 @@ async def process_single_activity(
         address_postal_code=activity["address_postal_code"],
         address_city=activity["address_city"],
         registration_number=activity["registration_number"],
-        area_id=area_id,
+        area_id=area_technical_id,  # Use resolved technical ID
         number_of_guests=activity["number_of_guests"],
         country_of_guests=activity["country_of_guests"],
         temporal_start_date_time=activity["temporal_start_date_time"],
@@ -236,10 +242,8 @@ async def process_activity_list(
             error_message = str(e).lower()
             if "unique constraint" in error_message or "duplicate" in error_message:
                 error_type = "duplicate_resource"
-                platform_activity_id = activity.get("platform_activity_id", "auto-generated")
-                platform_id = activity.get("platform_id_str", "unknown")
-                url = activity.get("url", "unknown")
-                msg = f"Activity with platformActivityId '{platform_activity_id}', platform '{platform_id}', and URL '{url}' already exists"
+                activity_id = activity.get("activity_id", "auto-generated")
+                msg = f"Activity with activityId '{activity_id}' and timestamp already exists (versioning constraint violated)"
             else:
                 error_type = "integrity_error"
                 msg = f"Database constraint violation: {str(e)}"
@@ -355,13 +359,14 @@ async def get_activity_list(
     )
 
     # Convert SQLAlchemy models to dictionaries for API layer
-    # Platform information is accessed via the relationship
+    # Platform and Area information accessed via relationships
+    # Return functional IDs (UUIDs), never expose technical IDs
     return [
         {
-            "activity_id": activity.id,
-            "platform_id": activity.platform.platform_id,  # Access via relationship
-            "platform_name": activity.platform.platform_name,  # Access via relationship
-            "platform_activity_id": activity.platform_activity_id,
+            "activity_id": activity.activity_id,  # Functional UUID
+            "activity_name": activity.activity_name,  # Functional name (optional)
+            "platform_id": activity.platform.platform_id,  # Functional ID via relationship
+            "platform_name": activity.platform.platform_name,  # Name via relationship
             "url": activity.url,
             "address_street": activity.address_street,
             "address_number": activity.address_number,
@@ -370,7 +375,7 @@ async def get_activity_list(
             "address_postal_code": activity.address_postal_code,
             "address_city": activity.address_city,
             "registration_number": activity.registration_number,
-            "area_id": activity.area.id,  # Technical area ID (integer)
+            "area_id": activity.area.area_id,  # Functional UUID via relationship
             "number_of_guests": activity.number_of_guests,
             "country_of_guests": activity.country_of_guests,
             "temporal_start_date_time": activity.temporal_start_date_time,

@@ -101,17 +101,20 @@ for area_def in "${AREAS[@]}"; do
     # Get hex-encoded data
     hex_bytea=$(encode_file_to_hex "${zipfile_path}")
 
-    # Generate a 20-character UUID for the area (matching uuid.uuid4().hex[:20])
-    area_uuid=$(python3 -c "import uuid; print(uuid.uuid4().hex[:20])")
+    # Generate a proper RFC 4122 UUID for the area_id (functional ID)
+    area_uuid=$(python3 -c "import uuid; print(str(uuid.uuid4()))")
+
+    # Extract area name from comment (e.g., "Amsterdam area" -> "Amsterdam")
+    area_name=$(echo "${comment}" | sed 's/ area$//')
 
     # Write SQL INSERT statement
     cat >> "${OUTPUT_FILE}" <<EOF
 -- ${comment}
-INSERT INTO area (id, competent_authority_id, competent_authority_area_id, filename, filedata, created_at)
+INSERT INTO area (competent_authority_id, area_id, area_name, filename, filedata, created_at)
 VALUES (
-  '${area_uuid}',
   (SELECT id FROM competent_authority WHERE competent_authority_id = '${ca_id}'),
-  '${competent_authority_area_id}',
+  '${area_uuid}',
+  '${area_name}',
   '${filename}',
   ${hex_bytea},
   '2025-01-01 00:00:00+00'::timestamptz
