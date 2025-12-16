@@ -37,10 +37,66 @@ async def validation_exception_handler(
 
     Returns 400 Bad Request for GET requests (query parameter validation),
     Returns 422 Unprocessable Entity for other methods (request body validation).
+
+    For /str/activities endpoint, returns batch processing format:
+    {
+        "message": "...",
+        "totalProcessed": N,
+        "succeeded": 0,
+        "failed": N,
+        "failures": [...]
+    }
     """
     logger = _get_logger()
     logger.warning(f"Validation error on {request.url.path}: {exc}")
 
+    # Special handling for /str/activities endpoint
+    if request.url.path.endswith("/str/activities") and request.method == "POST":
+        from app.schemas.activity import (
+            ActivityErrorDetail,
+            ActivityProcessingResponse,
+        )
+
+        # Try to extract the activities count from the request body
+        # to determine totalProcessed
+        total_activities = 1  # Default to 1 if we can't parse
+        try:
+            body = await request.body()
+            if body:
+                import json
+                data = json.loads(body)
+                if "activities" in data and isinstance(data["activities"], list):
+                    total_activities = len(data["activities"])
+        except Exception:
+            # If we can't parse the body, default to 1
+            pass
+
+        # Convert Pydantic errors to ActivityErrorDetail format
+        errors = []
+        for error in exc.errors():
+            errors.append(
+                ActivityErrorDetail(
+                    loc=error["loc"],
+                    msg=error["msg"],
+                    type=error["type"],
+                )
+            )
+
+        # Return batch processing format
+        response = ActivityProcessingResponse(
+            message=f"Processed {total_activities} activities: 0 succeeded, {total_activities} failed",
+            totalProcessed=total_activities,
+            succeeded=0,
+            failed=total_activities,
+            failures=[],  # No activity details available for Pydantic validation errors
+        )
+
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content=response.model_dump(by_alias=True, mode="json"),
+        )
+
+    # Standard error response for other endpoints
     details = []
     for error in exc.errors():
         details.append(

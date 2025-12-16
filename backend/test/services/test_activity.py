@@ -41,8 +41,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.area_id,
-                "competent_authority_id": "0363",
+                "area_id": area.id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -53,11 +52,13 @@ class TestActivityService:
         ]
 
         # Act
-        await activity_service.process_activity_list(
+        result = await activity_service.process_activity_list(
             async_session, activities
         )
 
         # Assert
+        assert result["succeeded"] == 1
+        assert result["failed"] == 0
         count = await activity_service.count_activity(async_session)
         assert count == 1
 
@@ -81,8 +82,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": f"REG{i:03d}",
-                "area_id": area.area_id,
-                "competent_authority_id": "0363",
+                "area_id": area.id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0)
@@ -96,11 +96,13 @@ class TestActivityService:
         ]
 
         # Act
-        await activity_service.process_activity_list(
+        result = await activity_service.process_activity_list(
             async_session, activities
         )
 
         # Assert
+        assert result["succeeded"] == 5
+        assert result["failed"] == 0
         count = await activity_service.count_activity(async_session)
         assert count == 5
 
@@ -123,8 +125,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.area_id,
-                "competent_authority_id": area.competent_authority.competent_authority_id,
+                "area_id": area.id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -135,11 +136,13 @@ class TestActivityService:
         ]
 
         # Act
-        await activity_service.process_activity_list(
+        result = await activity_service.process_activity_list(
             async_session, activities
         )
 
-        # Assert - verify platform was created
+        # Assert - verify success and platform was created
+        assert result["succeeded"] == 1
+        assert result["failed"] == 0
         from app.crud import platform as platform_crud
 
         platform = await platform_crud.get_by_platform_id(async_session, "new_platform")
@@ -170,8 +173,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.area_id,
-                "competent_authority_id": area.competent_authority.competent_authority_id,
+                "area_id": area.id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -182,11 +184,13 @@ class TestActivityService:
         ]
 
         # Act
-        await activity_service.process_activity_list(
+        result = await activity_service.process_activity_list(
             async_session, activities
         )
 
-        # Assert - verify no new platform was created
+        # Assert - verify success and no new platform was created
+        assert result["succeeded"] == 1
+        assert result["failed"] == 0
         from app.models.platform import Platform
         from sqlalchemy import select
 
@@ -214,8 +218,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.area_id,
-                "competent_authority_id": "0363",
+                "area_id": area.id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -226,11 +229,13 @@ class TestActivityService:
         ]
 
         # Act
-        await activity_service.process_activity_list(
+        result = await activity_service.process_activity_list(
             async_session, activities
         )
 
         # Assert
+        assert result["succeeded"] == 1
+        assert result["failed"] == 0
         count = await activity_service.count_activity(async_session)
         assert count == 1
 
@@ -238,11 +243,7 @@ class TestActivityService:
         self, async_session: AsyncSession
     ):
         """Test that processing fails when area doesn't exist"""
-        # Arrange - create competent authority so that area lookup is reached
-        await CompetentAuthorityFactory.create_async(
-            async_session, competent_authority_id="test"
-        )
-
+        # Arrange
         activities = [
             {
                 "url": "http://example.com/listing-1",
@@ -253,8 +254,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": "nonexistent-area-id",
-                "competent_authority_id": "test",
+                "area_id": "99999999999999999999",
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -264,74 +264,17 @@ class TestActivityService:
             }
         ]
 
-        # Act & Assert
-        with pytest.raises(BusinessLogicError) as exc_info:
-            await activity_service.process_activity_list(
-                async_session, activities
-            )
-
-        assert "Area with area_id 'nonexistent-area-id' and competent_authority_id 'test' not found" in str(
-            exc_info.value
-        )
-        assert exc_info.value.details == {
-            "area_id": "nonexistent-area-id",
-            "competent_authority_id": "test",
-        }
-
-    async def test_process_activity_list_raises_error_for_duplicate(
-        self, async_session: AsyncSession
-    ):
-        """Test that processing fails when duplicate activity is submitted"""
-        # Arrange
-        area = await AreaFactory.create_async(
-            async_session,
-            competent_authority_id="0363",
-            competent_authority_name="Gemeente Amsterdam",
-        )
-        platform = await PlatformFactory.create_async(async_session)
-        duplicate_activity_id = "duplicate-activity-id-001"
-
-        # Create first activity with specific activity_id
-        await ActivityFactory.create_async(
-            async_session,
-            activity_id=duplicate_activity_id,
-            url="http://example.com/listing-1",
-            temporal_start_date_time=datetime(2025, 6, 1, 12, 0, 0),
-            temporal_end_date_time=datetime(2025, 6, 8, 12, 0, 0),
-            area_id=area.id,
-            platform_id=platform.id,
+        # Act
+        result = await activity_service.process_activity_list(
+            async_session, activities
         )
 
-        # Try to create duplicate with same activity_id, url, and temporal
-        activities = [
-            {
-                "activity_id": duplicate_activity_id,  # Same activity_id!
-                "url": "http://example.com/listing-1",  # Same URL!
-                "address_street": "Damstraat",
-                "address_number": "1",
-                "address_letter": None,
-                "address_addition": None,
-                "address_postal_code": "1012JS",
-                "address_city": "Amsterdam",
-                "registration_number": "REG001",
-                "area_id": area.area_id,
-                "competent_authority_id": "0363",
-                "number_of_guests": 4,
-                "country_of_guests": ["NLD", "DEU"],
-                "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),  # Same temporal!
-                "temporal_end_date_time": datetime(2025, 6, 8, 12, 0, 0),  # Same temporal!
-                "platform_id_str": platform.platform_id,  # Same platform!
-                "platform_name": platform.platform_name,
-            }
-        ]
-
-        # Act & Assert
-        with pytest.raises(DuplicateResourceError) as exc_info:
-            await activity_service.process_activity_list(
-                async_session, activities
-            )
-
-        assert "already exists" in str(exc_info.value)
+        # Assert - Activity fails validation due to nonexistent area
+        assert result["total_processed"] == 1
+        assert result["succeeded"] == 0
+        assert result["failed"] == 1
+        assert len(result["failures"]) == 1
+        assert "Area with id 99999999999999999999 not found" in result["failures"][0]["errors"][0]["msg"]
 
     # Tests for count_activity
 
@@ -573,6 +516,9 @@ class TestActivityService:
         # Verify all required keys are present
         required_keys = {
             "activity_id",
+            "platform_id",
+            "platform_name",
+            "platform_activity_id",
             "url",
             "address_street",
             "address_number",
@@ -586,21 +532,24 @@ class TestActivityService:
             "country_of_guests",
             "temporal_start_date_time",
             "temporal_end_date_time",
-            "platform_id",
-            "platform_name",
             "created_at",
         }
         assert set(activity_dict.keys()) == required_keys
 
         # Verify types
         assert isinstance(activity_dict["activity_id"], str)
+        assert len(activity_dict["activity_id"]) == 20
+        assert isinstance(activity_dict["platform_id"], str)
+        assert isinstance(activity_dict["platform_name"], str)
+        assert isinstance(activity_dict["platform_activity_id"], str) or activity_dict["platform_activity_id"] is None
         assert isinstance(activity_dict["url"], str)
         assert isinstance(activity_dict["address_street"], str)
         assert isinstance(activity_dict["address_number"], int)
         assert isinstance(activity_dict["address_postal_code"], str)
         assert isinstance(activity_dict["address_city"], str)
         assert isinstance(activity_dict["registration_number"], str)
-        assert isinstance(activity_dict["area_id"], str)  # area_id is string business identifier
+        assert isinstance(activity_dict["area_id"], str)  # area_id is technical ID (20-char UUID)
+        assert len(activity_dict["area_id"]) == 20
         assert isinstance(activity_dict["number_of_guests"], int)
         assert isinstance(activity_dict["country_of_guests"], list)
         assert isinstance(activity_dict["temporal_start_date_time"], datetime)
@@ -830,10 +779,10 @@ class TestActivityService:
         assert result[0]["platform_id"] == "platform99"
         assert result[0]["platform_name"] == "Super Platform"
 
-    async def test_process_activity_list_with_activity_id(
+    async def test_process_activity_list_with_platform_activity_id(
         self, async_session: AsyncSession
     ):
-        """Test processing activity with optional activity_id provided"""
+        """Test processing activity with optional platform_activity_id provided"""
         # Arrange
         area = await AreaFactory.create_async(
             async_session,
@@ -842,7 +791,7 @@ class TestActivityService:
         )
         activities = [
             {
-                "activity_id": "custom-activity-123",
+                "platform_activity_id": "custom-activity-123",
                 "url": "http://example.com/listing-with-id",
                 "address_street": "Damstraat",
                 "address_number": "1",
@@ -851,8 +800,7 @@ class TestActivityService:
                 "address_postal_code": "1012JS",
                 "address_city": "Amsterdam",
                 "registration_number": "REG001",
-                "area_id": area.area_id,
-                "competent_authority_id": "0363",
+                "area_id": area.id,
                 "number_of_guests": 4,
                 "country_of_guests": ["NLD", "DEU"],
                 "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
@@ -863,19 +811,21 @@ class TestActivityService:
         ]
 
         # Act
-        await activity_service.process_activity_list(
+        result = await activity_service.process_activity_list(
             async_session, activities
         )
 
         # Assert
+        assert result["succeeded"] == 1
+        assert result["failed"] == 0
         count = await activity_service.count_activity(async_session)
         assert count == 1
 
-        # Verify activity was created with the specified activity_id
+        # Verify activity was created with the specified platform_activity_id
         from app.crud import activity as activity_crud
 
         saved = await activity_crud.get_by_url(
             async_session, "http://example.com/listing-with-id"
         )
         assert len(saved) == 1
-        assert saved[0].activity_id == "custom-activity-123"
+        assert saved[0].platform_activity_id == "custom-activity-123"

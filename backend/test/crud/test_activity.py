@@ -19,7 +19,7 @@ class TestActivityCRUD:
         # Arrange
         area = await AreaFactory.create_async(async_session)
         platform = await PlatformFactory.create_async(async_session)
-        activity_id = "test-activity-001"
+        platform_activity_id = "test-activity-001"
         url = "http://example.com/listing-1"
         address_street = "Main Street"
         address_number = 123
@@ -34,7 +34,7 @@ class TestActivityCRUD:
         # Act
         result = await activity.create(
             session=async_session,
-            activity_id=activity_id,
+            platform_activity_id=platform_activity_id,
             platform_id=platform.id,
             area_id=area.id,
             url=url,
@@ -53,7 +53,7 @@ class TestActivityCRUD:
 
         # Assert
         assert result.id is not None
-        assert result.activity_id == activity_id
+        assert result.platform_activity_id == platform_activity_id
         assert result.url == url
         assert result.address_street == address_street
         assert result.address_number == address_number
@@ -74,7 +74,7 @@ class TestActivityCRUD:
     async def test_create_activity_with_auto_generated_id(
         self, async_session: AsyncSession
     ):
-        """Test creating activity with auto-generated activity_id."""
+        """Test creating activity with auto-generated platform_activity_id."""
         # Arrange
         area = await AreaFactory.create_async(async_session)
         platform = await PlatformFactory.create_async(async_session)
@@ -82,7 +82,7 @@ class TestActivityCRUD:
         # Act
         result = await activity.create(
             session=async_session,
-            activity_id=None,
+            platform_activity_id=None,
             platform_id=platform.id,
             area_id=area.id,
             url="http://example.com/listing-autogen",
@@ -100,8 +100,7 @@ class TestActivityCRUD:
         )
 
         # Assert
-        assert result.activity_id is not None
-        assert len(result.activity_id) > 0
+        assert result.platform_activity_id is None  # Should be None when not provided
 
     async def test_create_activity_with_optional_fields(
         self, async_session: AsyncSession
@@ -116,7 +115,7 @@ class TestActivityCRUD:
         # Act
         result = await activity.create(
             session=async_session,
-            activity_id="test-activity-002",
+            platform_activity_id="test-activity-002",
             platform_id=platform.id,
             area_id=area.id,
             url="http://example.com/listing-2",
@@ -137,142 +136,6 @@ class TestActivityCRUD:
         assert result.address_letter == address_letter
         assert result.address_addition == address_addition
 
-    async def test_create_activity_with_duplicate_unique_constraint(
-        self, async_session: AsyncSession
-    ):
-        """Test that duplicate activity_id+platform_id+url+temporal combination raises IntegrityError."""
-        # Arrange
-        area = await AreaFactory.create_async(async_session)
-        platform = await PlatformFactory.create_async(async_session)
-        activity_id_value = "test-activity-003"
-        url = "http://example.com/same-listing"
-        temporal_start = datetime(2025, 8, 1, 10, 0, 0)
-        temporal_end = datetime(2025, 8, 7, 10, 0, 0)
-
-        # Create first activity
-        await activity.create(
-            session=async_session,
-            activity_id=activity_id_value,
-            platform_id=platform.id,
-            area_id=area.id,
-            url=url,
-            address_street="Test Street",
-            address_number=100,
-            address_letter=None,
-            address_addition=None,
-            address_postal_code="1111AA",
-            address_city="TestCity",
-            registration_number="REG111",
-            number_of_guests=3,
-            country_of_guests=["NLD"],
-            temporal_start_date_time=temporal_start,
-            temporal_end_date_time=temporal_end,
-        )
-        await async_session.flush()
-
-        # Act & Assert - Try to create duplicate (all 5 unique constraint fields are the same)
-        with pytest.raises(IntegrityError):
-            await activity.create(
-                session=async_session,
-                activity_id=activity_id_value,  # Same activity_id
-                platform_id=platform.id,  # Same platform_id
-                area_id=area.id,
-                url=url,  # Same URL
-                address_street="Different Street",
-                address_number=200,
-                address_letter=None,
-                address_addition=None,
-                address_postal_code="2222BB",
-                address_city="OtherCity",
-                registration_number="REG222",
-                number_of_guests=5,
-                country_of_guests=["DEU"],
-                temporal_start_date_time=temporal_start,  # Same temporal
-                temporal_end_date_time=temporal_end,  # Same temporal
-            )
-            await async_session.flush()
-
-    async def test_update_activity(self, async_session: AsyncSession):
-        """Test updating an existing activity."""
-        # Arrange
-        act = await ActivityFactory.create_async(async_session)
-        new_url = "http://example.com/updated-listing"
-        new_registration_number = "REG999999"
-
-        # Act
-        result = await activity.update(
-            async_session,
-            act.id,
-            url=new_url,
-            registration_number=new_registration_number,
-        )
-
-        # Assert
-        assert result is not None
-        assert result.id == act.id
-        assert result.url == new_url
-        assert result.registration_number == new_registration_number
-
-    async def test_update_activity_address_fields(
-        self, async_session: AsyncSession
-    ):
-        """Test updating address fields of activity."""
-        # Arrange
-        act = await ActivityFactory.create_async(async_session)
-        new_street = "New Street Name"
-        new_number = 999
-        new_postal_code = "9999ZZ"
-        new_city = "New City"
-
-        # Act
-        result = await activity.update(
-            async_session,
-            act.id,
-            address_street=new_street,
-            address_number=new_number,
-            address_postal_code=new_postal_code,
-            address_city=new_city,
-        )
-
-        # Assert
-        assert result is not None
-        assert result.address_street == new_street
-        assert result.address_number == new_number
-        assert result.address_postal_code == new_postal_code
-        assert result.address_city == new_city
-
-    async def test_update_activity_temporal_fields(
-        self, async_session: AsyncSession
-    ):
-        """Test updating temporal fields of activity."""
-        # Arrange
-        act = await ActivityFactory.create_async(async_session)
-        new_start = datetime(2025, 12, 1, 15, 0, 0)
-        new_end = datetime(2025, 12, 10, 15, 0, 0)
-
-        # Act
-        result = await activity.update(
-            async_session,
-            act.id,
-            temporal_start_date_time=new_start,
-            temporal_end_date_time=new_end,
-        )
-
-        # Assert
-        assert result is not None
-        assert result.temporal_start_date_time == new_start
-        assert result.temporal_end_date_time == new_end
-
-    async def test_update_activity_not_found(self, async_session: AsyncSession):
-        """Test updating a non-existent activity."""
-        # Act
-        result = await activity.update(
-            async_session, 99999, url="http://example.com/nonexistent"
-        )
-
-        # Assert
-        assert result is None
-
     async def test_delete_activity(self, async_session: AsyncSession):
         """Test deleting an existing activity."""
         # Arrange
@@ -289,7 +152,7 @@ class TestActivityCRUD:
     async def test_delete_activity_not_found(self, async_session: AsyncSession):
         """Test deleting a non-existent activity."""
         # Act
-        result = await activity.delete(async_session, 99999)
+        result = await activity.delete(async_session, "99999999999999999999")
 
         # Assert
         assert result is False
@@ -301,7 +164,7 @@ class TestActivityCRUD:
 
         # Act
         exists = await activity.exists(async_session, act.id)
-        not_exists = await activity.exists(async_session, 99999)
+        not_exists = await activity.exists(async_session, "99999999999999999999")
 
         # Assert
         assert exists is True
@@ -366,77 +229,7 @@ class TestActivityCRUD:
     async def test_get_by_id_not_found(self, async_session: AsyncSession):
         """Test getting a non-existent activity by id."""
         # Act
-        result = await activity.get_by_id(async_session, 99999)
-
-        # Assert
-        assert result is None
-
-    async def test_get_by_activity_id(self, async_session: AsyncSession):
-        """Test getting activity by activity_id (business identifier)."""
-        # Arrange
-        test_activity_id = "my-custom-activity-id"
-        act = await ActivityFactory.create_async(async_session, activity_id=test_activity_id)
-
-        # Act
-        result = await activity.get_by_activity_id(async_session, test_activity_id)
-
-        # Assert
-        assert result is not None
-        assert result.id == act.id
-        assert result.activity_id == test_activity_id
-
-    async def test_get_by_activity_id_not_found(self, async_session: AsyncSession):
-        """Test getting activity by non-existent activity_id."""
-        # Act
-        result = await activity.get_by_activity_id(async_session, "nonexistent-id")
-
-        # Assert
-        assert result is None
-
-    async def test_get_by_activity_id_and_platform_id(self, async_session: AsyncSession):
-        """Test getting activity by activity_id and platform_id (unique constraint)."""
-        # Arrange
-        platform1 = await PlatformFactory.create_async(async_session)
-        platform2 = await PlatformFactory.create_async(async_session)
-        test_activity_id = "my-shared-activity-id"
-
-        # Create two activities with the same activity_id but different platforms
-        act1 = await ActivityFactory.create_async(
-            async_session,
-            activity_id=test_activity_id,
-            platform_id=platform1.id
-        )
-        act2 = await ActivityFactory.create_async(
-            async_session,
-            activity_id=test_activity_id,
-            platform_id=platform2.id
-        )
-
-        # Act
-        result1 = await activity.get_by_activity_id_and_platform_id(
-            async_session, test_activity_id, platform1.id
-        )
-        result2 = await activity.get_by_activity_id_and_platform_id(
-            async_session, test_activity_id, platform2.id
-        )
-
-        # Assert
-        assert result1 is not None
-        assert result1.id == act1.id
-        assert result1.platform_id == platform1.id
-
-        assert result2 is not None
-        assert result2.id == act2.id
-        assert result2.platform_id == platform2.id
-
-    async def test_get_by_activity_id_and_platform_id_not_found(
-        self, async_session: AsyncSession
-    ):
-        """Test getting activity by non-existent activity_id and platform_id combination."""
-        # Act
-        result = await activity.get_by_activity_id_and_platform_id(
-            async_session, "nonexistent-id", 99999
-        )
+        result = await activity.get_by_id(async_session, "99999999999999999999")
 
         # Assert
         assert result is None
@@ -489,51 +282,6 @@ class TestActivityCRUD:
         # Assert
         assert len(results) == 0
 
-    async def test_get_by_unique_constraint(self, async_session: AsyncSession):
-        """Test getting activity by unique constraint (all 5 fields)."""
-        # Arrange
-        test_activity_id = "test-activity-unique-001"
-        test_url = "http://example.com/unique-listing"
-        test_start = datetime(2025, 9, 1, 10, 0, 0)
-        test_end = datetime(2025, 9, 7, 10, 0, 0)
-        act = await ActivityFactory.create_async(
-            async_session,
-            activity_id=test_activity_id,
-            url=test_url,
-            temporal_start_date_time=test_start,
-            temporal_end_date_time=test_end,
-        )
-
-        # Act
-        result = await activity.get_by_unique_constraint(
-            async_session, test_activity_id, act.platform_id, test_url, test_start, test_end
-        )
-
-        # Assert
-        assert result is not None
-        assert result.id == act.id
-        assert result.url == test_url
-
-    async def test_get_by_unique_constraint_not_found(
-        self, async_session: AsyncSession
-    ):
-        """Test getting activity by non-existent unique constraint."""
-        # Arrange
-        platform = await PlatformFactory.create_async(async_session)
-
-        # Act
-        result = await activity.get_by_unique_constraint(
-            async_session,
-            "nonexistent-activity-id",
-            platform.id,
-            "http://example.com/nonexistent",
-            datetime(2025, 10, 1, 10, 0, 0),
-            datetime(2025, 10, 7, 10, 0, 0),
-        )
-
-        # Assert
-        assert result is None
-
     async def test_get_by_registration_number(self, async_session: AsyncSession):
         """Test getting activities by registration number."""
         # Arrange
@@ -585,7 +333,7 @@ class TestActivityCRUD:
     async def test_get_by_platform_id_not_found(self, async_session: AsyncSession):
         """Test getting activities by non-existent platform_id."""
         # Act
-        results = await activity.get_by_platform_id(async_session, 99999)
+        results = await activity.get_by_platform_id(async_session, 99999)  # platform_id is still int
 
         # Assert
         assert len(results) == 0
@@ -607,7 +355,7 @@ class TestActivityCRUD:
     async def test_get_by_area_id_not_found(self, async_session: AsyncSession):
         """Test getting activities by non-existent area_id."""
         # Act
-        results = await activity.get_by_area_id(async_session, 99999)
+        results = await activity.get_by_area_id(async_session, "99999999999999999999")
 
         # Assert
         assert len(results) == 0

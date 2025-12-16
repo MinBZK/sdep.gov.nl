@@ -1,5 +1,7 @@
 """CRUD operations for Area model."""
 
+from datetime import datetime
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +10,7 @@ from app.models.area import Area
 
 async def create(
     session: AsyncSession,
-    area_id: str | None,
+    competent_authority_area_id: str | None,
     competent_authority_id: int,
     filename: str,
     filedata: bytes,
@@ -18,7 +20,7 @@ async def create(
 
     Args:
         session: Async database session
-        area_id: Optional area identifier (64 characters max, lowercase alphanumeric with dashes). If not provided, a random value will be generated.
+        competent_authority_area_id: Optional area identifier (64 characters max, lowercase alphanumeric with dashes). If not provided, a random value will be generated.
         competent_authority_id: Foreign key to CompetentAuthority
         filename: Filename (64 characters max)
         filedata: File data (binary)
@@ -27,12 +29,13 @@ async def create(
         Created Area instance
 
     Note:
-        The combination of area_id and competent_authority_id must be unique.
+        The combination of competent_authority_id, competent_authority_area_id, and created_at must be unique.
+        This enables versioning/stapling (same IDs with different timestamps).
     """
-    # Only set area_id if explicitly provided; otherwise let the model default handle it
-    if area_id is not None:
+    # Only set competent_authority_area_id if explicitly provided; otherwise let the model default handle it
+    if competent_authority_area_id is not None:
         area = Area(
-            area_id=area_id,
+            competent_authority_area_id=competent_authority_area_id,
             competent_authority_id=competent_authority_id,
             filename=filename,
             filedata=filedata,
@@ -49,47 +52,7 @@ async def create(
     return area
 
 
-async def update(
-    session: AsyncSession,
-    area_id: int,
-    area_id_value: str | None = None,
-    competent_authority_id: int | None = None,
-    filename: str | None = None,
-    filedata: bytes | None = None,
-) -> Area | None:
-    """
-    Update an existing area by id.
-
-    Args:
-        session: Async database session
-        area_id: Area id (primary key)
-        area_id_value: New area identifier (lowercase alphanumeric with dashes)
-        competent_authority_id: Foreign key to CompetentAuthority
-        filename: New filename
-        filedata: New filedata (binary)
-
-    Returns:
-        Updated Area instance or None if not found
-    """
-    area = await get_by_id(session, area_id)
-    if area is None:
-        return None
-
-    if area_id_value is not None:
-        area.area_id = area_id_value
-    if competent_authority_id is not None:
-        area.competent_authority_id = competent_authority_id
-    if filename is not None:
-        area.filename = filename
-    if filedata is not None:
-        area.filedata = filedata
-
-    await session.flush()
-    await session.refresh(area)
-    return area
-
-
-async def delete(session: AsyncSession, area_id: int) -> bool:
+async def delete(session: AsyncSession, area_id: str) -> bool:
     """
     Delete an area by id.
 
@@ -109,7 +72,7 @@ async def delete(session: AsyncSession, area_id: int) -> bool:
     return True
 
 
-async def exists(session: AsyncSession, area_id: int) -> bool:
+async def exists(session: AsyncSession, area_id: str) -> bool:
     """
     Check if an area exists by id.
 
@@ -162,7 +125,7 @@ async def get_all(
     return list(result.scalars().all())
 
 
-async def get_by_id(session: AsyncSession, area_id: int) -> Area | None:
+async def get_by_id(session: AsyncSession, area_id: str) -> Area | None:
     """
     Get an area by id.
 
@@ -174,49 +137,6 @@ async def get_by_id(session: AsyncSession, area_id: int) -> Area | None:
         Area instance or None if not found
     """
     stmt = select(Area).where(Area.id == area_id)
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
-
-
-async def get_by_area_id(session: AsyncSession, area_id: str) -> Area | None:
-    """
-    Get an area by area_id (business identifier).
-
-    Args:
-        session: Async database session
-        area_id: Area identifier (lowercase alphanumeric string with dashes)
-
-    Returns:
-        Area instance or None if not found
-
-    Note:
-        This function returns the first area with the given area_id.
-        Since area_id alone is not unique (the unique constraint is area_id + competent_authority_id),
-        use get_by_area_id_and_competent_authority_id() to get a specific area by the unique constraint.
-    """
-    stmt = select(Area).where(Area.area_id == area_id)
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
-
-
-async def get_by_area_id_and_competent_authority_id(
-    session: AsyncSession, area_id: str, competent_authority_id: int
-) -> Area | None:
-    """
-    Get an area by area_id and competent_authority_id (unique constraint).
-
-    Args:
-        session: Async database session
-        area_id: Area identifier (lowercase alphanumeric string with dashes)
-        competent_authority_id: Competent authority id (foreign key)
-
-    Returns:
-        Area instance or None if not found
-    """
-    stmt = select(Area).where(
-        Area.area_id == area_id,
-        Area.competent_authority_id == competent_authority_id,
-    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 

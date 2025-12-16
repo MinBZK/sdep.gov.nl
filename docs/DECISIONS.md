@@ -31,24 +31,24 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 For additional motivation, see the text below the table.
 
-| #               | Decision                                              | Example                                                                                          |
-| :-------------- | :---------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
-| **API&nbsp;01** | OpenAPI 3.1.0                                         |                                                                                                  |
-| **API&nbsp;02** | All endpoints are well-documented                     |                                                                                                  |
-| **API&nbsp;03** | Nouns instead of verbs                                | `/ca/areas`                                                                                      |
-| **API&nbsp;04** | Plurals for resources                                 | `/ca/areas`                                                                                      |
-| **API&nbsp;05** | Consistent datamodel                                  | `Activity`, `Area`                                                                               |
-| **API&nbsp;06** | Consistent endpoints                                  | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                    |
-| **API&nbsp;07** | Consistent pagination                                 | `offset`, `limit`, all endpoints                                                                 |
-| **API&nbsp;08** | Syntax validation                                     | `postal code`                                                                                    |
-| **API&nbsp;09** | Semantical validation                                 | `begin timestamp < end timestamp`                                                                |
-| **API&nbsp;10** | Integrity validation                                  | Duplicate key error                                                                              |
-| **API&nbsp;11** | Transaction size constraints (POST)                   |                                                                                                  |
-| **API&nbsp;12** | Consistent, functional ids                            | `competentAuthorityId`, `platformId`, `areaId`                                                   |
-| **API&nbsp;13** | Logical ordening => readability                       |                                                                                                  |
-| **API&nbsp;14** | Essentiality                                          | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`) |
-| **API&nbsp;15** | Consistent HTTP response codes                        | 200, 201, 400, 401, 403, 409, 422                                                                |
-| **API&nbsp;16** | Activities are always submitted against current areas |                                                                                                  |
+| #               | Decision                                       | Example                                                                                                                                          |
+| :-------------- | :--------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API&nbsp;01** | OpenAPI 3.1.0                                  |                                                                                                                                                  |
+| **API&nbsp;02** | All endpoints are well-documented              |                                                                                                                                                  |
+| **API&nbsp;03** | Nouns instead of verbs                         | `/ca/areas`                                                                                                                                      |
+| **API&nbsp;04** | Plurals for resources                          | `/ca/areas`                                                                                                                                      |
+| **API&nbsp;05** | Consistent datamodel                           | `Activity`, `Area`                                                                                                                               |
+| **API&nbsp;06** | Consistent endpoints                           | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                                                                    |
+| **API&nbsp;07** | Consistent pagination                          | `offset`, `limit`, all endpoints                                                                                                                 |
+| **API&nbsp;08** | Syntax validation                              | `postal code`, ...                                                                                                                               |
+| **API&nbsp;09** | Semantical validation                          | `begin timestamp < end timestamp`                                                                                                                |
+| **API&nbsp;10** | Integrity validation and the use of ids        | See [./IDS.md](./IDS.md)                                                                                                                         |
+| **API&nbsp;11** | Transaction size constraints (POST)            |                                                                                                                                                  |
+| **API&nbsp;12** | Logical ordening => readability                |                                                                                                                                                  |
+| **API&nbsp;13** | Essentiality                                   | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`)                                                 |
+| **API&nbsp;14** | Consistent HTTP response codes                 | 200, 201, 400, 401, 403, 409, 422                                                                                                                |
+| **API&nbsp;15** | Submit activities always against current areas |                                                                                                                                                  |
+| **API&nbsp;16** | Partial failures                               | See [./PARTIAL_FAILURES_FUNCTIONAL.md](./PARTIAL_FAILURES_FUNCTIONAL.md) and [./PARTIAL_FAILURES_TECHNICALL.md](./PARTIAL_FAILURES_TECHNICAL.md) |
 
 Motivation:
 
@@ -69,15 +69,11 @@ Motivation:
 - **No code duplication** between `ca-area` and `str-area`, if CA requires activity subset, then filter out themselves (activities.activity.areaId)
 - **Consistent use** of Address only (units can be covered by unicity of advertisement URL)
 
-**API 10**
-
-- If CA or STR have (wants to submit) **double-entries** (from their own database), they can optionally use `Area.areaId` or `Activity.activityId`
-
-**API 16**
+**API 15**
 
 - When new activities are submitted, first always retrieve the current areas
 - Because areas may change over time
-- This way, activities submitted over time, can always be correlated areas at that moment in time => point-in-time consistency
+- This way, activities can always be correlated to the areas at that moment in time => point-in-time consistency
 
 ## Security decisions
 
@@ -86,17 +82,18 @@ For additional motivation, see the text below the table.
 | #               | Decision                                                                   | Example |
 | :-------------- | :------------------------------------------------------------------------- | :------ |
 | **SEC&nbsp;01** | oAuth2 with JWT                                                            |         |
-| **SEC&nbsp;02** | client credentials grant                                                   |         |
+| **SEC&nbsp;02** | Client credentials grant (client credentials flow)                         |         |
 | **SEC&nbsp;03** | Support for delegated API-invocation (smaller platforms via third-parties) |         |
 
 Motivation:
 
 **SEC 01**
 
-- **Trusted machine-to-machine (M2M)** interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
+- For **trusted machine-to-machine (M2M)** interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 
 **SEC 02**
 
+- Only client credentials grant (client credentials flow)
 - Implicit flow (obtain access token directly, without backend secret) is **deprecated**
 
 **SEC 03**

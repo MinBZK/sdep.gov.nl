@@ -32,38 +32,6 @@ async def create(
     return competent_authority
 
 
-async def update(
-    session: AsyncSession,
-    id: int,
-    competent_authority_id: str | None = None,
-    competent_authority_name: str | None = None,
-) -> CompetentAuthority | None:
-    """
-    Update an existing competent authority by id.
-
-    Args:
-        session: Async database session
-        id: CompetentAuthority id (primary key)
-        competent_authority_id: New competent authority identifier
-        competent_authority_name: New competent authority name
-
-    Returns:
-        Updated CompetentAuthority instance or None if not found
-    """
-    competent_authority = await get_by_id(session, id)
-    if competent_authority is None:
-        return None
-
-    if competent_authority_id is not None:
-        competent_authority.competent_authority_id = competent_authority_id
-    if competent_authority_name is not None:
-        competent_authority.competent_authority_name = competent_authority_name
-
-    await session.flush()
-    await session.refresh(competent_authority)
-    return competent_authority
-
-
 async def delete(session: AsyncSession, id: int) -> bool:
     """
     Delete a competent authority by id.

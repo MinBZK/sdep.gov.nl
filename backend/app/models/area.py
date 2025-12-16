@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, LargeBinary, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, LargeBinary, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.config import Base
@@ -11,9 +11,7 @@ from app.db.config import Base
 
 def generate_area_id() -> str:
     """Generate a random lowercase alphanumeric area_id."""
-    return uuid.uuid4().hex[
-        :20
-    ]  # Generate 20 character lowercase alphanumeric string (UUID hex)
+    return uuid.uuid4().hex[:20]  # Generate 20 character lowercase alphanumeric string (UUID hex)
 
 
 class Area(Base):
@@ -23,17 +21,12 @@ class Area(Base):
     An area is supplied by (regulated by) a competent authority (CA).
     An area is expressed as a binary (shapefile).
 
-    The combination of area_id and competent_authority_id must be unique.
-    This allows the same area_id to be reused across different competent authorities.
+    Each area has a unique technical ID (20-character UUID) and an optional functional
+    competent_authority_area_id that can be used for business identification.
     """
 
     __tablename__ = "area"
     __table_args__ = (
-        UniqueConstraint(
-            "area_id",
-            "competent_authority_id",
-            name="uq_area_area_id_competent_authority",
-        ),
         CheckConstraint(
             "length(filedata) <= 1048576",
             name="ck_area_filedata_max_size",
@@ -41,16 +34,17 @@ class Area(Base):
     )
 
     # Primary key
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[str] = mapped_column(String(20), primary_key=True, index=True, default=generate_area_id)
 
     # Attributes
-    area_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, default=generate_area_id, index=True
-    )  # Lowercase alphanumeric with dashes, auto-generated if not supplied, for example "amsterdam-area-0363"
 
     competent_authority_id: Mapped[int] = mapped_column(
         ForeignKey("competent_authority.id"), nullable=False, index=True
     )  # Reference - foreign key to CompetentAuthority
+
+    competent_authority_area_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )  # Lowercase alphanumeric with dashes, optional field, for example "amsterdam-area-0363"
 
     filename: Mapped[str] = mapped_column(
         String(64), nullable=False
@@ -62,8 +56,8 @@ class Area(Base):
 
     # Audit attributes
     created_at: Mapped[datetime] = mapped_column(
-        default=func.now(), nullable=False
-    )  # Always present
+        DateTime(timezone=True), default=func.now(), nullable=False
+    )  # Always present, stored in UTC
 
     # References
     competent_authority: Mapped["CompetentAuthority"] = relationship(
@@ -76,4 +70,4 @@ class Area(Base):
 
     def __repr__(self) -> str:
         """String representation of Area."""
-        return f"<Area(id={self.id}, area_id='{self.area_id}', filename='{self.filename}')>"
+        return f"<Area(id={self.id}, competent_authority_area_id='{self.competent_authority_area_id}', filename='{self.filename}')>"

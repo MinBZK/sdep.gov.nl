@@ -152,12 +152,12 @@ test-security: ## Run security tests only
 	@echo "✅ Security tests completed!"
 
 test-verbose: ## Run all tests
-	@echo "🧪 Running tests..."
+	@echo "🧪 Running tests... (please wait)"
 	uv run python -m pytest
 	@echo "✅ All tests completed!"
 
 test: ## Run all tests (quiet)
-	@echo "🧪 Running tests..."
+	@echo "🧪 Running tests... (please wait)"
 	@uv run python -m pytest -q --tb=line --no-header 2>&1 | tail -20
 	@echo "✅ All tests completed!"
 

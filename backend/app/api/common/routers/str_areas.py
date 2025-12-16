@@ -23,8 +23,15 @@ router = APIRouter(tags=["str"])
     "/str/areas",
     response_model=AreasListResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get all SDEP areas",
-    description="Get all SDEP areas. By default, returns all areas (unlimited). Use optional pagination parameters to limit results.",
+    summary="Get all areas",
+    description="Get all areas. By default, returns all areas (unlimited). Use optional pagination parameters to limit results.\n\n"
+    "Each area contains:\n"
+    "- areaId: Technical ID (20-character UUID string)\n"
+    "- competentAuthorityId: Functional ID identifying the competent authority that submitted this area\n"
+    "- competentAuthorityName: Display name of the competent authority\n"
+    "- competentAuthorityAreaId: Optional functional ID assigned by the competent authority to identify this area\n"
+    "- createdAt: Timestamp when this area version was created (UTC); used for versioning or filtering\n"
+    "- filename: Name of the shapefile (e.g., 'area.zip')",
     operation_id="getAreas",
     responses={
         "400": {
@@ -96,8 +103,9 @@ async def get_areas(
             areaId=area_dict["areaId"],
             competentAuthorityId=area_dict["competentAuthorityId"],
             competentAuthorityName=area_dict["competentAuthorityName"],
+            competentAuthorityAreaId=area_dict["competentAuthorityAreaId"],
+            createdAt=area_dict["createdAt"],
             filename=area_dict["filename"],
-            created_at=area_dict["createdAt"],
         )
         for area_dict in areas_data
     ]
@@ -166,7 +174,7 @@ async def count_areas(
     response_class=Response,
     status_code=status.HTTP_200_OK,
     summary="Get area (shapefile)",
-    description="Get area (shapefile) based on areaId.",
+    description="Get area (shapefile) based on technical ID (20-character UUID string).",
     operation_id="getArea",
     responses={
         "200": {
@@ -218,8 +226,8 @@ async def get_area(
             detail="Access forbidden: 'sdep_read' role required",
         )
 
-    # Call business service with area_id string
-    area_data = await area.get_area_by_area_id(session, areaId)
+    # Call business service with technical area id
+    area_data = await area.get_area_by_id(session, areaId)
 
     if area_data is None:
         raise HTTPException(

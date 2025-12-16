@@ -10,8 +10,8 @@ For architectural concepts, layers, and data flows, see [ARCHITECTURE.md](./ARCH
 ├── backend/              # Python backend application
 ├── docs/                 # Documentation
 │   ├── ARCHITECTURE.md   # Architecture documentation
-│   ├── Classes.drawio    # UML class diagram (source)
-│   ├── Classes.svg       # UML class diagram (rendered)
+│   ├── Datamodel.drawio    # UML class diagram (source)
+│   ├── Datamodel.svg       # UML class diagram (rendered)
 │   └── CODE.md           # This file
 ├── keycloak/             # Keycloak IAM configuration
 ├── docker-compose.yml    # Local development environment
@@ -26,8 +26,8 @@ For architectural concepts, layers, and data flows, see [ARCHITECTURE.md](./ARCH
   - [`Architecture.excalidraw`](./Architecture.excalidraw) - Architecture diagram source
   - [`Architecture.png`](./Architecture.png) - Architecture diagram rendered
   - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - Architecture documentation
-  - [`Classes.drawio`](./Classes.drawio) - UML class diagram source
-  - [`Classes.svg`](./Classes.svg) - UML class diagram rendered
+  - [`Datamodel.drawio`](./Datamodel.drawio) - UML class diagram source
+  - [`Datamodel.svg`](./Datamodel.svg) - UML class diagram rendered
   - `CODE.md` - This file
 - [`keycloak/`](../keycloak/) - Keycloak IAM server configuration
 - [`AGENTS.md`](../AGENTS.md) - Development rules and AI agent instructions

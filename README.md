@@ -18,8 +18,7 @@ Overview:
 **Pre-requistes**
 
 - Docker installed
-- "yq" installed
-
+- "jq" and "yq" installed
 
 **Run SDEP fullstack** (incl. local infra)
 
@@ -90,14 +89,14 @@ Ingest and expose:
 
 ## Test package
 
-The integration tests (`make test`) test the API in real life (local).
+Integration tests (`make test`) test the API in real life (local).
 
 These tests can also be run against real deployments (TST, ACC, PRE, PRD).
 
-Inquire SDEP NL for more info/re-use.
+Inquire SDEP NLD for more info.
 
 ## Documentation
 
 - [Architecture](./docs/ARCHITECTURE.md)
-- [Datamodel](./docs/CLASSES.md)
+- [Datamodel](./docs/DATAMODEL.md)
 - [Structure](./docs/CODE.md)

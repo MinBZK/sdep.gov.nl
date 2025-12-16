@@ -201,13 +201,16 @@ class TestStrAreaAPI:
         assert "areaId" in area
         assert "competentAuthorityId" in area
         assert "competentAuthorityName" in area
+        assert "competentAuthorityAreaId" in area
         assert "filename" in area
         assert "createdAt" in area
 
         # Verify types
         assert isinstance(area["areaId"], str)
+        assert len(area["areaId"]) == 20
         assert isinstance(area["competentAuthorityId"], str)
         assert isinstance(area["competentAuthorityName"], str)
+        assert isinstance(area["competentAuthorityAreaId"], (str, type(None)))
         assert isinstance(area["filename"], str)
         assert isinstance(area["createdAt"], str)
 
@@ -608,7 +611,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act
             response = await client.get(
-                "/str/areas/nonexistent-area-id",
+                "/str/areas/99999999999999999999",
                 headers={"Authorization": "Bearer test_token"},
             )
 
@@ -619,7 +622,7 @@ class TestStrAreaAPI:
         # detail is a list of error objects
         assert isinstance(data["detail"], list)
         assert len(data["detail"]) > 0
-        assert "nonexistent-area-id" in data["detail"][0]["msg"]
+        assert "99999999999999999999" in data["detail"][0]["msg"]
 
     async def test_get_area_with_data(
         self, async_session: AsyncSession, setup_overrides, competent_authority
@@ -640,7 +643,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/areas/{area.area_id}",
+                f"/str/areas/{area.id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 
@@ -668,7 +671,7 @@ class TestStrAreaAPI:
             transport=ASGITransport(app=app_v0), base_url="http://test"
         ) as client:
             # Act
-            response = await client.get(f"/str/areas/{area.area_id}")
+            response = await client.get(f"/str/areas/{area.id}")
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -690,7 +693,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/areas/{area.area_id}",
+                f"/str/areas/{area.id}",
                 headers={"Authorization": "Bearer invalid_token"},
             )
 
@@ -715,7 +718,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act
             response = await client.get(
-                f"/str/areas/{area.area_id}",
+                f"/str/areas/{area.id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 
@@ -754,7 +757,7 @@ class TestStrAreaAPI:
         ) as client:
             # Act - request middle area
             response = await client.get(
-                f"/str/areas/{area2.area_id}",
+                f"/str/areas/{area2.id}",
                 headers={"Authorization": "Bearer test_token"},
             )
 

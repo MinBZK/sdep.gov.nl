@@ -47,10 +47,8 @@ class AreaFactory(AsyncSQLAlchemyFactory):
     class Meta:
         model = Area
 
-    area_id = factory.Sequence(
-        lambda n: f"area{n:016x}"[:20]
-    )  # Lowercase hex, e.g. "area000000000000001"
-    filename = Faker("file_name", extension="geojson")
+    competent_authority_area_id = None  # Optional field, nullable in model
+    filename = Faker("file_name", extension="zip")
     filedata = Faker("binary", length=100)
     # Foreign key to CompetentAuthority - defaults to creating one
 
@@ -137,18 +135,13 @@ class TemporalFactory(factory.Factory):
 class ActivityFactory(AsyncSQLAlchemyFactory):
     """Factory for Activity model.
 
-    Note: Two unique constraints apply:
-    1. The combination of url, temporal_start_date_time, and temporal_end_date_time must be unique.
-    2. The combination of activity_id and platform_id must be unique.
-    The factory uses sequences to ensure uniqueness.
+    Note: The factory uses sequences to ensure uniqueness of URLs.
     """
 
     class Meta:
         model = Activity
 
-    activity_id = factory.Sequence(
-        lambda n: f"activity-{n:08d}"
-    )  # e.g. "activity-00000001", "activity-00000002", etc.
+    platform_activity_id = None  # Optional field, nullable in model
     url = factory.Sequence(lambda n: f"http://example.com/listing-{n}")
     # Address composite fields (street, number, postal_code, city are mandatory)
     address_street = Faker("street_name")

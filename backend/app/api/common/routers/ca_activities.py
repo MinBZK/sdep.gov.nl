@@ -26,7 +26,14 @@ router = APIRouter(tags=["ca"])
     response_model=ActivityListResponse,
     status_code=status.HTTP_200_OK,
     summary="Get activities for the authenticated competent authority",
-    description="Get activities for the authenticated competent authority. By default, returns all activities (unlimited). Use optional pagination parameters to limit results.",
+    description="Get activities for the authenticated competent authority. By default, returns all activities (unlimited). Use optional pagination parameters to limit results.\n\n"
+    "Each activity contains:\n"
+    "- activityId: Technical ID (20-character UUID string)\n"
+    "- platformId: Functional ID identifying the platform that submitted this activity\n"
+    "- platformName: Display name of the platform\n"
+    "- platformActivityId: Optional functional ID assigned by the platform to identify this activity\n"
+    "- createdAt: Timestamp when this activity version was created (UTC); used for versioning or filtering\n"
+    "- areaId: Technical ID (20-character UUID string) referencing the area where this activity took place",
     operation_id="getActivityByCompetentAuthority",
     responses={
         "400": {
@@ -40,6 +47,68 @@ router = APIRouter(tags=["ca"])
         "403": {
             "description": "Forbidden - Missing required authorization roles",
         },
+    },
+    openapi_extra={
+        "responses": {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "activities": [
+                                {
+                                    "activityId": "a1b2c3d4e5f6a7b8c9d0",
+                                    "platformId": "sdep-str-01",
+                                    "platformName": "Example Platform",
+                                    "platformActivityId": "listing-amsterdam-001",
+                                    "createdAt": "2025-06-15T14:30:00Z",
+                                    "url": "https://example.com/listing/amsterdam-001",
+                                    "address": {
+                                        "street": "Prinsengracht",
+                                        "number": 263,
+                                        "letter": "A",
+                                        "addition": "2",
+                                        "postalCode": "1016HV",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG-AMS-2025-001",
+                                    "areaId": "f1e2d3c4b5a6f7e8d9c0",
+                                    "numberOfGuests": 4,
+                                    "countryOfGuests": ["NLD", "DEU", "BEL"],
+                                    "temporal": {
+                                        "startDatetime": "2025-07-01T15:00:00Z",
+                                        "endDatetime": "2025-07-07T11:00:00Z"
+                                    }
+                                },
+                                {
+                                    "activityId": "b2c3d4e5f6a7b8c9d0e1",
+                                    "platformId": "sdep-str-01",
+                                    "platformName": "Example Platform",
+                                    "platformActivityId": "listing-amsterdam-002",
+                                    "createdAt": "2025-06-16T10:15:00Z",
+                                    "url": "https://example.com/listing/amsterdam-002",
+                                    "address": {
+                                        "street": "Keizersgracht",
+                                        "number": 123,
+                                        "letter": None,
+                                        "addition": None,
+                                        "postalCode": "1015CJ",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG-AMS-2025-002",
+                                    "areaId": "f1e2d3c4b5a6f7e8d9c0",
+                                    "numberOfGuests": 2,
+                                    "countryOfGuests": ["FRA", "ITA"],
+                                    "temporal": {
+                                        "startDatetime": "2025-07-10T16:00:00Z",
+                                        "endDatetime": "2025-07-15T12:00:00Z"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
     },
 )
 async def get_activities(
@@ -68,7 +137,7 @@ async def get_activities(
     - url: URL of the advertisement
     - address: Address composite (street, number, postalCode, city, letter, addition)
     - registrationNumber: Registration number
-    - areaId: Area ID (foreign key)
+    - areaId: Area technical ID (20-character UUID string)
     - numberOfGuests: Number of guests (optional)
     - countryOfGuests: Array of country codes (optional)
     - temporal: Temporal composite (startDatetime, endDatetime)
@@ -117,6 +186,10 @@ async def get_activities(
     activity_responses = [
         ActivityResponse(
             activityId=activity_dict["activity_id"],
+            platformId=activity_dict["platform_id"],
+            platformName=activity_dict["platform_name"],
+            platformActivityId=activity_dict["platform_activity_id"],
+            createdAt=activity_dict["created_at"],
             url=activity_dict["url"],
             address=AddressResponse(
                 street=activity_dict["address_street"],
@@ -127,16 +200,13 @@ async def get_activities(
                 addition=activity_dict["address_addition"],
             ),
             registrationNumber=activity_dict["registration_number"],
-            areaId=str(activity_dict["area_id"]),
+            areaId=activity_dict["area_id"],
             numberOfGuests=activity_dict["number_of_guests"],
             countryOfGuests=activity_dict["country_of_guests"],
             temporal=TemporalResponse(
                 startDatetime=activity_dict["temporal_start_date_time"],
                 endDatetime=activity_dict["temporal_end_date_time"],
             ),
-            platformId=activity_dict["platform_id"],
-            platformName=activity_dict["platform_name"],
-            createdAt=activity_dict["created_at"],
         )
         for activity_dict in activity_list
     ]

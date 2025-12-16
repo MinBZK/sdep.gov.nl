@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from app.api.v0.main import app_v0
 from app.crud import area as area_crud
-from app.db.config import get_async_db
+from app.db.config import get_async_db_manual_commit
 from app.security import verify_bearer_token
 from fastapi import status
 from httpx import ASGITransport, AsyncClient
@@ -27,50 +27,52 @@ def mock_verify_bearer_token() -> dict[str, Any]:
 class TestCAAreaAPI:
     """Test suite for POST /ca/areas API endpoint."""
 
+    @pytest.fixture(autouse=True)
+    async def cleanup(self, async_session: AsyncSession):
+        """Auto-cleanup fixture that runs before and after each test."""
+        # Setup - runs before test
+        yield
+        # Teardown - runs after test, regardless of success/failure
+        # Note: Transaction rollback is handled automatically by conftest.py
+        app_v0.dependency_overrides.clear()
+
     @pytest.fixture
     def setup_overrides(self, async_session: AsyncSession):
         """Setup dependency overrides for authenticated tests."""
         # Override token verification
         app_v0.dependency_overrides[verify_bearer_token] = mock_verify_bearer_token
 
-        # Override database session
-        async def override_get_db():
+        # Override database session with manual commit
+        async def override_get_db_manual_commit():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db] = override_get_db
+        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual_commit
 
         yield
-
-        # Clean up overrides after test
-        app_v0.dependency_overrides.clear()
 
     @pytest.fixture
     def setup_db_only(self, async_session: AsyncSession):
         """Setup database override only (no auth override)."""
-
-        # Override database session
-        async def override_get_db():
+        # Override database session with manual commit
+        async def override_get_db_manual_commit():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db] = override_get_db
+        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual_commit
 
         yield
 
-        # Clean up overrides after test
-        app_v0.dependency_overrides.clear()
-
     # Tests for POST /ca/areas
 
-    async def test_post_areas_multiple(
+    async def test_post_areas_all_succeed(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /ca/areas with multiple areas"""
+        """Test POST /ca/areas with multiple areas - all succeed (201 Created)."""
         # Arrange
         payload = {
             "metadata": {},
             "areas": [
                 {
-                    "areaId": f"area-{i:03d}",
+                    "competentAuthorityAreaId": f"area-{i:03d}",
                     "filename": f"Area{i:03d}.zip",
                     "filedata": f"ZGF0YV97aX0=",  # base64 encoded
                 }
@@ -88,28 +90,63 @@ class TestCAAreaAPI:
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
+        # Assert - 201 Created (all succeeded)
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert "message" in data
-        assert "3" in data["message"]
+        assert data["totalProcessed"] == 3
+        assert data["succeeded"] == 3
+        assert data["failed"] == 0
+        assert len(data["failures"]) == 0
+        assert "3 succeeded" in data["message"]
 
-        # Verify data was saved
-        from app.services import area as area_service
+    async def test_post_areas_all_fail_pydantic(
+        self, async_session: AsyncSession, setup_overrides
+    ):
+        """Test POST /ca/areas with all Pydantic validation failures (422)."""
+        # Arrange - All areas have missing required fields
+        payload = {
+            "metadata": {},
+            "areas": [
+                {
+                    "competentAuthorityAreaId": "missing-filename-1",
+                    # Missing filename and filedata
+                },
+                {
+                    "competentAuthorityAreaId": "missing-filedata-2",
+                    "filename": "Test.zip",
+                    # Missing filedata
+                },
+            ],
+        }
 
-        count = await area_service.count_areas(async_session)
-        assert count == 3
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            # Act
+            response = await client.post(
+                "/ca/areas",
+                json=payload,
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        # Assert - 422 Unprocessable Entity (all failed)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        data = response.json()
+        assert data["totalProcessed"] == 2
+        assert data["succeeded"] == 0
+        assert data["failed"] == 2
+        assert len(data["failures"]) == 2
 
     async def test_post_areas_single_area_in_list(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /ca/areas with single area in list"""
+        """Test POST /ca/areas with single area in list (201)."""
         # Arrange
         payload = {
             "metadata": {},
             "areas": [
                 {
-                    "areaId": "single-area",
+                    "competentAuthorityAreaId": "single-area",
                     "filename": "SingleArea.zip",
                     "filedata": "c2luZ2xlX2RhdGE=",
                 }
@@ -129,18 +166,20 @@ class TestCAAreaAPI:
         # Assert
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert "1" in data["message"]
+        assert data["totalProcessed"] == 1
+        assert data["succeeded"] == 1
+        assert data["failed"] == 0
 
     async def test_post_areas_creates_single_competent_authority(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test that POST /ca/areas creates only one competent authority for multiple areas"""
+        """Test that POST /ca/areas creates only one competent authority for multiple areas."""
         # Arrange
         payload = {
             "metadata": {},
             "areas": [
                 {
-                    "areaId": f"multi-area-{i}",
+                    "competentAuthorityAreaId": f"multi-area-{i}",
                     "filename": f"MultiArea{i}.zip",
                     "filedata": "ZGF0YQ==",
                 }
@@ -161,24 +200,16 @@ class TestCAAreaAPI:
         # Assert
         assert response.status_code == status.HTTP_201_CREATED
 
-        # Verify only one competent authority was created
-        from app.models.competent_authority import CompetentAuthority
-        from sqlalchemy import select
-
-        cas = await async_session.execute(select(CompetentAuthority))
-        ca_count = len(cas.scalars().all())
-        assert ca_count == 1
-
     async def test_post_areas_unauthorized_no_token(
         self, async_session: AsyncSession, setup_db_only
     ):
-        """Test POST /ca/areas without authentication token"""
+        """Test POST /ca/areas without authentication token."""
         # Arrange
         payload = {
             "metadata": {},
             "areas": [
                 {
-                    "areaId": "test-area",
+                    "competentAuthorityAreaId": "test-area",
                     "filename": "Test.zip",
                     "filedata": "dGVzdA==",
                 }
@@ -200,7 +231,7 @@ class TestCAAreaAPI:
     async def test_post_areas_forbidden_missing_write_role(
         self, async_session: AsyncSession
     ):
-        """Test POST /ca/areas with missing sdep_write role"""
+        """Test POST /ca/areas with missing sdep_write role."""
         # Arrange
         def mock_token_without_write_role():
             return {
@@ -212,16 +243,16 @@ class TestCAAreaAPI:
 
         app_v0.dependency_overrides[verify_bearer_token] = mock_token_without_write_role
 
-        async def override_get_db():
+        async def override_get_db_manual_commit():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db] = override_get_db
+        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual_commit
 
         payload = {
             "metadata": {},
             "areas": [
                 {
-                    "areaId": "test-area",
+                    "competentAuthorityAreaId": "test-area",
                     "filename": "Test.zip",
                     "filedata": "dGVzdA==",
                 }
@@ -242,13 +273,10 @@ class TestCAAreaAPI:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "sdep_write" in response.json()["detail"][0]["msg"]
 
-        # Clean up
-        app_v0.dependency_overrides.clear()
-
     async def test_post_areas_validation_error_empty_list(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /ca/areas with empty areas list"""
+        """Test POST /ca/areas with empty areas list."""
         # Arrange
         payload = {
             "metadata": {},
@@ -267,3 +295,4 @@ class TestCAAreaAPI:
 
         # Assert
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+

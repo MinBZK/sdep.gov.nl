@@ -28,40 +28,9 @@ app_v0.openapi = create_custom_openapi(app_v0)
 
 # Register exception handlers for app_v0
 # This is needed for tests that use app_v0 directly
-from fastapi import HTTPException  # noqa: E402
-from fastapi.exceptions import RequestValidationError  # noqa: E402
+from app.api.common.exception_handlers import register_exception_handlers  # noqa: E402
 
-from app.exceptions import (  # noqa: E402
-    AuthenticationError,
-    AuthorizationError,
-    BusinessLogicError,
-    InvalidTokenError,
-    ResourceNotFoundError,
-    ValidationError,
-)
-from app.exceptions.handlers import (  # noqa: E402
-    app_validation_exception_handler,
-    authentication_exception_handler,
-    authorization_exception_handler,
-    business_logic_exception_handler,
-    general_exception_handler,
-    http_exception_handler,
-    resource_not_found_exception_handler,
-    validation_exception_handler,
-)
-
-# Order matters: more specific handlers should be registered before general ones
-app_v0.add_exception_handler(HTTPException, http_exception_handler)
-app_v0.add_exception_handler(RequestValidationError, validation_exception_handler)
-app_v0.add_exception_handler(ValidationError, app_validation_exception_handler)
-app_v0.add_exception_handler(BusinessLogicError, business_logic_exception_handler)
-app_v0.add_exception_handler(
-    ResourceNotFoundError, resource_not_found_exception_handler
-)
-app_v0.add_exception_handler(AuthenticationError, authentication_exception_handler)
-app_v0.add_exception_handler(AuthorizationError, authorization_exception_handler)
-app_v0.add_exception_handler(InvalidTokenError, authentication_exception_handler)
-app_v0.add_exception_handler(Exception, general_exception_handler)  # Catch-all
+register_exception_handlers(app_v0)
 
 # Register routers from common
 from app.api.common.routers import (

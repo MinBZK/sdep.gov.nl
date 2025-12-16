@@ -13,9 +13,9 @@ from app.models.competent_authority import CompetentAuthority
 
 async def create(
     session: AsyncSession,
-    activity_id: str | None,
+    platform_activity_id: str | None,
     platform_id: int,
-    area_id: int,
+    area_id: str,
     url: str,
     address_street: str,
     address_number: int,
@@ -34,7 +34,7 @@ async def create(
 
     Args:
         session: Async database session
-        activity_id: Optional activity identifier (64 characters max, lowercase alphanumeric). If not provided, a random value will be generated.
+        platform_activity_id: Optional activity identifier (64 characters max, lowercase alphanumeric). If not provided, a random value will be generated.
         platform_id: Platform id (foreign key to Platform, mandatory)
         area_id: Area id (foreign key to Area, mandatory)
         url: URL (128 characters, mandatory)
@@ -52,14 +52,11 @@ async def create(
 
     Returns:
         Created Activity instance
-
-    Note:
-        The combination of activity_id, platform_id, url, temporal_start_date_time, and temporal_end_date_time must be unique.
     """
-    # Only set activity_id if explicitly provided; otherwise let the model default handle it
-    if activity_id is not None:
+    # Only set platform_activity_id if explicitly provided; otherwise let the model default handle it
+    if platform_activity_id is not None:
         activity = Activity(
-            activity_id=activity_id,
+            platform_activity_id=platform_activity_id,
             platform_id=platform_id,
             area_id=area_id,
             url=url,
@@ -98,91 +95,7 @@ async def create(
     return activity
 
 
-async def update(
-    session: AsyncSession,
-    activity_id: int,
-    activity_id_value: str | None = None,
-    platform_id: int | None = None,
-    area_id: int | None = None,
-    url: str | None = None,
-    address_street: str | None = None,
-    address_number: int | None = None,
-    address_letter: str | None = None,
-    address_addition: str | None = None,
-    address_postal_code: str | None = None,
-    address_city: str | None = None,
-    registration_number: str | None = None,
-    number_of_guests: int | None = None,
-    country_of_guests: list[str] | None = None,
-    temporal_start_date_time: datetime | None = None,
-    temporal_end_date_time: datetime | None = None,
-) -> Activity | None:
-    """
-    Update an existing activity by id.
-
-    Args:
-        session: Async database session
-        activity_id: Activity id (primary key)
-        activity_id_value: New activity identifier (lowercase alphanumeric)
-        platform_id: New platform id (foreign key to Platform)
-        area_id: New area id (foreign key to Area)
-        url: New URL
-        address_street: New address street
-        address_number: New address number
-        address_letter: New address letter
-        address_addition: New address addition
-        address_postal_code: New address postal code
-        address_city: New address city
-        registration_number: New registration number
-        number_of_guests: New number of guests
-        country_of_guests: New array of country codes
-        temporal_start_date_time: New temporal start datetime
-        temporal_end_date_time: New temporal end datetime
-
-    Returns:
-        Updated Activity instance or None if not found
-    """
-    activity = await get_by_id(session, activity_id)
-    if activity is None:
-        return None
-
-    if activity_id_value is not None:
-        activity.activity_id = activity_id_value
-    if platform_id is not None:
-        activity.platform_id = platform_id
-    if area_id is not None:
-        activity.area_id = area_id
-    if url is not None:
-        activity.url = url
-    if address_street is not None:
-        activity.address_street = address_street
-    if address_number is not None:
-        activity.address_number = address_number
-    if address_letter is not None:
-        activity.address_letter = address_letter
-    if address_addition is not None:
-        activity.address_addition = address_addition
-    if address_postal_code is not None:
-        activity.address_postal_code = address_postal_code
-    if address_city is not None:
-        activity.address_city = address_city
-    if registration_number is not None:
-        activity.registration_number = registration_number
-    if number_of_guests is not None:
-        activity.number_of_guests = number_of_guests
-    if country_of_guests is not None:
-        activity.country_of_guests = country_of_guests
-    if temporal_start_date_time is not None:
-        activity.temporal_start_date_time = temporal_start_date_time
-    if temporal_end_date_time is not None:
-        activity.temporal_end_date_time = temporal_end_date_time
-
-    await session.flush()
-    await session.refresh(activity)
-    return activity
-
-
-async def delete(session: AsyncSession, activity_id: int) -> bool:
+async def delete(session: AsyncSession, activity_id: str) -> bool:
     """
     Delete an activity by id.
 
@@ -202,7 +115,7 @@ async def delete(session: AsyncSession, activity_id: int) -> bool:
     return True
 
 
-async def exists(session: AsyncSession, activity_id: int) -> bool:
+async def exists(session: AsyncSession, activity_id: str) -> bool:
     """
     Check if an activity exists by id.
 
@@ -256,7 +169,7 @@ async def get_all(
 
 
 async def get_by_id(
-    session: AsyncSession, activity_id: int
+    session: AsyncSession, activity_id: str
 ) -> Activity | None:
     """
     Get an activity by id.
@@ -273,60 +186,11 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
-async def get_by_activity_id(session: AsyncSession, activity_id: str) -> Activity | None:
-    """
-    Get an activity by activity_id (business identifier).
-
-    Args:
-        session: Async database session
-        activity_id: Activity identifier (lowercase alphanumeric string)
-
-    Returns:
-        Activity instance or None if not found
-
-    Note:
-        This function returns the first activity with the given activity_id.
-        Since activity_id alone is not unique (the unique constraint is activity_id + platform_id + url + temporal_start_date_time + temporal_end_date_time),
-        use get_by_unique_constraint() to get a specific activity by the full unique constraint.
-    """
-    stmt = select(Activity).where(Activity.activity_id == activity_id)
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
-
-
-async def get_by_activity_id_and_platform_id(
-    session: AsyncSession, activity_id: str, platform_id: int
-) -> Activity | None:
-    """
-    Get an activity by activity_id and platform_id (partial match).
-
-    Args:
-        session: Async database session
-        activity_id: Activity identifier (lowercase alphanumeric string)
-        platform_id: Platform id (foreign key to Platform)
-
-    Returns:
-        Activity instance or None if not found
-
-    Note:
-        This is a partial match function. The full unique constraint includes url and temporal dates.
-        Use get_by_unique_constraint() for the complete unique constraint match.
-    """
-    stmt = select(Activity).where(
-        Activity.activity_id == activity_id,
-        Activity.platform_id == platform_id,
-    )
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
-
-
 async def get_by_url(
     session: AsyncSession, url: str, offset: int = 0, limit: int | None = None
 ) -> list[Activity]:
     """
     Get activities by url with pagination.
-
-    Note: URL alone is not unique. Use get_by_unique_constraint() to get a specific activity.
 
     Args:
         session: Async database session
@@ -343,39 +207,6 @@ async def get_by_url(
 
     result = await session.execute(stmt)
     return list(result.scalars().all())
-
-
-async def get_by_unique_constraint(
-    session: AsyncSession,
-    activity_id: str,
-    platform_id: int,
-    url: str,
-    temporal_start_date_time: datetime,
-    temporal_end_date_time: datetime,
-) -> Activity | None:
-    """
-    Get activity by unique constraint (activity_id + platform_id + url + temporal dates).
-
-    Args:
-        session: Async database session
-        activity_id: Activity identifier (lowercase alphanumeric string)
-        platform_id: Platform id (foreign key to Platform)
-        url: URL
-        temporal_start_date_time: Temporal start datetime
-        temporal_end_date_time: Temporal end datetime
-
-    Returns:
-        Activity instance or None if not found
-    """
-    stmt = select(Activity).where(
-        Activity.activity_id == activity_id,
-        Activity.platform_id == platform_id,
-        Activity.url == url,
-        Activity.temporal_start_date_time == temporal_start_date_time,
-        Activity.temporal_end_date_time == temporal_end_date_time,
-    )
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
 
 
 async def get_by_registration_number(
@@ -436,7 +267,7 @@ async def get_by_platform_id(
 
 
 async def get_by_area_id(
-    session: AsyncSession, area_id: int, offset: int = 0, limit: int | None = None
+    session: AsyncSession, area_id: str, offset: int = 0, limit: int | None = None
 ) -> list[Activity]:
     """
     Get activities by area_id (foreign key) with pagination.
@@ -483,7 +314,7 @@ async def get_by_competent_authority_id(
         select(Activity)
         .options(
             selectinload(Activity.platform),  # Eagerly load platform relationship
-            selectinload(Activity.area)  # Eagerly load area relationship
+            selectinload(Activity.area).selectinload(Area.competent_authority),
         )
         .join(Area, Activity.area_id == Area.id)
         .join(CompetentAuthority, Area.competent_authority_id == CompetentAuthority.id)

@@ -33,39 +33,6 @@ class TestCompetentAuthorityCRUD:
         assert result.created_at is not None
         assert isinstance(result.created_at, datetime)
 
-    async def test_update_competent_authority(self, async_session: AsyncSession):
-        """Test updating an existing competent authority."""
-        # Arrange
-        ca = await CompetentAuthorityFactory.create_async(async_session)
-        new_name = "Updated Name"
-
-        # Act
-        result = await competent_authority.update(
-            async_session,
-            ca.id,
-            competent_authority_name=new_name,
-        )
-
-        # Assert
-        assert result is not None
-        assert result.id == ca.id
-        assert result.competent_authority_name == new_name
-        assert result.competent_authority_id == ca.competent_authority_id
-
-    async def test_update_competent_authority_not_found(
-        self, async_session: AsyncSession
-    ):
-        """Test updating a non-existent competent authority."""
-        # Act
-        result = await competent_authority.update(
-            async_session,
-            99999,
-            competent_authority_name="Updated Name",
-        )
-
-        # Assert
-        assert result is None
-
     async def test_delete_competent_authority(self, async_session: AsyncSession):
         """Test deleting an existing competent authority."""
         # Arrange

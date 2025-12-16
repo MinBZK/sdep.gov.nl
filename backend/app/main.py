@@ -1,28 +1,10 @@
 """Single Digital Entrypoint"""
 
-from fastapi import FastAPI, HTTPException
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI
 
+from app.api.common.exception_handlers import register_exception_handlers
 from app.api.common_app import app_common
 from app.api.v0 import app_v0
-from app.exceptions import (
-    AuthenticationError,
-    AuthorizationError,
-    BusinessLogicError,
-    InvalidTokenError,
-    ResourceNotFoundError,
-    ValidationError,
-)
-from app.exceptions.handlers import (
-    app_validation_exception_handler,
-    authentication_exception_handler,
-    authorization_exception_handler,
-    business_logic_exception_handler,
-    general_exception_handler,
-    http_exception_handler,
-    resource_not_found_exception_handler,
-    validation_exception_handler,
-)
 from app.security import SecurityHeadersMiddleware
 
 # Create FastAPI application instance
@@ -32,17 +14,7 @@ app = FastAPI()
 # EXCEPTION HANDLERS
 # ============================================================================
 # Register exception handlers for consistent error responses
-# Order matters: more specific handlers should be registered before general ones
-
-app.add_exception_handler(HTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
-app.add_exception_handler(ValidationError, app_validation_exception_handler)
-app.add_exception_handler(BusinessLogicError, business_logic_exception_handler)
-app.add_exception_handler(ResourceNotFoundError, resource_not_found_exception_handler)
-app.add_exception_handler(AuthenticationError, authentication_exception_handler)
-app.add_exception_handler(AuthorizationError, authorization_exception_handler)
-app.add_exception_handler(InvalidTokenError, authentication_exception_handler)
-app.add_exception_handler(Exception, general_exception_handler)  # Catch-all
+register_exception_handlers(app)
 
 # ============================================================================
 # MIDDLEWARE

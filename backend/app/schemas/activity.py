@@ -149,18 +149,23 @@ class MetaDataRequest(BaseModel):
 class ActivityRequest(BaseModel):
     """Activity request schema for creating rental activities.
 
-    Validation Layer:
-    - Validates all syntax constraints (lengths, ranges, types)
-    - Converts camelCase (API) to snake_case (internal Python)
+    Platform:
+    - NOT in request payload (extracted from JWT token at API layer)
+    - PlatformId comes from token's client_id claim
+    - PlatformName comes from token's client_name claim
+    - Will be auto-created if it doesn't exist yet
 
-    Activity ID:
+    Platform activity ID:
     - Optional: If not provided, will be auto-generated (UUID-based)
     - If provided: Must be lowercase alphanumeric with dashes (max 64 chars)
 
+    Validation Layer:
+    - Validates all syntax constraints (lengths, ranges, types)
+
     Constraints (enforced at database level, returns 409 Conflict on violation):
-    - Unique constraint: { activityId, platform, url, temporal.startDatetime, temporal.endDatetime }
+    - Unique constraint: { platformActivityId, platform, url, temporal.startDatetime, temporal.endDatetime }
       The combination of all five fields must be unique. This allows submitting the same
-      (platform, url, temporal) with different activityId values.
+      (platform, url, temporal) with different platformActivityId values.
     """
 
     model_config = ConfigDict(
@@ -168,9 +173,9 @@ class ActivityRequest(BaseModel):
         populate_by_name=True,  # Allow both snake_case and camelCase
     )
 
-    activity_id: str | None = Field(
+    platform_activity_id: str | None = Field(
         None,
-        alias="activityId",
+        alias="platformActivityId",
         min_length=1,
         max_length=64,
         pattern=r"^[a-z0-9-]+$",
@@ -178,10 +183,10 @@ class ActivityRequest(BaseModel):
         examples=["activity-amsterdam-0363-001"],
     )  # Attribute
 
-    @field_validator("activity_id")
+    @field_validator("platform_activity_id")
     @classmethod
-    def validate_activity_id_alphanumeric(cls, v: str | None) -> str | None:
-        """Validate activity_id is lowercase alphanumeric with dashes."""
+    def validate_platform_activity_id_alphanumeric(cls, v: str | None) -> str | None:
+        """Validate platform_activity_id is lowercase alphanumeric with dashes."""
         if v is not None:
             allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
             if not all(c in allowed_chars for c in v):
@@ -193,44 +198,12 @@ class ActivityRequest(BaseModel):
     area_id: str = Field(
         ...,
         alias="areaId",
-        min_length=1,
-        max_length=64,
-        pattern=r"^[a-z0-9-]+$",
-        description="Area identifier string (lowercase alphanumeric with dashes)",
-        examples=["amsterdam-area-0363"],
-    )  # Attribute
-
-    @field_validator("area_id")
-    @classmethod
-    def validate_area_id_alphanumeric(cls, v: str) -> str:
-        """Validate area_id is lowercase alphanumeric with dashes."""
-        allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
-        if not all(c in allowed_chars for c in v):
-            raise ValueError(
-                "Area ID must contain only lowercase alphanumeric characters and dashes"
-            )
-        return v
-
-    competent_authority_id: str = Field(
-        ...,
-        alias="competentAuthorityId",
-        min_length=1,
-        max_length=64,
-        pattern=r"^[a-z0-9-]+$",
-        description="Competent authority identifier string (lowercase alphanumeric with dashes)",
-        examples=["sdep-ca-0363"],
-    )  # Attribute
-
-    @field_validator("competent_authority_id")
-    @classmethod
-    def validate_competent_authority_id_alphanumeric(cls, v: str) -> str:
-        """Validate competent_authority_id is lowercase alphanumeric with dashes."""
-        allowed_chars = set("0123456789abcdefghijklmnopqrstuvwxyz-")
-        if not all(c in allowed_chars for c in v):
-            raise ValueError(
-                "Competent authority ID must contain only lowercase alphanumeric characters and dashes"
-            )
-        return v
+        min_length=20,
+        max_length=20,
+        pattern=r"^[a-f0-9]{20}$",
+        description="Technical area ID (20-character UUID)",
+        examples=["a1b2c3d4e5f6g7h8i9j0"],
+    )  # Attribute - technical ID
 
     url: str = Field(
         ...,
@@ -311,11 +284,11 @@ class ActivityRequest(BaseModel):
             Dictionary with snake_case keys and flattened structure
         """
         return {
-            "activity_id": self.activity_id,
-            "url": self.url,
-            "registration_number": self.registration_number,
             "platform_id_str": platform_id,
             "platform_name": platform_name,
+            "platform_activity_id": self.platform_activity_id,
+            "url": self.url,
+            "registration_number": self.registration_number,
             "address_street": self.address.street,
             "address_number": self.address.number,
             "address_letter": self.address.letter,
@@ -325,7 +298,6 @@ class ActivityRequest(BaseModel):
             "temporal_start_date_time": self.temporal.start_date_time,
             "temporal_end_date_time": self.temporal.end_date_time,
             "area_id": self.area_id,
-            "competent_authority_id": self.competent_authority_id,
             "country_of_guests": self.country_of_guests,
             "number_of_guests": self.number_of_guests,
         }
@@ -424,17 +396,33 @@ class ActivityResponse(BaseModel):
     )
 
     activity_id: str = Field(
-        ..., alias="activityId", description="Activity identifier"
-    )  # Attribute - response only
+        ...,
+        alias="activityId",
+        min_length=20,
+        max_length=20,
+        pattern=r"^[a-f0-9]{20}$",
+        description="Activity technical ID (20-character UUID)",
+        examples=["a1b2c3d4e5f6g7h8i9j0"],
+    )  # Technical key
     platformId: str = Field(
         ..., alias="platformId", description="Platform ID"
     )  # Attribute
     platformName: str = Field(
         ..., alias="platformName", description="Platform name"
     )  # Attribute
+    platform_activity_id: str | None = Field(
+        None, alias="platformActivityId", description="Activity identifier (optional)"
+    )  # Attribute - response only
+    createdAt: datetime = Field(
+        ..., alias="createdAt", description="Creation timestamp"
+    )  # Attribute
     areaId: str = Field(
-        ..., alias="areaId", description="Area ID"
-    )  # Reference - foreign key to Area
+        ...,
+        alias="areaId",
+        min_length=20,
+        max_length=20,
+        description="Area technical ID (20-character UUID, foreign key)"
+    )  # Reference - foreign key to Area (technical ID)
     url: str = Field(..., description="URL of the advertisement")  # Attribute
     address: AddressResponse = Field(..., description="Address composite")  # Composite
     registrationNumber: str = Field(
@@ -451,9 +439,6 @@ class ActivityResponse(BaseModel):
     temporal: TemporalResponse = Field(
         ..., description="Temporal composite"
     )  # Composite
-    createdAt: datetime = Field(
-        ..., alias="createdAt", description="Creation timestamp"
-    )  # Attribute
 
 
 class ActivityListResponse(BaseModel):
@@ -477,3 +462,94 @@ class ActivityCountResponse(BaseModel):
         description="Total number of activity records",
         examples=[42],
     )  # Attribute
+
+
+class ActivityErrorDetail(BaseModel):
+    """Error detail for a failed activity in processing."""
+
+    model_config = ConfigDict(
+        title="activity.ActivityErrorDetail",
+        populate_by_name=True,
+    )
+
+    loc: list[str | int] = Field(
+        default_factory=list,
+        description="Location of the error (field path)",
+        examples=[["activities", 0, "areaId"], ["activities", 1, "url"]],
+    )
+    msg: str = Field(
+        ...,
+        description="Error message describing what went wrong",
+        examples=[
+            "Competent authority with competent_authority_id 'invalid' not found",
+            "Activity with platformActivityId 'abc-123' already exists",
+        ],
+    )
+    type: str = Field(
+        ...,
+        description="Error type classification",
+        examples=["business_logic_error", "duplicate_resource", "integrity_error"],
+    )
+
+
+class FailedActivity(BaseModel):
+    """Represents a failed activity with its original request data and errors."""
+
+    model_config = ConfigDict(
+        title="activity.FailedActivity",
+        populate_by_name=True,
+    )
+
+    activityIndex: int = Field(
+        ...,
+        alias="activityIndex",
+        description="Index of the activity in the original request (0-based)",
+        examples=[0, 1, 2],
+    )
+    activity: ActivityRequest = Field(
+        ...,
+        description="Original activity request data that failed",
+    )
+    errors: list[ActivityErrorDetail] = Field(
+        ...,
+        description="List of errors that occurred for this activity",
+    )
+
+
+class ActivityProcessingResponse(BaseModel):
+    """Response for activity processing with partial success/failure support."""
+
+    model_config = ConfigDict(
+        title="activity.ActivityProcessingResponse",
+        populate_by_name=True,
+    )
+
+    message: str = Field(
+        ...,
+        description="Summary message of the processing result",
+        examples=[
+            "Processed 10 activities: 8 succeeded, 2 failed",
+            "Processed 5 activities: 5 succeeded, 0 failed",
+            "Processed 3 activities: 0 succeeded, 3 failed",
+        ],
+    )
+    totalProcessed: int = Field(
+        ...,
+        alias="totalProcessed",
+        description="Total number of activities submitted",
+        examples=[10, 5, 3],
+    )
+    succeeded: int = Field(
+        ...,
+        description="Number of activities that succeeded",
+        examples=[8, 5, 0],
+    )
+    failed: int = Field(
+        ...,
+        description="Number of activities that failed",
+        examples=[2, 0, 3],
+    )
+    failures: list[FailedActivity] = Field(
+        default_factory=list,
+        description="List of activities that failed (empty if all succeeded)",
+    )

@@ -25,9 +25,18 @@ class MetaDataRequest(BaseModel):
 class AreaRequest(BaseModel):
     """Area request schema for creating areas (shapefiles).
 
+    Competent Authority:
+    - NOT in request payload (extracted from JWT token at API layer)
+    - CompetentAuthorityId comes from token's client_id claim
+    - CompetentAuthorityName comes from token's client_name claim
+    - Will be auto-created if it doesn't exist yet
+
+    Competent authority area ID:
+    - Optional: If not provided, will be auto-generated (UUID-based)
+    - If provided: Must be lowercase alphanumeric with dashes (max 64 chars)
+
     Validation Layer:
     - Validates all syntax constraints (lengths, types)
-    - Converts camelCase (API) to snake_case (internal Python)
     - Accepts base64-encoded binary filedata in JSON requests
 
     File Data Encoding:
@@ -35,16 +44,6 @@ class AreaRequest(BaseModel):
     - Pydantic automatically decodes base64 strings to bytes
     - Example (bash): base64 -w 0 yourfile.zip
     - Example (Python): base64.b64encode(file_bytes).decode('utf-8')
-
-    Area ID:
-    - Optional: If not provided, will be auto-generated (UUID-based)
-    - If provided: Must be lowercase alphanumeric with dashes (max 64 chars)
-
-    Competent Authority:
-    - NOT in request payload (extracted from JWT token at API layer)
-    - CompetentAuthorityId comes from token's client_id claim
-    - CompetentAuthorityName comes from token's client_name claim
-    - Will be auto-created if it doesn't exist yet (similar to Platform in activities)
     """
 
     model_config = ConfigDict(
@@ -52,15 +51,15 @@ class AreaRequest(BaseModel):
         populate_by_name=True,
     )
 
-    area_id: str | None = Field(
+    competent_authority_area_id: str | None = Field(
         None,
-        alias="areaId",
+        alias="competentAuthorityAreaId",
         min_length=1,
         max_length=64,
         pattern=r"^[a-z0-9-]+$",
-        description="Area identifier (optional, auto-generated if not provided). Lowercase alphanumeric with dashes.",
+        description="Functional area identifier (optional, auto-generated UUID if not provided). Is combined with competent_authority_id and created_at for versioning/stapling. Lowercase alphanumeric with dashes.",
         examples=["amsterdam-area-0363"],
-    )  # Attribute
+    )  # Attribute - functional ID
 
     filename: str = Field(
         ...,
@@ -93,11 +92,11 @@ class AreaRequest(BaseModel):
             Dictionary with snake_case keys
         """
         return {
-            "area_id": self.area_id,
-            "filename": self.filename,
-            "filedata": self.filedata,
             "competent_authority_id_str": competent_authority_id,
             "competent_authority_name": competent_authority_name,
+            "competent_authority_area_id": self.competent_authority_area_id,
+            "filename": self.filename,
+            "filedata": self.filedata,
         }
 
 
@@ -164,10 +163,12 @@ class AreaResponse(BaseModel):
     area_id: str = Field(
         ...,
         alias="areaId",
-        max_length=64,
-        description="Area unique identifier (enables retrieval of area)",
-        examples=["amsterdam-area-0363"],
-    )  # Attribute
+        min_length=20,
+        max_length=20,
+        pattern=r"^[a-f0-9]{20}$",
+        description="Area technical ID (20-character UUID)",
+        examples=["a1b2c3d4e5f6g7h8i9j0"],
+    )  # Technical key
     competent_authority_id: str = Field(
         ...,
         alias="competentAuthorityId",
@@ -182,17 +183,24 @@ class AreaResponse(BaseModel):
         description="Competent authority name (for convenience)",
         examples=["Gemeente Amsterdam"],
     )  # Attribute
-    filename: str = Field(
-        ...,
+    competent_authority_area_id: str | None = Field(
+        None,
+        alias="competentAuthorityAreaId",
         max_length=64,
-        description="Area filename",
-        examples=["Amsterdam.zip"],
-    )  # Attribute
+        description="Functional area identifier (optional business key)",
+        examples=["amsterdam-area-0363"],
+    )  # Attribute - functional ID
     created_at: datetime = Field(
         ...,
         alias="createdAt",
         description="Timestamp when the area was created",
         examples=["2025-01-15T10:30:00Z"],
+    )  # Attribute
+    filename: str = Field(
+        ...,
+        max_length=64,
+        description="Area filename",
+        examples=["Amsterdam.zip"],
     )  # Attribute
 
 
@@ -218,3 +226,94 @@ class AreasCountResponse(BaseModel):
         description="Total number of areas in context of the current SDEP/member state",
         examples=[42],
     )  # Attribute
+
+
+class AreaErrorDetail(BaseModel):
+    """Error detail for a failed area in processing."""
+
+    model_config = ConfigDict(
+        title="area.AreaErrorDetail",
+        populate_by_name=True,
+    )
+
+    loc: list[str | int] = Field(
+        default_factory=list,
+        description="Location of the error (field path)",
+        examples=[["areas", 0, "filename"], ["areas", 1, "filedata"]],
+    )
+    msg: str = Field(
+        ...,
+        description="Error message describing what went wrong",
+        examples=[
+            "Competent authority with competent_authority_id 'invalid' not found",
+            "Area with areaId 'abc-123' already exists",
+        ],
+    )
+    type: str = Field(
+        ...,
+        description="Error type classification",
+        examples=["business_logic_error", "duplicate_resource", "integrity_error"],
+    )
+
+
+class FailedArea(BaseModel):
+    """Represents a failed area with its original request data and errors."""
+
+    model_config = ConfigDict(
+        title="area.FailedArea",
+        populate_by_name=True,
+    )
+
+    areaIndex: int = Field(
+        ...,
+        alias="areaIndex",
+        description="Index of the area in the original request (0-based)",
+        examples=[0, 1, 2],
+    )
+    area: AreaRequest = Field(
+        ...,
+        description="Original area request data that failed",
+    )
+    errors: list[AreaErrorDetail] = Field(
+        ...,
+        description="List of errors that occurred for this area",
+    )
+
+
+class AreaProcessingResponse(BaseModel):
+    """Response for area processing with partial success/failure support."""
+
+    model_config = ConfigDict(
+        title="area.AreaProcessingResponse",
+        populate_by_name=True,
+    )
+
+    message: str = Field(
+        ...,
+        description="Summary message of the processing result",
+        examples=[
+            "Processed 10 areas: 8 succeeded, 2 failed",
+            "Processed 5 areas: 5 succeeded, 0 failed",
+            "Processed 3 areas: 0 succeeded, 3 failed",
+        ],
+    )
+    totalProcessed: int = Field(
+        ...,
+        alias="totalProcessed",
+        description="Total number of areas submitted",
+        examples=[10, 5, 3],
+    )
+    succeeded: int = Field(
+        ...,
+        description="Number of areas that succeeded",
+        examples=[8, 5, 0],
+    )
+    failed: int = Field(
+        ...,
+        description="Number of areas that failed",
+        examples=[2, 0, 3],
+    )
+    failures: list[FailedArea] = Field(
+        default_factory=list,
+        description="List of areas that failed (empty if all succeeded)",
+    )

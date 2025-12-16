@@ -24,7 +24,7 @@ from app.models.temporal import Temporal
 
 
 def generate_activity_id() -> str:
-    """Generate a random lowercase alphanumeric activity_id."""
+    """Generate a random lowercase alphanumeric activity technical ID."""
     return uuid.uuid4().hex[:20]
 
 
@@ -62,29 +62,19 @@ class Activity(Base):
     """Activity model representing an actual rental activity.
 
     An Activity represents an actual rental activity.
-    - The activity can apply to the address as a whole
-    - The activity can also apply to part of the address (a unit)
 
     The host has obtained a registration number for the address (conform legislation).
-    On the platform, the host has replicated the registration number in each advertisement,
+    On the platform, the host has replicated the registration number in each advertisement (unit),
     in case the address is advertised in parts.
     The registration number is consequently replicated in each Activity.
 
-    An Activity has a unique constraint:
-    - The combination of activity_id, platform_id, url, temporal start datetime, and temporal end datetime must be unique
+    The platform_activity_id is an optional external identifier that platforms may provide.
+
     Although registrationNumber is a string, it still is commonly referred to as "number".
     """
 
     __tablename__ = "activity"
     __table_args__ = (
-        UniqueConstraint(
-            "activity_id",
-            "platform_id",
-            "url",
-            "temporal_start_date_time",
-            "temporal_end_date_time",
-            name="uq_activity_all",
-        ),
         CheckConstraint(
             "number_of_guests IS NULL OR (number_of_guests >= 1 AND number_of_guests <= 1024)",
             name="ck_activity_number_of_guests_range",
@@ -97,19 +87,22 @@ class Activity(Base):
     )
 
     # Primary key
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[str] = mapped_column(
+        String(20), primary_key=True, index=True, default=generate_activity_id
+    )
 
     # Attributes
-    activity_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, default=generate_activity_id, index=True
-    )  # Lowercase alphanumeric, auto-generated if not supplied, for example "sdep-str01-001"
 
     platform_id: Mapped[int] = mapped_column(
         ForeignKey("platform.id"), nullable=False, index=True
     )  # Reference - foreign key to Platform
 
-    area_id: Mapped[int] = mapped_column(
-        ForeignKey("area.id"), nullable=False, index=True
+    platform_activity_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )  # Lowercase alphanumeric, optional, for example "sdep-str01-001"
+
+    area_id: Mapped[str] = mapped_column(
+        String(20), ForeignKey("area.id"), nullable=False, index=True
     )  # Reference - foreign key to Area
 
     url: Mapped[str] = mapped_column(
@@ -146,8 +139,8 @@ class Activity(Base):
 
     # Audit attributes
     created_at: Mapped[datetime] = mapped_column(
-        default=func.now(), nullable=False
-    )  # Always present
+        DateTime(timezone=True), default=func.now(), nullable=False
+    )  # Always present, stored in UTC
 
     # Composites
     address: Mapped[Address] = composite(
@@ -174,4 +167,4 @@ class Activity(Base):
 
     def __repr__(self) -> str:
         """String representation of Activity."""
-        return f"<Activity(id={self.id}, activity_id='{self.activity_id}', url='{self.url}', registration_number='{self.registration_number}')>"
+        return f"<Activity(id={self.id}, platform_activity_id='{self.platform_activity_id}', url='{self.url}', registration_number='{self.registration_number}')>"

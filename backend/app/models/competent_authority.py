@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import String, func
+from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.config import Base
@@ -31,8 +31,8 @@ class CompetentAuthority(Base):
 
     # Audit attributes
     created_at: Mapped[datetime] = mapped_column(
-        default=func.now(), nullable=False
-    )  # Always present
+        DateTime(timezone=True), default=func.now(), nullable=False
+    )  # Always present, stored in UTC
 
     # References
     areas: Mapped[list["Area"]] = relationship(

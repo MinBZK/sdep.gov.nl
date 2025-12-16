@@ -83,16 +83,16 @@ class TestCAActivitiesAPI:
         # Create areas
         area_amsterdam = await AreaFactory.create_async(
             async_session,
-            area_id="0363",
+            competent_authority_area_id="0363",
             competent_authority_id=ca_amsterdam.id,
-            filename="amsterdam.geojson",
+            filename="amsterdam.zip",
             filedata=b"amsterdam_data",
         )
         area_denhaag = await AreaFactory.create_async(
             async_session,
-            area_id="0518",
+            competent_authority_area_id="0518",
             competent_authority_id=ca_denhaag.id,
-            filename="denhaag.geojson",
+            filename="denhaag.zip",
             filedata=b"denhaag_data",
         )
 
@@ -337,7 +337,7 @@ class TestCAActivitiesAPI:
         # Verify top-level fields
         assert isinstance(activity["url"], str)
         assert isinstance(activity["registrationNumber"], str)
-        assert isinstance(activity["areaId"], str)
+        assert isinstance(activity["areaId"], str)  # areaId is technical ID (20-char UUID)
         assert isinstance(activity["numberOfGuests"], int)
         assert isinstance(activity["countryOfGuests"], list)
         assert isinstance(activity["platformId"], str)
@@ -390,9 +390,9 @@ class TestCAActivitiesAPI:
         )
         area = await AreaFactory.create_async(
             async_session,
-            area_id="0363",
+            competent_authority_area_id="0363",
             competent_authority_id=ca.id,
-            filename="amsterdam.geojson",
+            filename="amsterdam.zip",
             filedata=b"amsterdam_data",
         )
         platform = await PlatformFactory.create_async(

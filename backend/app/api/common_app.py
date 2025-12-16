@@ -12,6 +12,11 @@ app_common = FastAPI(
     root_path="/api",
 )
 
+# Register exception handlers for consistent error responses
+from app.api.common.exception_handlers import register_exception_handlers  # noqa: E402
+
+register_exception_handlers(app_common)
+
 # Register health router
 from app.api.common.routers import health  # noqa: E402
 

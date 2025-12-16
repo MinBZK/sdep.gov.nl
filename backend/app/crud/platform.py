@@ -12,7 +12,7 @@ Pattern:
 - CRUD layer: Data access (flush only, no commits)
 """
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.platform import Platform
@@ -99,6 +99,42 @@ async def get_all(session: AsyncSession) -> list[Platform]:
     return list(result.scalars().all())
 
 
+async def delete(session: AsyncSession, platform_id: int) -> bool:
+    """
+    Delete a platform by primary key id.
+
+    Args:
+        session: Async database session
+        platform_id: Platform id (primary key)
+
+    Returns:
+        True if deleted, False if not found
+    """
+    platform = await get_by_id(session, platform_id)
+    if platform is None:
+        return False
+
+    await session.delete(platform)
+    await session.flush()
+    return True
+
+
+async def exists(session: AsyncSession, platform_id: int) -> bool:
+    """
+    Check if a platform exists by primary key id.
+
+    Args:
+        session: Async database session
+        platform_id: Platform id (primary key)
+
+    Returns:
+        True if exists, False otherwise
+    """
+    stmt = select(Platform.id).where(Platform.id == platform_id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none() is not None
+
+
 async def count(session: AsyncSession) -> int:
     """
     Count total number of platforms.
@@ -109,5 +145,6 @@ async def count(session: AsyncSession) -> int:
     Returns:
         Total count of platforms
     """
-    result = await session.execute(select(Platform))
-    return len(list(result.scalars().all()))
+    stmt = select(func.count()).select_from(Platform)
+    result = await session.execute(stmt)
+    return result.scalar_one()

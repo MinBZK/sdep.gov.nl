@@ -51,7 +51,7 @@ ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 ENV UV_HTTP_TIMEOUT=300
 RUN uv sync --frozen --no-install-project
 
-# -- Stage 2 - package (final image with build artifacts and without source code)
+# -- Stage 2 - runtime (final image with build artifacts and without source code)
 
 FROM python:3.13-slim
 

@@ -134,6 +134,11 @@ if [ "$http_code" -eq 200 ]; then
         # Extract number of areas (count occurrences of "areaId")
         area_count=$(echo "$body" | grep -o '"areaId"' | wc -l)
 
+        # Extract area IDs for later tests using jq
+        FIRST_AREA_ID=$(echo "$body" | jq -r '.areas[0].areaId // empty' 2>/dev/null)
+        SECOND_AREA_ID=$(echo "$body" | jq -r '.areas[1].areaId // empty' 2>/dev/null)
+        THIRD_AREA_ID=$(echo "$body" | jq -r '.areas[2].areaId // empty' 2>/dev/null)
+
         if [ "$area_count" -ge 1 ]; then
             echo "✅ Test 2 passed: Retrieved $area_count area(s)"
             PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -254,19 +259,23 @@ echo "════════════════════════�
 echo
 
 # Test 5: GET area with known areaId
-echo "Test 5: GET area with known areaId (amsterdam-area-0363)"
+echo "Test 5: GET area with known areaId"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
-KNOWN_AREA_ID="amsterdam-area-0363"
+TARGET_AREA_ID=${FIRST_AREA_ID:-"99999999999999999999"}
 
-if [ -n "$BEARER_TOKEN" ]; then
+if [ -n "$BEARER_TOKEN" ] && [ -n "$TARGET_AREA_ID" ]; then
     # Use -i to get headers and -s for silent mode, -w to get http code
     { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${KNOWN_AREA_ID}"); } 2>/dev/null
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${TARGET_AREA_ID}"); } 2>/dev/null
+elif [ -z "$TARGET_AREA_ID" ]; then
+    response=""
+    http_code=""
+    echo "⏭️  Skipping Test 5 (no areaId captured from list response)"
 else
-    { response=$(curl -s -i -w "\n%{http_code}" "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${KNOWN_AREA_ID}"); } 2>/dev/null
+    { response=$(curl -s -i -w "\n%{http_code}" "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${TARGET_AREA_ID}"); } 2>/dev/null
 fi
 
 http_code=$(echo "$response" | tail -n1)
@@ -274,7 +283,9 @@ headers=$(echo "$response" | sed '$d')
 
 echo "HTTP Status: $http_code"
 
-if [ "$http_code" -eq 200 ]; then
+if [ -z "$http_code" ]; then
+    echo "⏭️  Skipping Test 5 (no response)"
+elif [ "$http_code" -eq 200 ]; then
     # Check Content-Type header
     content_type=$(echo "$headers" | grep -i "content-type:" | head -n1 | cut -d' ' -f2- | tr -d '\r')
 
@@ -307,17 +318,15 @@ fi
 echo
 
 # Test 6: GET area with another known areaId
-echo "Test 6: GET area with another known areaId (rotterdam-area-0599)"
+echo "Test 6: GET area with another known areaId"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
-# Only run if authenticated
-if [ -n "$BEARER_TOKEN" ]; then
-    AREA_ID_2="rotterdam-area-0599"
-
+# Only run if authenticated and second area ID was captured
+if [ -n "$BEARER_TOKEN" ] && [ -n "$SECOND_AREA_ID" ]; then
     { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${AREA_ID_2}"); } 2>/dev/null
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${SECOND_AREA_ID}"); } 2>/dev/null
 
     http_code=$(echo "$response" | tail -n1)
     headers=$(echo "$response" | sed '$d')
@@ -329,7 +338,7 @@ if [ -n "$BEARER_TOKEN" ]; then
         content_type=$(echo "$headers" | grep -i "content-type:" | head -n1 | cut -d' ' -f2- | tr -d '\r')
 
         if echo "$content_type" | grep -q "application/octet-stream"; then
-            echo "✅ Test 6 passed: Retrieved area for Rotterdam"
+            echo "✅ Test 6 passed: Retrieved area"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
             echo "❌ Test 6 failed: Expected Content-Type application/octet-stream"
@@ -340,7 +349,7 @@ if [ -n "$BEARER_TOKEN" ]; then
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 else
-    echo "⏭️  Skipping Test 6 (requires authentication)"
+    echo "⏭️  Skipping Test 6 (no second area ID available)"
 fi
 
 echo
@@ -352,7 +361,7 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
-    NONEXISTENT_AREA_ID="nonexistent-area-99999"
+    NONEXISTENT_AREA_ID="99999999"
 
     response=$(curl -s -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
@@ -383,13 +392,11 @@ echo "Test 8: Verify Content-Disposition contains filename"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
-# Only run if authenticated
-if [ -n "$BEARER_TOKEN" ]; then
-    AREA_ID_3="denhaag-area-0518"
-
+# Only run if authenticated and third area ID was captured
+if [ -n "$BEARER_TOKEN" ] && [ -n "$THIRD_AREA_ID" ]; then
     { response=$(curl -s -i -w "\n%{http_code}" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${AREA_ID_3}"); } 2>/dev/null
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/areas/${THIRD_AREA_ID}"); } 2>/dev/null
 
     http_code=$(echo "$response" | tail -n1)
     headers=$(echo "$response" | sed '$d')
@@ -414,7 +421,7 @@ if [ -n "$BEARER_TOKEN" ]; then
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 else
-    echo "⏭️  Skipping Test 8 (requires authentication)"
+    echo "⏭️  Skipping Test 8 (no third area ID available)"
 fi
 
 echo

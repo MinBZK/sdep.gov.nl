@@ -1,28 +1,36 @@
 """CA Area endpoints.
 
 Transaction Management Architecture (API Layer):
-- This API endpoint uses get_async_db dependency for automatic transaction management
-- get_async_db provides a session with automatic commit/rollback via context manager
-- Transaction boundary is at the API layer (aligned with HTTP request boundary)
-- Service layer contains business logic without transaction management
+- This API endpoint uses get_async_db_manual_commit for manual transaction management
+- Service layer uses nested transactions (savepoints) for partial success/failure support
+- API layer performs manual commit if any areas succeeded
 - CRUD layer only flushes, never commits
 
 Pattern:
-- API layer: Transaction boundary (auto-commit via dependency)
-- Service layer: Business logic (no transaction management)
+- API layer: Transaction boundary (manual commit)
+- Service layer: Business logic with savepoints (nested transactions)
 - CRUD layer: Data access (flush only, no commits)
 """
 
 import logging
+from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.config import get_async_db
+from app.db.config import get_async_db_manual_commit
 from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 from app.exceptions.validation import ValidationError
-from app.schemas.area import AreaListRequest
+from app.schemas.area import (
+    AreaErrorDetail,
+    AreaListRequest,
+    AreaProcessingResponse,
+    AreaRequest,
+    FailedArea,
+)
 from app.schemas.auth import UnauthorizedError
 from app.security import verify_bearer_token
 from app.services import area as area_service
@@ -34,16 +42,22 @@ router = APIRouter(tags=["ca"])
 
 @router.post(
     "/ca/areas",
-    status_code=status.HTTP_201_CREATED,
-    summary="Submit areas for the authenticated competent authority.",
-    description="Submit areas for the authenticated competent authority. Each area comprises a shapefile (zip). All areas are processed atomically (all succeed or all fail). Validation is performed on all fields before processing. Use areaId (functional, optional, otherwise randomized) when having (wanting to submit) double-entries from your own adminstation. **IMPORTANT:** The 'filedata' field must contain base64-encoded file data. Use base64 encoding to convert your binary files before sending them in the JSON payload.",
+    summary="Submit areas for the authenticated competent authority",
+    description="""Submit areas for the authenticated competent authority (competentAuthorityId).
+
+Optionally, a `competentAuthorityAreaId` can be supplied for each area as a functional business identifier assigned by the competent authority. If not provided, the field remains null.
+
+Areas are processed with partial success/failure support. Each area is validated and processed independently using nested transactions (savepoints). Returns detailed results showing which areas succeeded and which failed.""",
     operation_id="postAreas",
+    response_model=AreaProcessingResponse,
     responses={
-        "201": {
-            "description": "Areas successfully processed and saved",
+        "200": {
+            "description": "Partial success - some areas succeeded, some failed",
+            "model": AreaProcessingResponse,
         },
-        "400": {
-            "description": "Bad Request - Validation error in submitted data",
+        "201": {
+            "description": "Complete success - all areas processed successfully",
+            "model": AreaProcessingResponse,
         },
         "401": {
             "model": UnauthorizedError,
@@ -52,56 +66,108 @@ router = APIRouter(tags=["ca"])
         "403": {
             "description": "Forbidden - Missing required authorization roles",
         },
-        "409": {
-            "description": "Conflict - Duplicate area (same area_id) or constraint violation",
+        "422": {
+            "description": "Unprocessable Entity - All areas failed (or Pydantic validation error)",
+            "model": AreaProcessingResponse,
         },
+    },
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["metadata", "areas"],
+                        "properties": {
+                            "metadata": {
+                                "type": "object",
+                                "title": "MetaDataRequest",
+                                "description": "Metadata placeholder (currently unused)"
+                            },
+                            "areas": {
+                                "type": "array",
+                                "minItems": 1,
+                                "maxItems": 100,
+                                "items": {
+                                    "$ref": "#/components/schemas/AreaRequest"
+                                }
+                            }
+                        }
+                    },
+                    "examples": {
+                        "valid_example": {
+                            "summary": "Valid areas",
+                            "value": {
+                                "metadata": {},
+                                "areas": [
+                                    {
+                                        "competentAuthorityAreaId": "amsterdam-area-0363",
+                                        "filename": "Amsterdam.zip",
+                                        "filedata": "UEsDBBQAAAAIAG1heFkAAAAAAAAAAAAAAAAOAAAAQW1zdGVyZGFtLnNocA=="
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        }
     },
 )
 async def post_areas(
-    data: AreaListRequest,
-    session: AsyncSession = Depends(get_async_db),
+    request: Request,
+    session: AsyncSession = Depends(get_async_db_manual_commit),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
-) -> dict[str, str]:
+) -> AreaProcessingResponse:
     """
-    Submit areas for processing.
+    Submit areas for processing with partial success/failure support.
 
     Transaction Management:
-    - API uses get_async_db which provides automatic transaction management
-    - Transaction starts when dependency is invoked (via AsyncSessionLocal.begin())
-    - Transaction commits automatically on success
-    - Transaction rolls back automatically on exception
-    - Service layer contains business logic only (no transaction management)
+    - Uses get_async_db_manual_commit for manual transaction control
+    - Service layer uses nested transactions (savepoints) for each area
+    - Manual commit at end if any areas succeeded
+    - Manual rollback on unexpected exceptions
 
-    Validation:
-    - Pydantic validates all fields (syntax, types, constraints)
-    - Service performs no validation (already validated by Pydantic)
+    System Crash Behavior:
+    - If system crashes BEFORE commit, ALL changes are lost
+    - Example: 7 areas total, 5 processed (2 succeeded, 3 failed), system crashes:
+      * Result: ALL 5 areas rolled back (including the 2 that "succeeded")
+      * PostgreSQL automatically rolls back uncommitted transactions on connection loss
+      * Savepoints only protect against individual area failures, NOT system crashes
+      * All 7 areas must be resubmitted after recovery
+
+    Processing Approach:
+    - Phase 0: Collect Pydantic validation errors
+    - Phase 1: Validate all areas (business logic)
+    - Phase 2: Process valid areas using savepoints
+    - Each area can succeed or fail independently
+
+    HTTP Status Codes:
+    - 200 OK: Partial success - at least one area succeeded AND at least one failed
+    - 201 Created: Complete success - all areas processed successfully
+    - 401 Unauthorized: Authentication failure
+    - 403 Forbidden: Authorization failure (missing sdep_ca or sdep_write role)
+    - 422 Unprocessable Entity: Complete failure - no areas succeeded
+    - 500 Internal Server Error: Unexpected system error
 
     Authorization:
-    - Requires valid bearer token with "sdep_ca" and "sdep_write" roles in realm_access
-    - Competent authority ID is extracted from token's "client_id" claim
-    - Competent authority name is extracted from token's "client_name" claim
+    - Requires valid bearer token with "sdep_ca" and "sdep_write" roles
+    - Competent authority ID extracted from token's "client_id" claim
+    - Competent authority name extracted from token's "client_name" claim
 
-    Request Body:
-    - metadata: Batch-level metadata (placeholder for future use)
-    - areas: List of areas (minimum 1 required, maximum 100)
-    - Each area contains:
-      - areaId: Optional area identifier (auto-generated if not provided)
-      - filename: Filename of the shapefile
-      - filedata: Base64-encoded binary file data (e.g., base64-encoded .zip with ESRI shapefile files)
-        Example (bash): base64 -w 0 file.zip
-        Example (Python): base64.b64encode(file_bytes).decode('utf-8')
-
-    Note: Competent authority ID and name (from token) are normalized to each area at the API layer
-    before passing to service layer. This keeps service layer focused on business logic. The competent
-    authority is created automatically if it doesn't exist yet.
+    Args:
+        request: FastAPI Request object for manual body parsing
+        session: AsyncSession with manual commit mode
+        token_payload: JWT token payload from bearer token
 
     Returns:
-        Success message with count of processed areas
+        AreaProcessingResponse with processing results
 
     Raises:
-        HTTPException 400: Validation error
+        HTTPException 401: Unauthorized - Invalid or missing token
         HTTPException 403: Forbidden - Missing required authorization roles
-        HTTPException 409: Duplicate area or constraint violation
+        HTTPException 422: All areas failed (Pydantic validation is automatic)
         HTTPException 500: Internal server error
     """
 
@@ -122,7 +188,6 @@ async def post_areas(
         )
 
     # Extract competent authority ID and name from token
-    # competentAuthorityId comes from client_id claim
     competent_authority_id = token_payload.get("client_id")
     if not competent_authority_id:
         raise HTTPException(
@@ -131,7 +196,6 @@ async def post_areas(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # competentAuthorityName comes from client_name claim
     competent_authority_name = token_payload.get("client_name")
     if not competent_authority_name:
         raise HTTPException(
@@ -141,36 +205,207 @@ async def post_areas(
         )
 
     try:
-        # Convert Pydantic models to service layer format
-        # Competent authority ID and name are extracted from the token, not from the request payload
-        areas_list = data.to_service_list(
-            competent_authority_id=competent_authority_id,
-            competent_authority_name=competent_authority_name,
+        # Parse request body manually to collect both Pydantic and business logic errors
+        body = await request.json()
+
+        # Track Pydantic validation errors per area
+        pydantic_errors_by_index: dict[int, list[dict]] = {}
+        validated_data: AreaListRequest | None = None
+
+        # Attempt Pydantic validation
+        top_level_errors = []
+        try:
+            validated_data = AreaListRequest(**body)
+        except PydanticValidationError as pydantic_exc:
+            # Extract errors and group by area index
+            for error in pydantic_exc.errors():
+                # Error location format: ('areas', index, 'field', ...) for area errors
+                # or ('areas',) or ('metadata',) for top-level errors
+                if len(error["loc"]) >= 2 and error["loc"][0] == "areas":
+                    area_index = error["loc"][1]
+                    if area_index not in pydantic_errors_by_index:
+                        pydantic_errors_by_index[area_index] = []
+                    pydantic_errors_by_index[area_index].append({
+                        "loc": list(error["loc"]),
+                        "msg": error["msg"],
+                        "type": error.get("type", "validation_error"),
+                    })
+                else:
+                    # Top-level validation error (e.g., empty list, missing metadata)
+                    top_level_errors.append(error)
+
+        # Handle top-level validation errors (e.g., empty areas list)
+        if top_level_errors:
+            # Return standard error response for top-level validation errors
+            from app.schemas.error import ErrorDetail, ErrorResponse
+            from datetime import UTC
+
+            error_response = ErrorResponse(
+                detail=[
+                    ErrorDetail(
+                        msg=error["msg"],
+                        type=error.get("type", "validation_error"),
+                    )
+                    for error in top_level_errors
+                ],
+                timestamp=datetime.now(UTC),
+                path=str(request.url.path),
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            )
+            return JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                content=error_response.model_dump(mode="json"),
+            )
+
+        # Get areas list from body (even if Pydantic validation failed)
+        areas_raw = body.get("areas", [])
+        total_areas = len(areas_raw)
+
+        if total_areas == 0:
+            # This shouldn't happen if Pydantic validation worked, but handle it anyway
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="At least one area is required",
+            )
+
+        # Convert valid areas to service layer format
+        # Invalid areas will be tracked with their Pydantic errors
+        areas_dict = []
+        if validated_data:
+            # Pydantic validation succeeded - convert all areas
+            areas_dict = validated_data.to_service_list(
+                competent_authority_id=competent_authority_id,
+                competent_authority_name=competent_authority_name,
+            )
+        else:
+            # Pydantic validation failed - convert areas that passed validation
+            # and create placeholder dicts for failed ones
+            for idx, area_raw in enumerate(areas_raw):
+                if idx in pydantic_errors_by_index:
+                    # This area failed Pydantic validation
+                    # Create a minimal dict with the raw data for error reporting
+                    areas_dict.append({
+                        "_pydantic_validation_failed": True,
+                        "_raw_data": area_raw,
+                        "competent_authority_id_str": competent_authority_id,
+                        "competent_authority_name": competent_authority_name,
+                    })
+                else:
+                    # This area passed Pydantic validation - convert it
+                    try:
+                        area_validated = AreaRequest(**area_raw)
+                        areas_dict.append(
+                            area_validated.to_service_dict(
+                                competent_authority_id=competent_authority_id,
+                                competent_authority_name=competent_authority_name,
+                            )
+                        )
+                    except PydanticValidationError:
+                        # Shouldn't happen, but handle it gracefully
+                        areas_dict.append({
+                            "_pydantic_validation_failed": True,
+                            "_raw_data": area_raw,
+                            "competent_authority_id_str": competent_authority_id,
+                            "competent_authority_name": competent_authority_name,
+                        })
+
+        # Call service layer with manual commit session
+        # Service handles nested transactions (savepoints)
+        # Pass Pydantic errors so they can be included in the response
+        result = await area_service.process_area_list(
+            session, areas_dict, pydantic_errors_by_index
         )
 
-        # Call service layer with injected session
-        # Transaction is managed by get_async_db dependency (auto-commit on success)
-        await area_service.process_area_list(session, areas_list)
+        # Commit the transaction if any areas succeeded
+        # If no areas succeeded, don't commit - the transaction will be
+        # automatically rolled back when the session closes
+        #
+        # If system crashes BEFORE this commit executes, ALL changes
+        # are lost (even areas that "succeeded" in their savepoints).
+        # PostgreSQL rolls back uncommitted transactions on connection loss.
+        if result["succeeded"] > 0:
+            await session.commit()
 
-        return {
-            "message": f"Successfully processed {len(data.areas)} area(s)"
-        }
+        # Build response
+        total = result["total_processed"]
+        succeeded = result["succeeded"]
+        failed = result["failed"]
+
+        # Convert failures to response schema format
+        failed_areas = []
+        for failure in result["failures"]:
+            area_dict = failure["area"]
+
+            # Check if this is a Pydantic validation failure (has _raw_data)
+            if area_dict.get("_pydantic_validation_failed"):
+                # For Pydantic failures, use the raw data without validation
+                # Validation errors are already captured in the errors array
+                raw_data = area_dict.get("_raw_data", {})
+
+                area_request = AreaRequest.model_construct(**raw_data)
+            else:
+                # Convert back from service dict to request schema (business logic failure)
+                area_request = AreaRequest(**{
+                    "competentAuthorityAreaId": area_dict.get("competent_authority_area_id"),
+                    "filename": area_dict["filename"],
+                    "filedata": area_dict["filedata"],
+                })
+
+            failed_areas.append(
+                FailedArea(
+                    areaIndex=failure["area_index"],
+                    area=area_request,
+                    errors=[
+                        AreaErrorDetail(**error)
+                        for error in failure["errors"]
+                    ],
+                )
+            )
+
+        response = AreaProcessingResponse(
+            message=f"Processed {total} areas: {succeeded} succeeded, {failed} failed",
+            totalProcessed=total,
+            succeeded=succeeded,
+            failed=failed,
+            failures=failed_areas,
+        )
+
+        # Determine HTTP status code
+        if failed == 0:
+            # All succeeded - 201 Created
+            return JSONResponse(
+                status_code=status.HTTP_201_CREATED,
+                content=response.model_dump(by_alias=True, mode="json"),
+            )
+        elif succeeded == 0:
+            # All failed - 422 Unprocessable Entity
+            return JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                content=response.model_dump(by_alias=True, mode="json"),
+            )
+        else:
+            # Mixed results - 200 OK
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=response.model_dump(by_alias=True, mode="json"),
+            )
 
     except DuplicateResourceError as e:
-        # Handle duplicate resource errors (HTTP 409 via global handler)
-        # Global handler logs and converts to proper HTTP response
+        # Should not reach here (handled in service layer)
+        await session.rollback()
         raise e
     except BusinessLogicError as e:
-        # Handle business logic errors (HTTP 422 via global handler)
-        # Global handler logs and converts to proper HTTP response
+        # Should not reach here (handled in service layer)
+        await session.rollback()
         raise e
     except ValidationError as e:
-        # Handle validation errors (HTTP 422 via global handler)
-        # Global handler logs and converts to proper HTTP response
+        # Should not reach here (Pydantic validates)
+        await session.rollback()
         raise e
     except Exception as e:
-        # Convert unexpected errors to HTTP 500
-        # Global handler logs with full stack trace
+        # Unexpected errors - rollback and raise
+        await session.rollback()
+        logger.error(f"Unexpected error processing areas: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process areas",

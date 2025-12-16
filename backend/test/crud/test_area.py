@@ -18,13 +18,13 @@ class TestAreaCRUD:
         """Test creating a new area."""
         # Arrange
         ca = await CompetentAuthorityFactory.create_async(async_session)
-        filename = "area1.geojson"
+        filename = "area1.zip"
         filedata = b"binary_geo_data"
 
         # Act
         result = await area.create(
             async_session,
-            area_id=None,
+            competent_authority_area_id=None,
             competent_authority_id=ca.id,
             filename=filename,
             filedata=filedata,
@@ -32,27 +32,25 @@ class TestAreaCRUD:
 
         # Assert
         assert result.id is not None
-        assert result.area_id is not None  # Should be auto-generated
-        assert len(result.area_id) <= 64
-        assert result.area_id.islower()  # Should be lowercase alphanumeric
+        assert result.competent_authority_area_id is None  # Should be None when not provided
         assert result.competent_authority_id == ca.id
         assert result.filename == filename
         assert result.filedata == filedata
         assert result.created_at is not None
         assert isinstance(result.created_at, datetime)
 
-    async def test_create_area_with_explicit_area_id(self, async_session: AsyncSession):
-        """Test creating a new area with explicit area_id."""
+    async def test_create_area_with_explicit_competent_authority_area_id(self, async_session: AsyncSession):
+        """Test creating a new area with explicit competent_authority_area_id."""
         # Arrange
         ca = await CompetentAuthorityFactory.create_async(async_session)
-        explicit_area_id = "custom-area-123abc"
-        filename = "area1.geojson"
+        explicit_competent_authority_area_id = "custom-area-123abc"
+        filename = "area1.zip"
         filedata = b"binary_geo_data"
 
         # Act
         result = await area.create(
             async_session,
-            area_id=explicit_area_id,
+            competent_authority_area_id=explicit_competent_authority_area_id,
             competent_authority_id=ca.id,
             filename=filename,
             filedata=filedata,
@@ -60,59 +58,12 @@ class TestAreaCRUD:
 
         # Assert
         assert result.id is not None
-        assert result.area_id == explicit_area_id  # Should use provided value
+        assert result.competent_authority_area_id == explicit_competent_authority_area_id  # Should use provided value
         assert result.competent_authority_id == ca.id
         assert result.filename == filename
         assert result.filedata == filedata
         assert result.created_at is not None
         assert isinstance(result.created_at, datetime)
-
-    async def test_update_area(self, async_session: AsyncSession):
-        """Test updating an existing area."""
-        # Arrange
-        ca = await CompetentAuthorityFactory.create_async(async_session)
-        a = await AreaFactory.create_async(
-            async_session,
-            competent_authority_id=ca.id,
-            filename="old.geojson",
-            filedata=b"old_data",
-        )
-        new_filename = "new.geojson"
-
-        # Act
-        result = await area.update(async_session, a.id, filename=new_filename)
-
-        # Assert
-        assert result is not None
-        assert result.id == a.id
-        assert result.filename == new_filename
-
-    async def test_update_area_filedata(self, async_session: AsyncSession):
-        """Test updating filedata binary data."""
-        # Arrange
-        ca = await CompetentAuthorityFactory.create_async(async_session)
-        a = await AreaFactory.create_async(
-            async_session,
-            competent_authority_id=ca.id,
-            filename="test.geojson",
-            filedata=b"old_data",
-        )
-        new_spec = b"new_binary_data"
-
-        # Act
-        result = await area.update(async_session, a.id, filedata=new_spec)
-
-        # Assert
-        assert result is not None
-        assert result.filedata == new_spec
-
-    async def test_update_area_not_found(self, async_session: AsyncSession):
-        """Test updating a non-existent area."""
-        # Act
-        result = await area.update(async_session, 99999, filename="unknown.geojson")
-
-        # Assert
-        assert result is None
 
     async def test_delete_area(self, async_session: AsyncSession):
         """Test deleting an existing area."""
@@ -121,7 +72,7 @@ class TestAreaCRUD:
         a = await AreaFactory.create_async(
             async_session,
             competent_authority_id=ca.id,
-            filename="test.geojson",
+            filename="test.zip",
             filedata=b"test_data",
         )
 
@@ -136,7 +87,7 @@ class TestAreaCRUD:
     async def test_delete_area_not_found(self, async_session: AsyncSession):
         """Test deleting a non-existent area."""
         # Act
-        result = await area.delete(async_session, 99999)
+        result = await area.delete(async_session, "99999999999999999999")
 
         # Assert
         assert result is False
@@ -148,13 +99,13 @@ class TestAreaCRUD:
         a = await AreaFactory.create_async(
             async_session,
             competent_authority_id=ca.id,
-            filename="test.geojson",
+            filename="test.zip",
             filedata=b"test_data",
         )
 
         # Act
         exists = await area.exists(async_session, a.id)
-        not_exists = await area.exists(async_session, 99999)
+        not_exists = await area.exists(async_session, "99999999999999999999")
 
         # Assert
         assert exists is True
@@ -168,7 +119,7 @@ class TestAreaCRUD:
             await AreaFactory.create_async(
                 async_session,
                 competent_authority_id=ca.id,
-                filename=f"area{i}.geojson",
+                filename=f"area{i}.zip",
                 filedata=b"test_data",
             )
 
@@ -186,13 +137,13 @@ class TestAreaCRUD:
         await AreaFactory.create_async(
             async_session,
             competent_authority_id=ca1.id,
-            filename="area1.geojson",
+            filename="area1.zip",
             filedata=b"test_data1",
         )
         await AreaFactory.create_async(
             async_session,
             competent_authority_id=ca2.id,
-            filename="area2.geojson",
+            filename="area2.zip",
             filedata=b"test_data2",
         )
 
@@ -210,7 +161,7 @@ class TestAreaCRUD:
             await AreaFactory.create_async(
                 async_session,
                 competent_authority_id=ca.id,
-                filename=f"area{i}.geojson",
+                filename=f"area{i}.zip",
                 filedata=b"test_data",
             )
 
@@ -231,7 +182,7 @@ class TestAreaCRUD:
         a = await AreaFactory.create_async(
             async_session,
             competent_authority_id=ca.id,
-            filename="test.geojson",
+            filename="test.zip",
             filedata=b"test_data",
         )
 
@@ -246,7 +197,7 @@ class TestAreaCRUD:
     async def test_get_by_id_not_found(self, async_session: AsyncSession):
         """Test getting a non-existent area by id."""
         # Act
-        result = await area.get_by_id(async_session, 99999)
+        result = await area.get_by_id(async_session, "99999999999999999999")
 
         # Assert
         assert result is None
@@ -258,13 +209,13 @@ class TestAreaCRUD:
         await AreaFactory.create_async(
             async_session,
             competent_authority_id=ca.id,
-            filename="area1.geojson",
+            filename="area1.zip",
             filedata=b"test_data1",
         )
         await AreaFactory.create_async(
             async_session,
             competent_authority_id=ca.id,
-            filename="area2.geojson",
+            filename="area2.zip",
             filedata=b"test_data2",
         )
 
@@ -289,7 +240,7 @@ class TestAreaCRUD:
         """Test getting areas by filename."""
         # Arrange
         ca = await CompetentAuthorityFactory.create_async(async_session)
-        filename = "special_area.geojson"
+        filename = "special_area.zip"
         await AreaFactory.create_async(
             async_session,
             competent_authority_id=ca.id,
@@ -303,82 +254,3 @@ class TestAreaCRUD:
         # Assert
         assert len(results) == 1
         assert results[0].filename == filename
-
-    async def test_get_by_area_id(self, async_session: AsyncSession):
-        """Test getting an area by area_id (unique identifier)."""
-        # Arrange
-        ca = await CompetentAuthorityFactory.create_async(async_session)
-        test_area_id = "test-area-abc123"
-        await AreaFactory.create_async(
-            async_session,
-            area_id=test_area_id,
-            competent_authority_id=ca.id,
-            filename="area1.geojson",
-            filedata=b"test_data",
-        )
-
-        # Act
-        result = await area.get_by_area_id(async_session, test_area_id)
-
-        # Assert
-        assert result is not None
-        assert result.area_id == test_area_id
-
-    async def test_get_by_area_id_not_found(self, async_session: AsyncSession):
-        """Test getting a non-existent area by area_id."""
-        # Act
-        result = await area.get_by_area_id(async_session, "non-existent-area-id")
-
-        # Assert
-        assert result is None
-
-    async def test_create_area_with_duplicate_area_id(
-        self, async_session: AsyncSession
-    ):
-        """Test that creating an area with duplicate area_id raises IntegrityError."""
-        # Arrange
-        ca = await CompetentAuthorityFactory.create_async(async_session)
-        duplicate_area_id = "duplicate-area-id"
-
-        # Create first area with specific area_id
-        await area.create(
-            async_session,
-            area_id=duplicate_area_id,
-            competent_authority_id=ca.id,
-            filename="area1.geojson",
-            filedata=b"data1",
-        )
-        await async_session.flush()
-
-        # Act & Assert - Try to create second area with same area_id
-        # Use flush() instead of commit() to test constraint within savepoint
-        with pytest.raises(IntegrityError):
-            await area.create(
-                async_session,
-                area_id=duplicate_area_id,
-                competent_authority_id=ca.id,
-                filename="area2.geojson",
-                filedata=b"data2",
-            )
-            await async_session.flush()
-
-    async def test_update_area_id(self, async_session: AsyncSession):
-        """Test updating the area_id of an existing area."""
-        # Arrange
-        ca = await CompetentAuthorityFactory.create_async(async_session)
-        a = await AreaFactory.create_async(
-            async_session,
-            area_id="old-area-id",
-            competent_authority_id=ca.id,
-            filename="test.geojson",
-            filedata=b"test_data",
-        )
-        new_area_id = "new-area-id-xyz"
-
-        # Act
-        result = await area.update(async_session, a.id, area_id_value=new_area_id)
-
-        # Assert
-        assert result is not None
-        assert result.id == a.id
-        assert result.area_id == new_area_id

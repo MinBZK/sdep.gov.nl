@@ -36,7 +36,7 @@ encode_file_to_hex() {
 }
 
 # Define area
-# Format: "area_id|filename|zipfile|competent_authority_id|comment"
+# Format: "competent_authority_area_id|filename|zipfile|competent_authority_id|comment"
 declare -a AREAS=(
     "amsterdam-area-0363|Amsterdam-dummy.zip|Amsterdam-dummy.zip|sdep-ca-0363|Amsterdam area"
     "rotterdam-area-0599|Rotterdam.zip|Rotterdam.zip|sdep-ca-0599|Rotterdam area"
@@ -85,7 +85,7 @@ EOF
 
 # Generate SQL for each area
 for area_def in "${AREAS[@]}"; do
-    IFS='|' read -r area_id filename zipfile ca_id comment <<< "${area_def}"
+    IFS='|' read -r competent_authority_area_id filename zipfile ca_id comment <<< "${area_def}"
 
     zipfile_path="${SHAPEFILE_DIR}/${zipfile}"
 
@@ -101,18 +101,21 @@ for area_def in "${AREAS[@]}"; do
     # Get hex-encoded data
     hex_bytea=$(encode_file_to_hex "${zipfile_path}")
 
+    # Generate a 20-character UUID for the area (matching uuid.uuid4().hex[:20])
+    area_uuid=$(python3 -c "import uuid; print(uuid.uuid4().hex[:20])")
+
     # Write SQL INSERT statement
     cat >> "${OUTPUT_FILE}" <<EOF
 -- ${comment}
-INSERT INTO area (area_id, filename, filedata, competent_authority_id, created_at)
+INSERT INTO area (id, competent_authority_id, competent_authority_area_id, filename, filedata, created_at)
 VALUES (
-  '${area_id}',
+  '${area_uuid}',
+  (SELECT id FROM competent_authority WHERE competent_authority_id = '${ca_id}'),
+  '${competent_authority_area_id}',
   '${filename}',
   ${hex_bytea},
-  (SELECT id FROM competent_authority WHERE competent_authority_id = '${ca_id}'),
-  NOW()
-)
-ON CONFLICT (area_id, competent_authority_id) DO NOTHING;
+  '2025-01-01 00:00:00+00'::timestamptz
+);
 
 EOF
 done

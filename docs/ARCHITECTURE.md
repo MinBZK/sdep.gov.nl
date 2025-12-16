@@ -45,11 +45,14 @@ This document describes the SDEP architecture, including layering principles, da
 
 ## Overview
 
-SDEP is an online transactional processing (OLTP) application with straight transactional semantics:
+SDEP is an online transactional processing (OLTP) application where data is submitted in batch jobs:
 
 - Each endpoint (POST) demarcates one transaction
+- Partial failures allowed (and returned), using nested transactions with savepoints
+- Versioning by stapling (new record with same functional ID, different timestamp)
+- Technical IDs (20-character UUID strings) for GET responses and foreign key references
+- Optional functional IDs for POST requests (nullable, not auto-generated)
 - Single concurrency for platform or competent authority
-- Single delivery without versioning
 
 ## Layers
 
@@ -172,9 +175,7 @@ Responsibilities:
 
 - Business logic implementation
 - Optimized queries
-- Transaction management with optional nested savepoints
-
-Technology:
+- Transaction management with nested savepoints (allows to collect partial failures)
 
 - SQLAlchemy async patterns
 - Python async/await
@@ -227,15 +228,15 @@ Technology:
 Patterns:
 
 - One model per file
-- Generated from UML class diagrams (`*.drawio`)
+- Generated from datamodel (UML class) diagrams (`*.drawio`)
 - Audit fields: `created`, `updated` (except supportive classes)
 - Optimistic locking: `version` field (except single concurrency classes)
 - Composite aggregations for contained relationships
 - Explicit foreign keys with proper indexes
 
-SDEP's datamodel is based on this UML class model
+SDEP's datamodel is based on this datamodel:
 
-![](./Classes.svg)
+![](./Datamodel.svg)
 
 The datamodel enforces:
 
@@ -468,7 +469,7 @@ Several components are **generated** from source artifacts:
 
 ### Models from UML diagrams
 
-Source: [`docs/Classes.drawio`](./Classes.drawio)
+Source: [`docs/Datamodel.drawio`](./Datamodel.drawio)
 
 Target: [`backend/app/models/*.py`](../backend/app/models/)
 
