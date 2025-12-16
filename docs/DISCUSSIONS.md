@@ -7,46 +7,52 @@ This page described open and closed discussion items.
 
 ## Open
 
-For additional motivation, see the text below the table.
+For selective additional motivation, see the text below the table.
 
-| #               | Discussion                         | Example |
-| :-------------- | :--------------------------------- | :------ |
-| **DIS&nbsp;02** | Async request/response model       |         |
-| **DIS&nbsp;03** | Purpose of stay                    |         |
-| **DIS&nbsp;04** | Checkin/checkout                   |         |
-| **DIS&nbsp;05** | Query by timestamp                 |         |
-| **DIS&nbsp;06** | Filter by areaId                   |         |
-| **DIS&nbsp;07** | Number/country of guests optional? |         |
-| **DIS&nbsp;08** | Units                              |         |
+| #               | Discussion                         |
+| :-------------- | :--------------------------------- |
+| **DIS&nbsp;02** | Async request/response model?      |
+| **DIS&nbsp;04** | Checkin/checkout?                  |
+| **DIS&nbsp;05** | Query filters?                     |
+| **DIS&nbsp;06** | Pagination max# records?           |
+| **DIS&nbsp;07** | Number/country of guests optional? |
+| **DIS&nbsp;08** | Support for units?                 |
+| **DIS&nbsp;09** | Max #records in POST (throttling)? |
 
 **DIS 02**
 - For POST requests, support an **async request/response model**
-- Is: acknowledge receipt, process the transactions asynchronously
+- This is: acknowledge receipt, process the transactions asynchronously
 - Consideration: API needs to be extended (status back-reporting)
-- Consideration: performance gain?
+- Consideration: performance test?
 - Consideration: when SDEP is down is not an issue => transaction is rolled back, SDEP is an OLTP-batch system => try again
+- **Proposal**: for now, don't do
 
 **DIS 03**
 - Add `Activity.purposeOfStay` (as optional field)?
+- **Discuss**
 
 **DIS 04**
 - Change from `Temporal.startDatetime, endDatetime` to `Temporal.checkin, checkout`?
+- **Discuss**
 
 **DIS 05**
-- Add query activities by timestamp
-- So CA can e.g. get a monthly report
+- CA can filter activities by timestamp (begin/end), e.g. to get a monthly report
+- ...
+- **Discuss**
 
 **DIS 06**
-- Add filter activities by areaId
-- So CA can do selective reporting
-
-**DIS 07**
 - Keep number of guests and country of guests as optional (in activity)?
 - Because these may unavailable in the platform's internal administration
 - Consideration: is OK for EU ?
+- **Discuss**
 
 **DIS 08**
-- Discuss
+- Inside SDEP, or outside SDEP (only in platform administartion, via platformActivityId)
+- **Discuss**
+
+**DIS 09**
+- Common approach: max. 1000 ?
+- **Discuss**
 
 ## Closed
 

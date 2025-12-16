@@ -29,14 +29,14 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 ## API decisions
 
-For additional motivation, see the text below the table.
+For selective additional motivation, see the text below the table.
 
 | #               | Decision                                       | Example                                                                                                                                          |
 | :-------------- | :--------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **API&nbsp;01** | OpenAPI 3.1.0                                  |                                                                                                                                                  |
-| **API&nbsp;02** | All endpoints are well-documented              |                                                                                                                                                  |
-| **API&nbsp;03** | Nouns instead of verbs                         | `/ca/areas`                                                                                                                                      |
-| **API&nbsp;04** | Plurals for resources                          | `/ca/areas`                                                                                                                                      |
+| **API&nbsp;01** | Support OpenAPI 3.1.0                          |                                                                                                                                                  |
+| **API&nbsp;02** | All endpoints are well-documented              | See e.g. `/str/activities` endpoint                                                                                                              |
+| **API&nbsp;03** | Use nouns instead of verbs                     | `/ca/areas`                                                                                                                                      |
+| **API&nbsp;04** | Use plurals for resources                      | `/ca/areas`                                                                                                                                      |
 | **API&nbsp;05** | Consistent datamodel                           | `Activity`, `Area`                                                                                                                               |
 | **API&nbsp;06** | Consistent endpoints                           | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                                                                    |
 | **API&nbsp;07** | Consistent pagination                          | `offset`, `limit`, all endpoints                                                                                                                 |
@@ -44,11 +44,11 @@ For additional motivation, see the text below the table.
 | **API&nbsp;09** | Semantical validation                          | `begin timestamp < end timestamp`                                                                                                                |
 | **API&nbsp;10** | Integrity validation and the use of ids        | See [./IDS.md](./IDS.md)                                                                                                                         |
 | **API&nbsp;11** | Transaction size constraints (POST)            |                                                                                                                                                  |
-| **API&nbsp;12** | Logical ordening => readability                |                                                                                                                                                  |
-| **API&nbsp;13** | Essentiality                                   | `POST /str/activities` => only `areaId` and `competentAuthorityId` (no `competentAuthorityName`)                                                 |
+| **API&nbsp;12** | Logical ordening => readability                | See e.g. `/str/areas` endpoint                                                                                                                   |
+| **API&nbsp;13** | Essentiality                                   | `POST /str/activities` => only `areaId` required (is technical key); `competentAuthorityId, competentAuthorityName` are not required             |
 | **API&nbsp;14** | Consistent HTTP response codes                 | 200, 201, 400, 401, 403, 409, 422                                                                                                                |
 | **API&nbsp;15** | Submit activities always against current areas |                                                                                                                                                  |
-| **API&nbsp;16** | Partial failures                               | See [./PARTIAL_FAILURES_FUNCTIONAL.md](./PARTIAL_FAILURES_FUNCTIONAL.md) and [./PARTIAL_FAILURES_TECHNICALL.md](./PARTIAL_FAILURES_TECHNICAL.md) |
+| **API&nbsp;16** | Support partial failures                       | See [./PARTIAL_FAILURES_FUNCTIONAL.md](./PARTIAL_FAILURES_FUNCTIONAL.md) and [./PARTIAL_FAILURES_TECHNICALL.md](./PARTIAL_FAILURES_TECHNICAL.md) |
 
 Motivation:
 
@@ -77,7 +77,7 @@ Motivation:
 
 ## Security decisions
 
-For additional motivation, see the text below the table.
+For selective additional motivation, see the text below the table.
 
 | #               | Decision                                                                   | Example |
 | :-------------- | :------------------------------------------------------------------------- | :------ |
