@@ -5,7 +5,7 @@
 # -- Stage 1 - prepare
 
 FROM python:3.13-slim AS builder
-LABEL "maintainer"="ICTU DevOps"
+LABEL "maintainer"="ICTU"
 
 # The installer requires curl (and certificates) to download the release archive
 # Also install libpq-dev for psycopg

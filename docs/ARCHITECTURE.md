@@ -1,4 +1,4 @@
-<h1>Project Structure</h1>
+<h1>Architecture</h1>
 
 This document provides an overview of the SDEP (Single Digital Entry Point) project structure, technology stack, and key components.
 

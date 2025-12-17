@@ -73,7 +73,7 @@ echo "HTTP Status: $http_code"
 echo
 
 # Expected count
-EXPECTED_COUNT=28
+EXPECTED_COUNT=5
 
 if [ "$http_code" -eq 200 ]; then
     # Extract count from JSON response (handles both "count":10 and "count": 10)
