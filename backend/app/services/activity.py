@@ -28,6 +28,7 @@ from app.crud import area as area_crud
 from app.crud import competent_authority as competent_authority_crud
 from app.crud import platform as platform_crud
 from app.exceptions.business import BusinessLogicError, DuplicateResourceError
+from app.models.activity import Activity
 
 
 async def validate_activity(
@@ -71,7 +72,7 @@ async def validate_activity(
 
 async def process_single_activity(
     session: AsyncSession, activity: dict
-) -> None:
+) -> Activity:
     """
     Process and save a single activity (assumes validation already passed).
 
@@ -81,6 +82,9 @@ async def process_single_activity(
     Args:
         session: Async database session (within savepoint)
         activity: Activity dictionary (already validated, contains _area_technical_id)
+
+    Returns:
+        Created Activity object with generated ID
 
     Raises:
         IntegrityError: Database constraint violation
@@ -102,7 +106,7 @@ async def process_single_activity(
         )
 
     # Save activity (CRUD only flushes)
-    await activity_crud.create(
+    activity_obj = await activity_crud.create(
         session=session,
         activity_id=activity.get("activity_id"),
         activity_name=activity.get("activity_name"),
@@ -121,6 +125,8 @@ async def process_single_activity(
         temporal_end_date_time=activity["temporal_end_date_time"],
         platform_id=platform.id,
     )
+
+    return activity_obj
 
 
 async def process_activity_list(
@@ -161,6 +167,13 @@ async def process_activity_list(
             "total_processed": int,
             "succeeded": int,
             "failed": int,
+            "successes": [
+                {
+                    "activity_index": int,
+                    "activity_id": str,
+                    "activity": dict
+                }
+            ],
             "failures": [
                 {
                     "activity_index": int,
@@ -176,6 +189,7 @@ async def process_activity_list(
     total_processed = len(activities)
     succeeded = 0
     failed = 0
+    successes = []
     failures = []
 
     # PHASE 0: Handle Pydantic validation failures
@@ -226,12 +240,17 @@ async def process_activity_list(
 
         try:
             # Process the activity
-            await process_single_activity(session, activity)
+            activity_obj = await process_single_activity(session, activity)
 
             # Flush to detect database errors within savepoint
             await session.flush()
 
-            # Success - savepoint commits automatically
+            # Success - track it
+            successes.append({
+                "activity_index": idx,
+                "activity_id": activity_obj.activity_id,
+                "activity": activity,
+            })
             succeeded += 1
 
         except IntegrityError as e:
@@ -284,6 +303,7 @@ async def process_activity_list(
         "total_processed": total_processed,
         "succeeded": succeeded,
         "failed": failed,
+        "successes": successes,
         "failures": failures,
     }
 

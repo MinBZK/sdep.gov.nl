@@ -65,7 +65,7 @@ class Activity(Base):
 
     The registration number is consequently replicated in each Activity.
 
-    The activity_id is a functional identifier (RFC 4122 UUID) that can be optionally
+    The activity_id is a functional identifier that can be optionally
     provided by the platform or auto-generated. Combined with created_at, it enables versioning.
 
     Although registrationNumber is a string, it still is commonly referred to as "number".
@@ -95,15 +95,15 @@ class Activity(Base):
     # Attributes
 
     activity_id: Mapped[str] = mapped_column(
-        String(36),
+        String(64),
         nullable=False,
         index=True,
         default=lambda: str(uuid.uuid4()),
-    )  # Functional ID (business-facing, API-exposed, RFC 4122 UUID), e.g., "550e8400-e29b-41d4-a716-446655440000"
+    )  # Functional ID (business-facing, API-exposed, lowercase alphanumeric with hyphens, max 64 chars), e.g., "550e8400-e29b-41d4-a716-446655440000"
 
     activity_name: Mapped[str | None] = mapped_column(
-        String(128), nullable=True
-    )  # Functional name (optional, human-readable), e.g., "Amsterdam Summer Rental 2025"
+        String(64), nullable=True
+    )  # Functional name (optional, human-readable, max 64 chars), e.g., "Amsterdam Summer Rental"
 
     platform_id: Mapped[int] = mapped_column(
         ForeignKey("platform.id"), nullable=False, index=True
@@ -113,9 +113,9 @@ class Activity(Base):
         ForeignKey("area.id"), nullable=False, index=True
     )  # Reference - foreign key to Area
 
-    url: Mapped[str] = mapped_column(
-        String(128), nullable=False
-    )  # Mandatory, for example "http://example.com/my-advertisement"
+    url: Mapped[str | None] = mapped_column(
+        String(128), nullable=True
+    )  # Optional, for example "http://example.com/my-advertisement"
 
     # Composite attributes - Address
     address_street: Mapped[str] = mapped_column(String(64), nullable=False)

@@ -324,14 +324,14 @@ if [ -n "$BEARER_TOKEN" ]; then
     START_TIME_4=$(date -u -d "+6 hours" +"%Y-%m-%dT%H:%M:%SZ")
     END_TIME_4=$(date -u -d "+7 hours" +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Prepare invalid payload (missing 'url' field)
+    # Prepare invalid payload (missing 'registrationNumber' required field)
     read -r -d '' PAYLOAD_INVALID <<EOF || true
 {
   "metadata": {
   },
   "activities": [
     {
-      "registrationNumber": "REG9999",
+      "url": "http://example.com/amsterdam-invalid",
       "address": {
         "street": "Prinsengracht",
         "number": 999,

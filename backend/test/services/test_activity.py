@@ -538,7 +538,7 @@ class TestActivityService:
 
         # Verify types
         assert isinstance(activity_dict["activity_id"], str)
-        assert len(activity_dict["activity_id"]) == 36  # RFC 4122 UUID format
+        assert len(activity_dict["activity_id"]) == 36  # Functional ID
         assert isinstance(activity_dict["activity_name"], (str, type(None)))  # Optional field
         assert isinstance(activity_dict["platform_id"], str)
         assert isinstance(activity_dict["platform_name"], str)
@@ -548,8 +548,8 @@ class TestActivityService:
         assert isinstance(activity_dict["address_postal_code"], str)
         assert isinstance(activity_dict["address_city"], str)
         assert isinstance(activity_dict["registration_number"], str)
-        assert isinstance(activity_dict["area_id"], str)  # area_id is functional UUID
-        assert len(activity_dict["area_id"]) == 36  # RFC 4122 UUID format
+        assert isinstance(activity_dict["area_id"], str)  # Functional ID
+        assert len(activity_dict["area_id"]) == 36  # RFC 9562 UUID format
         assert isinstance(activity_dict["number_of_guests"], int)
         assert isinstance(activity_dict["country_of_guests"], list)
         assert isinstance(activity_dict["temporal_start_date_time"], datetime)

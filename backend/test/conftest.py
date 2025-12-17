@@ -88,8 +88,8 @@ async def async_engine() -> AsyncGenerator[AsyncEngine]:
             test_db_url,
             echo=False,
             pool_pre_ping=True,
-            pool_size=1,
-            max_overflow=0,
+            pool_size=5,
+            max_overflow=10,
             pool_recycle=300,
         )
 

@@ -26,7 +26,7 @@ router = APIRouter(tags=["str"])
     summary="Get all areas",
     description="Get all areas. By default, returns all areas (unlimited). Use optional pagination parameters to limit results.\n\n"
     "Each area contains:\n"
-    "- areaId: Functional ID (RFC 4122 UUID) identifying this area\n"
+    "- areaId: Functional ID identifying this area\n"
     "- areaName: Optional human-readable name for this area\n"
     "- createdAt: Timestamp when this area version was created (UTC); used for versioning or filtering\n"
     "- competentAuthorityId: Functional ID identifying the competent authority that submitted this area\n"
@@ -69,7 +69,7 @@ async def get_areas(
     - Requires valid bearer token with "sdep_str" and "sdep_read" roles in realm_access
 
     Returns a list of areas, each containing:
-    - areaId: Functional ID (RFC 4122 UUID) - enables retrieval of area shapefile
+    - areaId: Functional ID - enables retrieval of area shapefile
     - areaName: Optional human-readable name
     - createdAt: Timestamp when the area was created
     - competentAuthorityId: Competent authority functional ID who submitted the area
@@ -172,7 +172,7 @@ async def count_areas(
     response_class=Response,
     status_code=status.HTTP_200_OK,
     summary="Get area (shapefile)",
-    description="Get area (shapefile) based on functional ID (RFC 4122 UUID).",
+    description="Get area (shapefile) based on functional ID.",
     operation_id="getArea",
     responses={
         "200": {

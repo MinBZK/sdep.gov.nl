@@ -38,7 +38,7 @@ async def validation_exception_handler(
     Returns 400 Bad Request for GET requests (query parameter validation),
     Returns 422 Unprocessable Entity for other methods (request body validation).
 
-    For /str/activities endpoint, returns batch processing format:
+    For /str/activities endpoint, returns bulk processing format:
     {
         "message": "...",
         "totalProcessed": N,
@@ -82,7 +82,7 @@ async def validation_exception_handler(
                 )
             )
 
-        # Return batch processing format
+        # Return bulk processing format
         response = ActivityProcessingResponse(
             message=f"Processed {total_activities} activities: 0 succeeded, {total_activities} failed",
             totalProcessed=total_activities,

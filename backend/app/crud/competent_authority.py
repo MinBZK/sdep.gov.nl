@@ -87,7 +87,7 @@ async def get_all(
     session: AsyncSession, offset: int = 0, limit: int | None = None
 ) -> list[CompetentAuthority]:
     """
-    Get competent authorities with pagination.
+    Get competent authorities with pagination (latest versions only).
 
     Args:
         session: Async database session
@@ -95,9 +95,17 @@ async def get_all(
         limit: Maximum number of records to return (default: no limit)
 
     Returns:
-        List of CompetentAuthority instances
+        List of CompetentAuthority instances (latest version per competent_authority_id)
     """
-    stmt = select(CompetentAuthority).offset(offset)
+    stmt = (
+        select(CompetentAuthority)
+        .distinct(CompetentAuthority.competent_authority_id)
+        .order_by(
+            CompetentAuthority.competent_authority_id,
+            CompetentAuthority.created_at.desc()
+        )
+        .offset(offset)
+    )
     if limit is not None:
         stmt = stmt.limit(limit)
 
@@ -149,7 +157,7 @@ async def get_by_competent_authority_name(
     limit: int | None = None,
 ) -> list[CompetentAuthority]:
     """
-    Get competent authorities by competent_authority_name with pagination.
+    Get competent authorities by competent_authority_name with pagination (latest versions only).
 
     Args:
         session: Async database session
@@ -158,11 +166,16 @@ async def get_by_competent_authority_name(
         limit: Maximum number of records to return (default: no limit)
 
     Returns:
-        List of CompetentAuthority instances matching the competent_authority_name
+        List of CompetentAuthority instances (latest version per competent_authority_id) matching the competent_authority_name
     """
     stmt = (
         select(CompetentAuthority)
         .where(CompetentAuthority.competent_authority_name == competent_authority_name)
+        .distinct(CompetentAuthority.competent_authority_id)
+        .order_by(
+            CompetentAuthority.competent_authority_id,
+            CompetentAuthority.created_at.desc()
+        )
         .offset(offset)
     )
     if limit is not None:

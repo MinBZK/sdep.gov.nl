@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_serializer
 
 
 def validate_year_ge_2025(v: datetime) -> datetime:
@@ -130,22 +130,6 @@ class TemporalRequest(BaseModel):
         return v
 
 
-class MetaDataRequest(BaseModel):
-    """Metadata schema for activity batch submissions.
-
-    Contains metadata that applies to all activities in a batch submission.
-    Platform ID and name are now extracted from the JWT token (client_id and client_name claims).
-
-    Note: This is kept as a placeholder for future batch-level metadata.
-    Currently, no batch-level fields are required.
-    """
-
-    model_config = ConfigDict(
-        title="activity.MetaDataRequest",
-        populate_by_name=True,
-    )
-
-
 class ActivityRequest(BaseModel):
     """Activity request schema for creating rental activities.
 
@@ -156,8 +140,7 @@ class ActivityRequest(BaseModel):
     - Will be auto-created if it doesn't exist yet
 
     Activity ID:
-    - Optional: If not provided, will be auto-generated (RFC 4122 UUID)
-    - If provided: Must be RFC 4122 UUID format
+    - Optional: If not provided, will be auto-generated (RFC 9562 UUID)
 
     Activity Name:
     - Optional: Human-readable name (max 128 chars)
@@ -177,36 +160,36 @@ class ActivityRequest(BaseModel):
     activity_id: str | None = Field(
         None,
         alias="activityId",
-        min_length=36,
-        max_length=36,
-        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-        description="Activity functional ID (optional, auto-generated RFC 4122 UUID if not provided)",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Activity functional ID (optional, auto-generated UUID if not provided; lowercase alphanumeric with hyphens, max 64 chars)",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     )  # Functional ID
 
     activity_name: str | None = Field(
         None,
         alias="activityName",
-        max_length=128,
-        description="Activity name (optional, human-readable)",
-        examples=["Amsterdam Summer Rental 2025"],
+        max_length=64,
+        description="Activity name (optional, human-readable, max 64 chars)",
+        examples=["Amsterdam Summer Rental"],
     )  # Functional name
 
     area_id: str = Field(
         ...,
         alias="areaId",
-        min_length=36,
-        max_length=36,
-        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-        description="Area functional ID (RFC 4122 UUID)",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Area functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
         examples=["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
     )  # Functional ID reference
 
-    url: str = Field(
-        ...,
+    url: str | None = Field(
+        None,
         min_length=1,
         max_length=128,
-        description="Unique URL of the advertisement",
+        description="Unique URL of the advertisement (optional)",
         examples=["http://example.com/amsterdam-myhouse-1"],
     )  # Attribute
 
@@ -312,11 +295,6 @@ class ActivityListRequest(BaseModel):
 
     model_config = ConfigDict(title="activity.ActivityListRequest")
 
-    metadata: MetaDataRequest = Field(
-        ...,
-        description="Metadata that applies to all activities in this batch (placeholder for future use)",
-    )
-
     activities: list[ActivityRequest] = Field(
         ...,
         min_length=1,
@@ -396,33 +374,44 @@ class ActivityResponse(BaseModel):
     activity_id: str = Field(
         ...,
         alias="activityId",
-        min_length=36,
-        max_length=36,
-        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-        description="Activity functional ID (RFC 4122 UUID)",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Activity functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     )  # Functional ID
     activity_name: str | None = Field(
-        None, alias="activityName", description="Activity name (optional)"
+        None,
+        alias="activityName",
+        max_length=64,
+        description="Activity name (optional, max 64 chars)",
     )  # Functional name
     created_at: datetime = Field(
         ..., alias="createdAt", description="Creation timestamp"
     )  # Attribute
     platform_id: str = Field(
-        ..., alias="platformId", description="Platform functional ID"
+        ...,
+        alias="platformId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Platform functional ID (lowercase alphanumeric with hyphens, max 64 chars)"
     )  # Attribute
-    platform_name: str = Field(
-        ..., alias="platformName", description="Platform name"
+    platform_name: str | None = Field(
+        None,
+        alias="platformName",
+        max_length=64,
+        description="Platform name (optional, max 64 chars)",
     )  # Attribute
     area_id: str = Field(
         ...,
         alias="areaId",
-        min_length=36,
-        max_length=36,
-        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-        description="Area functional ID (RFC 4122 UUID)"
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Area functional ID (lowercase alphanumeric with hyphens, max 64 chars)"
     )  # Functional ID reference
-    url: str = Field(..., description="URL of the advertisement")  # Attribute
+    url: str | None = Field(None, description="URL of the advertisement (optional)")  # Attribute
     address: AddressResponse = Field(..., description="Address composite")  # Composite
     registration_number: str = Field(
         ...,
@@ -438,6 +427,14 @@ class ActivityResponse(BaseModel):
     temporal: TemporalResponse = Field(
         ..., description="Temporal composite"
     )  # Composite
+
+    @model_serializer(mode='wrap')
+    def _serialize_model(self, serializer, info):
+        """Exclude activityName from response when it's None."""
+        data = serializer(self)
+        if data.get('activityName') is None:
+            data.pop('activityName', None)
+        return data
 
 
 class ActivityListResponse(BaseModel):
@@ -515,6 +512,26 @@ class FailedActivity(BaseModel):
     )
 
 
+class SuccessfulActivity(BaseModel):
+    """Represents a successfully processed activity with its original request data (including generated ID)."""
+
+    model_config = ConfigDict(
+        title="activity.SuccessfulActivity",
+        populate_by_name=True,
+    )
+
+    activityIndex: int = Field(
+        ...,
+        alias="activityIndex",
+        description="Index of the activity in the original request (0-based)",
+        examples=[0, 1, 2],
+    )
+    activity: ActivityRequest = Field(
+        ...,
+        description="Original activity request data that succeeded (includes generated activityId)",
+    )
+
+
 class ActivityProcessingResponse(BaseModel):
     """Response for activity processing with partial success/failure support."""
 
@@ -547,6 +564,10 @@ class ActivityProcessingResponse(BaseModel):
         ...,
         description="Number of activities that failed",
         examples=[2, 0, 3],
+    )
+    successes: list[SuccessfulActivity] = Field(
+        default_factory=list,
+        description="List of activities that succeeded (empty if all failed)",
     )
     failures: list[FailedActivity] = Field(
         default_factory=list,

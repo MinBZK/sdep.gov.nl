@@ -30,12 +30,12 @@ class CompetentAuthority(Base):
 
     # Attributes
     competent_authority_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, unique=True, index=True
-    )  # Mandatory, unique, for example "0363"
+        String(64), nullable=False, index=True
+    )  # Mandatory, unique with created_at (versioning), lowercase alphanumeric with hyphens, max 64 chars, for example "0363" or "sdep-ca-0363"
 
-    competent_authority_name: Mapped[str] = mapped_column(
-        String(128), nullable=False
-    )  # Mandatory, for example "Gemeente Amsterdam"
+    competent_authority_name: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )  # Optional, human-readable, max 64 chars, for example "Gemeente Amsterdam"
 
     # Audit attributes
     created_at: Mapped[datetime] = mapped_column(

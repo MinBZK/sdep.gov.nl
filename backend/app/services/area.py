@@ -146,7 +146,7 @@ async def validate_area(
 
 async def process_single_area(
     session: AsyncSession, area: dict
-) -> None:
+) -> Area:
     """
     Process and save a single area (assumes validation already passed).
 
@@ -155,6 +155,9 @@ async def process_single_area(
     Args:
         session: Async database session (within savepoint)
         area: Area dictionary (already validated)
+
+    Returns:
+        Created Area object with generated ID
 
     Raises:
         IntegrityError: Database constraint violation
@@ -176,7 +179,7 @@ async def process_single_area(
         )
 
     # Save area (CRUD only flushes)
-    await area_crud.create(
+    area_obj = await area_crud.create(
         session=session,
         area_id=area.get("area_id"),  # Can be None (auto-generated UUID)
         area_name=area.get("area_name"),  # Optional name
@@ -184,6 +187,8 @@ async def process_single_area(
         filedata=area["filedata"],
         competent_authority_id=competent_authority.id,  # Use the FK (int)
     )
+
+    return area_obj
 
 
 async def process_area_list(
@@ -216,7 +221,7 @@ async def process_area_list(
     Args:
         session: Async database session (manual commit mode)
         areas: List of area dictionaries (may include invalid ones), each containing:
-            - area_id: Optional functional ID (RFC 4122 UUID, auto-generated if None)
+            - area_id: Optional functional ID, auto-generated if None)
             - area_name: Optional human-readable name
             - filename: Filename (64 characters max)
             - filedata: Binary file data
@@ -230,6 +235,13 @@ async def process_area_list(
             "total_processed": int,
             "succeeded": int,
             "failed": int,
+            "successes": [
+                {
+                    "area_index": int,
+                    "area_id": str,
+                    "area": dict
+                }
+            ],
             "failures": [
                 {
                     "area_index": int,
@@ -245,6 +257,7 @@ async def process_area_list(
     total_processed = len(areas)
     succeeded = 0
     failed = 0
+    successes = []
     failures = []
 
     # PHASE 0: Handle Pydantic validation failures
@@ -295,12 +308,17 @@ async def process_area_list(
 
         try:
             # Process the area
-            await process_single_area(session, area)
+            area_obj = await process_single_area(session, area)
 
             # Flush to detect database errors within savepoint
             await session.flush()
 
-            # Success - savepoint commits automatically
+            # Success - track it
+            successes.append({
+                "area_index": idx,
+                "area_id": area_obj.area_id,
+                "area": area,
+            })
             succeeded += 1
 
         except IntegrityError as e:
@@ -353,5 +371,6 @@ async def process_area_list(
         "total_processed": total_processed,
         "succeeded": succeeded,
         "failed": failed,
+        "successes": successes,
         "failures": failures,
     }

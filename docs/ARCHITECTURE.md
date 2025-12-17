@@ -1,3 +1,278 @@
-<h1>Architecture</h1>
+<h1>Project Structure</h1>
 
-This document describes the SDEP architecture, including layering principles, data flows, and architectural decisions.
+This document provides an overview of the SDEP (Single Digital Entry Point) project structure, technology stack, and key components.
+
+- [Overview](#overview)
+- [Technology Stack](#technology-stack)
+  - [Backend](#backend)
+  - [Infrastructure](#infrastructure)
+  - [Development Tools](#development-tools)
+- [Directory Structure](#directory-structure)
+- [Backend Architecture](#backend-architecture)
+  - [API Layer (`app/api/`)](#api-layer-appapi)
+  - [Service Layer (`app/services/`)](#service-layer-appservices)
+  - [CRUD Layer (`app/crud/`)](#crud-layer-appcrud)
+  - [Models Layer (`app/models/`)](#models-layer-appmodels)
+  - [Schemas Layer (`app/schemas/`)](#schemas-layer-appschemas)
+- [Key Endpoints](#key-endpoints)
+  - [Authentication](#authentication)
+  - [Competent Authority (CA) - Requires `sdep_ca` role](#competent-authority-ca-requires-sdep_ca-role)
+  - [Short-Term Rental Platform (STR) - Requires `sdep_str` role](#short-term-rental-platform-str-requires-sdep_str-role)
+  - [Health](#health)
+- [Development Workflow](#development-workflow)
+- [Testing Strategy](#testing-strategy)
+  - [Unit Tests (`backend/test/`)](#unit-tests-backendtest)
+  - [Integration Tests (`test/`)](#integration-tests-test)
+  - [Test Coverage](#test-coverage)
+- [Key Configuration Files](#key-configuration-files)
+- [Authentication \& Authorization](#authentication-authorization)
+
+
+## Overview
+
+SDEP is a FastAPI-based REST API that enables:
+- Competent Authorities (CA) to register regulated areas with geospatial data
+- Short-Term Rental platforms (STR) to query regulated areas and submit rental activities
+- Competent Authorities (CA) to query rental activities
+- Compliance with EU Regulation 2024/1028
+
+**Production:** https://sdep.gov.nl/api/v0/docs
+
+## Technology Stack
+
+### Backend
+- **Python:** 3.13+
+- **Framework:** FastAPI 0.115+
+- **Database:** PostgreSQL (with PostGIS for geospatial data)
+- **ORM:** SQLAlchemy 2.0+ (async)
+- **Migrations:** Alembic
+- **Validation:** Pydantic 2.10+
+- **Authentication:** OAuth2 Client Credentials via Keycloak
+- **Server:** Uvicorn
+
+### Infrastructure
+- **Container Platform:** Docker + Docker Compose
+- **Identity Provider:** Keycloak (OAuth2/OIDC)
+- **Database:** PostgreSQL 15+
+- **Package Manager:** uv (Python)
+
+### Development Tools
+- **Linting:** Ruff
+- **Type Checking:** Pyright
+- **Testing:** pytest (with pytest-asyncio, pytest-xdist for parallel execution)
+- **Pre-commit:** Hooks for code quality
+- **CI/CD:** GitLab CI
+
+## Directory Structure
+
+```
+sdep-app/
+├── backend/                      # Python FastAPI application
+│   ├── app/                      # Application code
+│   │   ├── api/                  # API layer (routers, endpoints)
+│   │   │   ├── common/           # Shared API components
+│   │   │   │   ├── routers/      # API routers (health, auth, areas, activities)
+│   │   │   │   ├── exception_handlers.py
+│   │   │   │   ├── openapi.py
+│   │   │   │   └── security.py
+│   │   │   └── v0/               # API version 0
+│   │   │       └── main.py       # API v0 entry point
+│   │   ├── crud/                 # Database operations (Create, Read, Update, Delete)
+│   │   │   ├── activity.py
+│   │   │   ├── area.py
+│   │   │   ├── competent_authority.py
+│   │   │   └── platform.py
+│   │   ├── db/                   # Database configuration
+│   │   │   └── config.py         # Database session management
+│   │   ├── exceptions/           # Custom exceptions
+│   │   │   ├── auth.py           # Authentication exceptions
+│   │   │   ├── base.py           # Base exception classes
+│   │   │   ├── business.py       # Business logic exceptions
+│   │   │   ├── handlers.py       # Exception handlers
+│   │   │   └── validation.py     # Validation exceptions
+│   │   ├── models/               # SQLAlchemy ORM models
+│   │   │   ├── activity.py
+│   │   │   ├── address.py
+│   │   │   ├── area.py
+│   │   │   ├── competent_authority.py
+│   │   │   ├── platform.py
+│   │   │   └── temporal.py
+│   │   ├── schemas/              # Pydantic schemas (request/response models)
+│   │   │   ├── activity.py
+│   │   │   ├── area.py
+│   │   │   ├── auth.py
+│   │   │   ├── error.py
+│   │   │   ├── health.py
+│   │   │   └── validation.py
+│   │   ├── security/             # Security utilities
+│   │   │   ├── bearer.py         # Bearer token handling
+│   │   │   └── headers.py        # Security headers
+│   │   ├── services/             # Business logic layer
+│   │   │   ├── activity.py
+│   │   │   └── area.py
+│   │   ├── config.py             # Application configuration
+│   │   └── main.py               # Application entry point
+│   ├── alembic/                  # Database migrations
+│   │   └── versions/             # Migration scripts
+│   ├── test/                     # Unit tests (mirrors app/ structure)
+│   │   ├── api/
+│   │   ├── crud/
+│   │   ├── fixtures/
+│   │   ├── security/
+│   │   └── services/
+│   ├── alembic.ini               # Alembic configuration
+│   ├── Dockerfile                # Backend container image
+│   ├── Makefile                  # Backend-specific make targets
+│   ├── pyproject.toml            # Python project configuration (uv/pip)
+│   └── uv.lock                   # Locked dependencies
+│
+├── test/                         # Integration tests (shell scripts)
+│   ├── auth_client.sh            # OAuth2 token acquisition utility
+│   ├── auth_credentials.sh       # Test client credentials flow
+│   ├── auth_headers.sh           # Security headers compliance
+│   ├── auth_unauthorized.sh      # Test unauthorized access rejection
+│   ├── ca_activities.sh          # Test CA activity endpoints
+│   ├── ca_areas.sh               # Test CA area submission
+│   ├── health_ping.sh            # Health check tests
+│   ├── str_activities.sh         # Test STR activity submission
+│   ├── str_areas.sh              # Test STR area query endpoints
+│   └── README.md                 # Test documentation
+│
+├── keycloak/                     # Keycloak configuration
+│   ├── add-realm-admin.sh        # Create realm admin user
+│   ├── add-realm-clients.sh      # Configure OAuth2 clients
+│   ├── add-realm-roles.sh        # Configure roles
+│   ├── add-realm.sh              # Initialize realm
+│   ├── clients.yaml              # Client definitions (CA, STR)
+│   ├── roles.yaml                # Role definitions
+│   └── wait.sh                   # Wait for Keycloak startup
+│
+├── postgres/                     # PostgreSQL initialization
+│   ├── init-keycloak.sql         # Keycloak database setup
+│   ├── init-sdep.sql             # SDEP database setup
+│   └── clean.sql                 # Database cleanup
+│
+├── test-data/                    # Test data for integration tests
+│   └── *.sql                     # SQL data fixtures
+│
+├── docs/                         # Documentation
+│   ├── ARCHITECTURE.md           # Architecture overview
+│   ├── DATAMODEL.md              # Data model documentation
+│   ├── Datamodel.drawio          # Data model diagram (draw.io)
+│   ├── Datamodel.svg             # Data model diagram (SVG)
+│   ├── Datamodel.json            # Data model metadata
+│   ├── DECISIONS.md              # Decision log
+│   ├── DISCUSSIONS.md            # Discussion log
+│   ├── ID_DESIGN.md              # ID management design
+│
+├── .env                          # Environment variables
+├── docker-compose.yml            # Multi-container orchestration
+├── Makefile                      # Root-level make targets
+├── .gitignore                    # Git ignore rules
+├── LICENSE.md                    # EUPL License
+├── README.md                     # Quick start guide
+└── AGENTS.md                     # Claude agent configuration
+```
+
+## Backend Architecture
+
+The backend follows a **layered architecture** pattern:
+
+### API Layer (`app/api/`)
+- HTTP request/response handling
+- Route definitions and parameter validation
+- Authentication/authorization enforcement
+- Manual transaction boundaries (per HTTP request)
+- Commits transactions if at least one record succeeds
+
+### Service Layer (`app/services/`)
+- Business logic implementation
+- Validation (Layer 2: business rules)
+- Uses nested transactions (savepoints) for independent record processing
+- Collects validation and processing errors
+- Returns partial success/failure responses
+
+### CRUD Layer (`app/crud/`)
+- Database operations (Create, Read, Update, Delete)
+- Data access abstraction
+- SQLAlchemy query construction
+- Uses flush (not commit) - defers transaction control to upper layers
+
+### Models Layer (`app/models/`)
+- SQLAlchemy ORM models
+- Database table definitions
+- Relationships and constraints
+
+### Schemas Layer (`app/schemas/`)
+- Pydantic models for request/response validation
+- Data serialization/deserialization
+- Validation (Layer 1: type/format validation)
+
+## Key Endpoints
+
+### Authentication
+- `POST /api/v0/auth/token` - OAuth2 token endpoint
+
+### Competent Authority (CA) - Requires `sdep_ca` role
+- `POST /api/v0/ca/areas` - Submit regulated areas (bulk, 1-100 areas)
+- `GET /api/v0/ca/activities` - Query rental activities
+- `GET /api/v0/ca/activities/count` - Count activities
+
+### Short-Term Rental Platform (STR) - Requires `sdep_str` role
+- `GET /api/v0/str/areas` - List regulated areas
+- `GET /api/v0/str/areas/count` - Count areas
+- `GET /api/v0/str/areas/{areaId}` - Download shapefile for area
+- `POST /api/v0/str/activities` - Submit rental activities (bulk, 1-100 activities)
+
+### Health
+- `GET /api/health` - Health check (unauthenticated)
+- `GET /api/v0/ping` - Ping endpoint (authenticated)
+
+## Development Workflow
+
+See makefile help
+```
+make
+```
+
+## Testing Strategy
+
+### Unit Tests (`backend/test/`)
+- pytest with parallel execution (`-n auto`)
+- Async test support
+- Fixtures for database and authentication
+- Code coverage tracking
+- **Run:** `cd backend && make test`
+
+### Integration Tests (`test/`)
+- Shell scripts using curl
+- Test OAuth2 flows
+- Test API endpoints
+- Test security headers (OWASP compliance)
+- Test validation (Pydantic + business logic)
+- Test partial success/failure scenarios
+- **Run:** `make test`
+
+### Test Coverage
+See [test/README.md](../test/README.md) for detailed test documentation.
+
+## Key Configuration Files
+
+- **`.env`** - Environment variables (database, keycloak, backend config)
+- **`docker-compose.yml`** - Container orchestration
+- **`backend/pyproject.toml`** - Python dependencies and tool configuration
+- **`backend/alembic.ini`** - Database migration configuration
+- **`keycloak/clients.yaml`** - Test client definitions (oAuth2)
+- **`keycloak/roles.yaml`** - Test role definitions
+- **`Makefile`** - Development automation
+
+## Authentication & Authorization
+
+- **Protocol:** OAuth2 Client Credentials flow
+- **Identity Provider:** Keycloak
+- **Token Type:** JWT Bearer tokens
+- **Roles:**
+  - `sdep_ca` - Competent Authority access
+  - `sdep_str` - STR Platform access
+  - `sdep_read` - Read operations
+  - `sdep_write` - Write operations

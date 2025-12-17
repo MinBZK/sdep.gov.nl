@@ -30,6 +30,7 @@ from app.schemas.area import (
     AreaProcessingResponse,
     AreaRequest,
     FailedArea,
+    SuccessfulArea,
 )
 from app.schemas.auth import UnauthorizedError
 from app.security import verify_bearer_token
@@ -42,21 +43,28 @@ router = APIRouter(tags=["ca"])
 
 @router.post(
     "/ca/areas",
-    summary="Submit areas for the current authenticated competent authority",
-    description="""Submit areas for the current authenticated competent authority (competentAuthorityId).
-
-**Batch Size:** Maximum 1000 areas per request (minimum 1).
+    summary="Submit areas (bulk) for the current authenticated competent authority",
+    description="""Submit areas (bulk) for the current authenticated competent authority (competentAuthorityId).
 
 **ID Pattern:**
-- `areaId` (optional): RFC 4122 UUID, auto-generated if not provided
+- `areaId`: provided by client as business identitifer (optional), otherwise generated as UUID (RFC 9562 compliant)
 - `areaName` (optional): Human-readable name (max 128 chars)
 
 **Versioning:**
 - Same `areaId` can be resubmitted → creates new version with different timestamp
 - Unique constraint: (areaId, createdAt)
 
-**Partial Success/Failure Support:**
-Areas are processed independently using nested transactions (savepoints). Each area is validated and processed separately, allowing some to succeed while others fail.
+**Processing:**
+
+- Areas are processed independently using nested transactions (savepoints)
+- Each area is validated and processed separately, allowing some to succeed while others can fail
+
+**Limiting:**
+
+- Min. 1 records per request
+- Max. 1,000 records per request
+- Max. 1 MiB (1,048,576 bytes) per filedata field
+- This to ensure predictable performance, reduce abuse risk, control transaction size, and improve overall reliability and error handling
 
 **Response Codes:**
 - **201 Created:** All areas processed successfully
@@ -65,20 +73,136 @@ Areas are processed independently using nested transactions (savepoints). Each a
 - **401 Unauthorized:** Invalid or missing authentication token
 - **403 Forbidden:** Missing required authorization roles
 
-**Response:**
-- All IDs are functional UUIDs (technical IDs never exposed)
+**Response Structure:**
+Returns detailed results including:
+- `successes`: Array of successfully created areas (always present, even if empty)
+  - Each entry contains: `areaIndex` (0-based position in original request), `area` object (original request data with generated `areaId`)
+- `failures`: Array of failed areas (always present, even if empty)
+  - Each entry contains: `areaIndex` (0-based position in original request), `area` object (original request data), `errors` array (validation/processing errors)
+- Summary counts: `totalProcessed`, `succeeded`, `failed`
 
-Returns detailed results showing which areas succeeded and which failed, including specific error messages for failures.""",
+**Note:** The `areaIndex` values are unique and mutually exclusive between `successes` and `failures` - each index appears in exactly one array, representing whether that specific request item succeeded or failed.
+
+**Example:** If request contains 5 areas [0,1,2,3,4] and items at positions 0,2,4 succeed while 1,3 fail:
+- `successes` will contain entries with `areaIndex` values: 0, 2, 4
+- `failures` will contain entries with `areaIndex` values: 1, 3
+""",
     operation_id="postAreas",
     response_model=AreaProcessingResponse,
     responses={
         "200": {
             "description": "Partial success - some areas succeeded, some failed",
             "model": AreaProcessingResponse,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Processed 5 areas: 3 succeeded, 2 failed",
+                        "totalProcessed": 5,
+                        "succeeded": 3,
+                        "failed": 2,
+                        "successes": [
+                            {
+                                "areaIndex": 0,
+                                "area": {
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "areaName": "Amsterdam Central",
+                                    "filename": "Amsterdam.zip",
+                                    "filedata": "UEsDBBQAAAA..."
+                                }
+                            },
+                            {
+                                "areaIndex": 2,
+                                "area": {
+                                    "areaId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+                                    "filename": "Rotterdam.zip",
+                                    "filedata": "UEsDBBQAAAA..."
+                                }
+                            },
+                            {
+                                "areaIndex": 4,
+                                "area": {
+                                    "areaId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
+                                    "filename": "Utrecht.zip",
+                                    "filedata": "UEsDBBQAAAA..."
+                                }
+                            }
+                        ],
+                        "failures": [
+                            {
+                                "areaIndex": 1,
+                                "area": {
+                                    "filename": "Invalid.zip",
+                                    "filedata": "corrupted..."
+                                },
+                                "errors": [
+                                    {
+                                        "loc": ["areas", 1, "filedata"],
+                                        "msg": "Invalid file format",
+                                        "type": "value_error"
+                                    }
+                                ]
+                            },
+                            {
+                                "areaIndex": 3,
+                                "area": {
+                                    "areaId": "duplicate-id",
+                                    "filename": "Duplicate.zip",
+                                    "filedata": "UEsDBBQAAAA..."
+                                },
+                                "errors": [
+                                    {
+                                        "loc": ["areas", 3],
+                                        "msg": "Duplicate area ID",
+                                        "type": "integrity_error"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
         },
         "201": {
             "description": "Complete success - all areas processed successfully",
             "model": AreaProcessingResponse,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Processed 3 areas: 3 succeeded, 0 failed",
+                        "totalProcessed": 3,
+                        "succeeded": 3,
+                        "failed": 0,
+                        "successes": [
+                            {
+                                "areaIndex": 0,
+                                "area": {
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "areaName": "Amsterdam Central",
+                                    "filename": "Amsterdam.zip",
+                                    "filedata": "UEsDBBQAAAA..."
+                                }
+                            },
+                            {
+                                "areaIndex": 1,
+                                "area": {
+                                    "areaId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+                                    "filename": "Rotterdam.zip",
+                                    "filedata": "UEsDBBQAAAA..."
+                                }
+                            },
+                            {
+                                "areaIndex": 2,
+                                "area": {
+                                    "areaId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
+                                    "filename": "Utrecht.zip",
+                                    "filedata": "UEsDBBQAAAA..."
+                                }
+                            }
+                        ],
+                        "failures": []
+                    }
+                }
+            }
         },
         "401": {
             "model": UnauthorizedError,
@@ -90,6 +214,47 @@ Returns detailed results showing which areas succeeded and which failed, includi
         "422": {
             "description": "Unprocessable Entity - All areas failed (or Pydantic validation error)",
             "model": AreaProcessingResponse,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Processed 2 areas: 0 succeeded, 2 failed",
+                        "totalProcessed": 2,
+                        "succeeded": 0,
+                        "failed": 2,
+                        "successes": [],
+                        "failures": [
+                            {
+                                "areaIndex": 0,
+                                "area": {
+                                    "filename": "Invalid1.zip",
+                                    "filedata": "corrupted..."
+                                },
+                                "errors": [
+                                    {
+                                        "loc": ["areas", 0, "filedata"],
+                                        "msg": "Invalid file format",
+                                        "type": "value_error"
+                                    }
+                                ]
+                            },
+                            {
+                                "areaIndex": 1,
+                                "area": {
+                                    "filename": "Invalid2.zip",
+                                    "filedata": "corrupted..."
+                                },
+                                "errors": [
+                                    {
+                                        "loc": ["areas", 1, "filename"],
+                                        "msg": "Filename too short",
+                                        "type": "string_too_short"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
         },
     },
     openapi_extra={
@@ -99,13 +264,8 @@ Returns detailed results showing which areas succeeded and which failed, includi
                 "application/json": {
                     "schema": {
                         "type": "object",
-                        "required": ["metadata", "areas"],
+                        "required": ["areas"],
                         "properties": {
-                            "metadata": {
-                                "type": "object",
-                                "title": "MetaDataRequest",
-                                "description": "Metadata placeholder (currently unused)"
-                            },
                             "areas": {
                                 "type": "array",
                                 "minItems": 1,
@@ -120,7 +280,6 @@ Returns detailed results showing which areas succeeded and which failed, includi
                         "valid_example": {
                             "summary": "Valid areas",
                             "value": {
-                                "metadata": {},
                                 "areas": [
                                     {
                                         "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
@@ -385,11 +544,33 @@ async def post_areas(
                 )
             )
 
+        # Convert successes to response schema format
+        successful_areas = []
+        for success in result["successes"]:
+            area_dict = success["area"]
+
+            # Convert back from service dict to request schema
+            # Include the generated ID in the area object
+            area_request = AreaRequest(**{
+                "areaId": success["area_id"],  # Use the generated ID
+                "areaName": area_dict.get("area_name"),
+                "filename": area_dict["filename"],
+                "filedata": area_dict["filedata"],
+            })
+
+            successful_areas.append(
+                SuccessfulArea(
+                    areaIndex=success["area_index"],
+                    area=area_request,
+                )
+            )
+
         response = AreaProcessingResponse(
             message=f"Processed {total} areas: {succeeded} succeeded, {failed} failed",
             totalProcessed=total,
             succeeded=succeeded,
             failed=failed,
+            successes=successful_areas,
             failures=failed_areas,
         )
 

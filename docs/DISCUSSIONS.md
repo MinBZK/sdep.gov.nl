@@ -11,7 +11,7 @@ For selective additional motivation [*], see the text below the table.
 
 | #               | Topic                                                                          |
 | :-------------- | :----------------------------------------------------------------------------- |
-| **DIS&nbsp;01** | Batches (with partial failures) or 1-1 tranactions [*]                         |
+| **DIS&nbsp;01** | Bulk updates or 1-1 tranactions [*]                                            |
 | **DIS&nbsp;02** | Async request/response model [*]                                               |
 | **DIS&nbsp;03** | Extra field `Activity.purposeOfStay` (optional)                                |
 | **DIS&nbsp;04** | Change `Temporal.startDatetime, endDatetime` => `Temporal.checkin, checkout`   |
@@ -20,21 +20,20 @@ For selective additional motivation [*], see the text below the table.
 | **DIS&nbsp;07** | Number/country of guests optional                                              |
 | **DIS&nbsp;08** | Support for units [*]                                                          |
 | **DIS&nbsp;09** | Max #records in POST (throttling) [*]                                          |
-| **DIS&nbsp;10** | Unique constraint on area_id + competent_authority_id [*]                      |
-| **DIS&nbsp;11** | Unique constraint on activity_id + platform_id [*]                             |
+| **DIS&nbsp;10** | When adding new version => invalidate the previous?                            |
 
 **DIS 01**
-- For POST requests, consider to support only one record at a time, or allow batches (as currently supported in prototype)
-- When batches, then support partial failures (return succes & failed record)
-- When partial failures, then nested transactions are needed
-- When nested transactions, then compare single/batch with a performance test
+- For POST requests, consider to support only one record at a time, or allow bulk updates (as currently supported in prototype)
+- When bulk updates, then partial failures are required (return succes records or failed records) => this is currently implemented
+- For partial failures, nested transactions are needed
+- For nested transactions, performance need to be checked
 
 **DIS 02**
 - For POST requests, consider an async request/response model
 - That is: acknowledge receipt, process the transactions asynchronously
-- Consideration: complexity API needs to be extended (push/pull the batch status)
+- Complexity: API needs to be extended for reporting back the status of each record
 - Consideration: performance gain (test)?
-- Consideration: when SDEP is down is not an issue => transaction is rolled back, SDEP is an OLTP-batch system => try again
+- Consideration: when SDEP is down, this is not an issue => the entire transaction is rolled back => try again later
 - **Proposal**: for now, don't do
 
 **DIS 06**
@@ -47,11 +46,5 @@ For selective additional motivation [*], see the text below the table.
 
 **DIS 09**
 - Common approach: max. 1000 ?
-
-**DIS 10**
-- Becaue when functionallty supplied by competent authority, duplicates can occur?
-
-**DIS 11**
-- Becaue when functionallty supplied by platform, duplicates can occur?
 
 ## Closed

@@ -125,7 +125,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with single activity."""
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/listing-001",
@@ -180,7 +179,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with multiple activities."""
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/listing-001",
@@ -248,7 +246,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with all optional fields populated."""
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/listing-full",
@@ -303,7 +300,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities without authentication token."""
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -362,7 +358,6 @@ class TestSTRActivitiesAPI:
 
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-no-role",
@@ -431,7 +426,6 @@ class TestSTRActivitiesAPI:
 
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-no-client-id",
@@ -479,7 +473,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with missing required field."""
         # Arrange - missing 'url' field
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     # "url": "http://example.com/test",  # Missing!
@@ -520,7 +513,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with invalid postal code (contains space)."""
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -555,7 +547,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -566,7 +558,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with end datetime before start datetime."""
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -607,7 +598,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with same URL but different temporal dates (should succeed)."""
         # Arrange - same URL but different temporal periods
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/same-url",
@@ -701,7 +691,6 @@ class TestSTRActivitiesAPI:
         """Test that all activities are processed atomically (all or nothing)."""
         # Arrange - valid payload
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": f"http://example.com/listing-{i:03d}",
@@ -751,7 +740,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with letter instead of number for address.number field."""
         # Arrange - address.number should be int, providing string instead
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -786,7 +774,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -798,7 +786,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with number instead of letter for address.letter field."""
         # Arrange - address.letter should be str, providing int instead
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -834,7 +821,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -846,7 +833,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with numeric string for address.letter field."""
         # Arrange - address.letter should be alphabetic only, providing numeric string
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -882,7 +868,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -894,7 +880,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with special character for address.letter field."""
         # Arrange - address.letter should be alphabetic only
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -930,7 +915,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -941,7 +926,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with special character in postal code."""
         # Arrange - postal code should be alphanumeric only
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -976,7 +960,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -988,7 +972,6 @@ class TestSTRActivitiesAPI:
         # This test is now obsolete since competentAuthorityId was removed from Activity schema
         # Keeping as a successful activity submission test
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-obsolete-uppercase",
@@ -1034,7 +1017,6 @@ class TestSTRActivitiesAPI:
         # This test is now obsolete since competentAuthorityId was removed from Activity schema
         # Keeping as a successful activity submission test
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-obsolete-nonalpha",
@@ -1079,7 +1061,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities accepts valid alphanumeric competent_authority_area_id with hyphens."""
         # Arrange - valid lowercase alphanumeric with hyphens should be accepted
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-hex-hyphens",
@@ -1122,7 +1103,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with lowercase country code."""
         # Arrange - country codes should be uppercase
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1159,7 +1139,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -1170,7 +1150,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with country code too short."""
         # Arrange - country codes must be exactly 3 characters (ISO 3166-1 alpha-3)
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1205,7 +1184,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -1216,7 +1195,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with country code too long."""
         # Arrange - country codes must be exactly 3 characters (ISO 3166-1 alpha-3)
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1251,7 +1229,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -1262,7 +1240,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with country code containing numbers."""
         # Arrange - country codes should be alphabetic only
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1297,7 +1274,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -1308,7 +1285,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities accepts valid ISO 3166-1 alpha-3 country codes."""
         # Arrange - valid 3-character country codes should be accepted
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-alpha3-countries",
@@ -1356,7 +1332,6 @@ class TestSTRActivitiesAPI:
         """Test that platform is extracted from JWT token (client_id and client_name claims)."""
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": "http://example.com/test-platform-from-token",
@@ -1415,9 +1390,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with start year before 2025."""
         # Arrange - start datetime year must be >= 2025
         payload = {
-            "metadata": {
-                "platform": "str01",
-            },
             "activities": [
                 {
                     "url": "http://example.com/test",
@@ -1452,7 +1424,7 @@ class TestSTRActivitiesAPI:
         # Assert
         assert response.status_code == 422
         data = response.json()
-        # Validation errors now return batch processing format
+        # Validation errors now return bulk processing format
         assert data["totalProcessed"] == 1
         assert data["succeeded"] == 0
         assert data["failed"] == 1
@@ -1463,7 +1435,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with optional activityId and activityName fields provided."""
         # Arrange
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "activityId": "550e8400-e29b-41d4-a716-446655440999",
@@ -1521,7 +1492,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with 5 activities - all succeed (201 Created)."""
         # Arrange - 5 unique activities
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": f"http://example.com/all-succeed-{i}",
@@ -1571,7 +1541,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with partial success - some succeed, some fail (200 OK)."""
         # Submit 2 activities: 1 valid, 1 invalid area
         payload = {
-            "metadata": {},
             "activities": [
                 # Activity 0: Valid - should succeed
                 {
@@ -1647,7 +1616,6 @@ class TestSTRActivitiesAPI:
         """Test POST /str/activities with all failures - all fail (422 Unprocessable Entity)."""
         # Arrange - All activities have invalid areas
         payload = {
-            "metadata": {},
             "activities": [
                 {
                     "url": f"http://example.com/all-fail-{i}",

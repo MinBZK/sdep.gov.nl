@@ -207,7 +207,7 @@ class TestStrAreaAPI:
 
         # Verify types
         assert isinstance(area["areaId"], str)
-        assert len(area["areaId"]) == 36  # RFC 4122 UUID format
+        assert len(area["areaId"]) == 36  # RFC 9562 UUID format
         assert isinstance(area["areaName"], (str, type(None)))  # Optional field
         assert isinstance(area["competentAuthorityId"], str)
         assert isinstance(area["competentAuthorityName"], str)

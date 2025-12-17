@@ -87,15 +87,20 @@ async def get_by_id(session: AsyncSession, platform_id: int) -> Platform | None:
 
 async def get_all(session: AsyncSession) -> list[Platform]:
     """
-    Get all platforms.
+    Get all platforms (latest versions only).
 
     Args:
         session: Async database session
 
     Returns:
-        List of all Platform instances
+        List of all Platform instances (latest version per platform_id)
     """
-    result = await session.execute(select(Platform))
+    stmt = (
+        select(Platform)
+        .distinct(Platform.platform_id)
+        .order_by(Platform.platform_id, Platform.created_at.desc())
+    )
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 

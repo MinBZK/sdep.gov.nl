@@ -28,12 +28,12 @@ router = APIRouter(tags=["ca"])
     summary="Get activities for the current authenticated competent authority",
     description="Get activities for the current authenticated competent authority. By default, returns all activities (unlimited). Use optional pagination parameters to limit results.\n\n"
     "Each activity contains:\n"
-    "- activityId: Functional ID (RFC 4122 UUID) identifying this activity\n"
+    "- activityId: Functional ID identifying this activity\n"
     "- activityName: Optional human-readable name for this activity\n"
     "- createdAt: Timestamp when this activity version was created (UTC); used for versioning or filtering\n"
     "- platformId: Functional ID identifying the platform that submitted this activity\n"
     "- platformName: Display name of the platform\n"
-    "- areaId: Functional ID (RFC 4122 UUID) referencing the area where this activity took place",
+    "- areaId: Functional ID referencing the area where this activity took place",
     operation_id="getActivityByCompetentAuthority",
     responses={
         "400": {
@@ -134,12 +134,12 @@ async def get_activities(
     - Competent authority ID is extracted from token's "client_id" claim
 
     Returns a list of activities, each containing:
-    - activityId: Functional ID (RFC 4122 UUID)
+    - activityId: Functional ID
     - activityName: Optional human-readable name
     - createdAt: Creation timestamp
     - platformId: Platform ID
     - platformName: Platform name
-    - areaId: Functional ID (RFC 4122 UUID)
+    - areaId: Functional ID
     - url: URL of the advertisement
     - address: Address composite (street, number, postalCode, city, letter, addition)
     - registrationNumber: Registration number

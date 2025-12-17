@@ -69,7 +69,6 @@ class TestCAAreaAPI:
         """Test POST /ca/areas with multiple areas - all succeed (201 Created)."""
         # Arrange
         payload = {
-            "metadata": {},
             "areas": [
                 {
                     "competentAuthorityAreaId": f"area-{i:03d}",
@@ -105,7 +104,6 @@ class TestCAAreaAPI:
         """Test POST /ca/areas with all Pydantic validation failures (422)."""
         # Arrange - All areas have missing required fields
         payload = {
-            "metadata": {},
             "areas": [
                 {
                     "competentAuthorityAreaId": "missing-filename-1",
@@ -143,7 +141,6 @@ class TestCAAreaAPI:
         """Test POST /ca/areas with single area in list (201)."""
         # Arrange
         payload = {
-            "metadata": {},
             "areas": [
                 {
                     "competentAuthorityAreaId": "single-area",
@@ -176,7 +173,6 @@ class TestCAAreaAPI:
         """Test that POST /ca/areas creates only one competent authority for multiple areas."""
         # Arrange
         payload = {
-            "metadata": {},
             "areas": [
                 {
                     "competentAuthorityAreaId": f"multi-area-{i}",
@@ -206,7 +202,6 @@ class TestCAAreaAPI:
         """Test POST /ca/areas without authentication token."""
         # Arrange
         payload = {
-            "metadata": {},
             "areas": [
                 {
                     "competentAuthorityAreaId": "test-area",
@@ -249,7 +244,6 @@ class TestCAAreaAPI:
         app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual_commit
 
         payload = {
-            "metadata": {},
             "areas": [
                 {
                     "competentAuthorityAreaId": "test-area",
@@ -279,7 +273,6 @@ class TestCAAreaAPI:
         """Test POST /ca/areas with empty areas list."""
         # Arrange
         payload = {
-            "metadata": {},
             "areas": [],  # Empty list should fail validation
         }
 

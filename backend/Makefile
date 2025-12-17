@@ -133,37 +133,37 @@ down: ## Stop backend
 
 test-crud: ## Run CRUD tests only
 	@echo "🧪 Running CRUD tests..."
-	uv run python -m pytest test/crud/
+	uv run python -m pytest test/crud/ -n auto
 	@echo "✅ CRUD tests completed!"
 
 test-services: ## Run service tests only
 	@echo "🧪 Running service tests..."
-	uv run python -m pytest test/services/
+	uv run python -m pytest test/services/ -n auto
 	@echo "✅ Service tests completed!"
 
 test-api: ## Run API tests only
 	@echo "🧪 Running API tests..."
-	uv run python -m pytest test/api/
+	uv run python -m pytest test/api/ -n auto
 	@echo "✅ API tests completed!"
 
 test-security: ## Run security tests only
 	@echo "🧪 Running security tests..."
-	uv run python -m pytest test/security/
+	uv run python -m pytest test/security/ -n auto
 	@echo "✅ Security tests completed!"
 
 test-verbose: ## Run all tests
 	@echo "🧪 Running tests... (please wait)"
-	uv run python -m pytest
+	uv run python -m pytest -n auto
 	@echo "✅ All tests completed!"
 
 test: ## Run all tests (quiet)
 	@echo "🧪 Running tests... (please wait)"
-	@uv run python -m pytest -q --tb=line --no-header 2>&1 | tail -20
+	@uv run python -m pytest -n auto -q --tb=line --no-header 2>&1 | tail -20
 	@echo "✅ All tests completed!"
 
 test-coverage: ## Run tests with coverage report
 	@echo "🧪 Running tests with coverage..."
-	uv run python -m pytest --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml
+	uv run python -m pytest -n auto --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml
 	@echo "✅ Coverage tests completed! Coverage report in htmlcov/"
 
 ##@ Code Quality

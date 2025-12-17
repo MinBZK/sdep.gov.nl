@@ -9,8 +9,9 @@ Overview:
 - [Quick start (local workstation)](#quick-start-local-workstation)
 - [Background](#background)
 - [Main functionality](#main-functionality)
+- [Unit tests](#unit-tests)
+- [Integration tests](#integration-tests)
 - [Discussion and decision log](#discussion-and-decision-log)
-- [Test package](#test-package)
 - [Documentation](#documentation)
 
 ## Quick start (local workstation)
@@ -45,21 +46,11 @@ Authorize in Swagger UI:
 
 Explore endpoints in your current role (ca, str).
 
-**Run SDEP fullstack tests**
-```
-make test
-```
 
 **Run SDEP backend only** (without local infra)
 ```
 cd backend
 make up
-```
-
-**Run SDEP backend tests only**
-```
-cd backend
-make test
 ```
 
 **Explore all options**
@@ -82,21 +73,36 @@ Ingest and expose:
 - To **ingest rental activities** from short-term rental platforms
 - To **expose rental activities** to competent authorities and other stakeholders
 
+## Unit tests
+
+Backend only:
+```
+cd backend
+make test
+make test-verbose
+```
+
+## Integration tests
+
+Fullstack, using this [coverage](./test/README.md):
+```
+make test
+make test-verbose
+```
+
+Integration tests are also run against real deployments (TST, ACC, PRE, PRD).
+
+These deployments are out of scope of this project, contact SDEP NLD for more info.
+
+https://sdep.gov.nl/api/v0/docs
+
 ## Discussion and decision log
 
 - [Discussion log](./docs/DISCUSSIONS.md)
 - [Decision log](./docs/DECISIONS.md)
 
-## Test package
-
-Integration tests (`make test`) test the API in real life (local).
-
-These tests can also be run against real deployments (TST, ACC, PRE, PRD).
-
-Inquire SDEP NLD for more info.
-
 ## Documentation
 
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Datamodel](./docs/DATAMODEL.md)
-- [Project (structure)](./docs/PROJECT.md)
+- [ID-management](./docs/ID_DESIGN.md).

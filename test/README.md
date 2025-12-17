@@ -1,33 +1,14 @@
-# Integration Test Scripts
+<h1>Integration Test Scripts</h1>
 
 This directory contains shell scripts for integration testing the SDEP (Single Digital Entry Point) API endpoints. These tests verify API functionality, authentication, authorization, and security compliance.
 
-## Prerequisites
-
-### Environment Variables
-
-All test scripts require:
-- `BACKEND_BASE_URL` - Base URL of the API server (e.g., `http://localhost:8000`)
-- `API_VERSION` - API version (optional, defaults to `v0`)
-
-Authentication tests also require:
-- `CLIENT_ID` - OAuth2 client ID for authentication
-- `CLIENT_SECRET` - OAuth2 client secret for authentication
-
-Alternatively, you can directly provide:
-- `BEARER_TOKEN` - Pre-generated JWT bearer token
-
-See also [../Makefile](../Makefile).
-
-### Running Tests
+## Running Tests
 
 See [../Makefile](../Makefile).
 
-## Test Scripts Overview
+## Authentication & authorization tests
 
-### 🔐 Authentication & Authorization Tests
-
-#### `auth_client.sh`
+### `auth_client.sh`
 **Purpose:** Utility script to authenticate and save bearer token
 
 **What it does:**
@@ -36,24 +17,23 @@ See [../Makefile](../Makefile).
 - Saves token to `./tmp/.bearer_token` for use by other scripts
 - Used as a prerequisite for authenticated endpoint tests
 
-**Usage:**
-```bash
-CLIENT_ID=sdep-str-01 CLIENT_SECRET=sdep-str-01 \
-  BACKEND_BASE_URL=http://localhost:8000 \
-  ./auth_client.sh
-```
-
-#### `auth_credentials.sh`
-**Purpose:** Test authentication with various credential scenarios
+### `auth_credentials.sh`
+**Purpose:** Test OAuth2 token acquisition for both STR and CA clients
 
 **What it tests:**
-- Valid credentials authentication
-- Invalid credentials (wrong client_id/secret)
-- Missing credentials
-- Malformed requests
+- STR platform client credentials authentication
+- CA (Competent Authority) client credentials authentication
+- JWT token acquisition and decoding
+- Token payload inspection
 
-#### `auth_headers.sh`
-**Purpose:** Verify security headers compliance
+### `auth_headers.sh`
+**Purpose:** Verify security headers compliance across multiple endpoints
+
+**Endpoints tested:**
+- `/` - Root endpoint
+- `/api/health` - Health check
+- `/api/v0/ping` - Ping endpoint
+- `/api/v0/openapi.json` - OpenAPI specification
 
 **What it tests:**
 - XSS protection headers
@@ -63,45 +43,41 @@ CLIENT_ID=sdep-str-01 CLIENT_SECRET=sdep-str-01 \
 - Prevents clickjacking attacks
 - Secure cookie settings
 
-**Expected headers:**
-- `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: DENY`
-- `X-XSS-Protection: 1; mode=block`
-- `Content-Security-Policy`
-- `Strict-Transport-Security` (HSTS)
+### `auth_unauthorized.sh`
+**Purpose:** Verify all secured endpoints properly reject unauthenticated requests
 
-#### `auth_unauthorized.sh`
-**Purpose:** Test unauthorized access scenarios
+**Endpoints tested:**
+- `GET /api/v0/ping`
+- `GET /api/v0/str/areas`
+- `GET /api/v0/str/areas/count`
+- `GET /api/v0/str/areas/{areaId}`
+- `POST /api/v0/str/activities`
+- `GET /api/v0/ca/activities`
+- `GET /api/v0/ca/activities/count`
+- `POST /api/v0/ca/areas`
 
 **What it tests:**
-- Missing bearer token
-- Invalid/expired bearer token
-- Malformed Authorization header
-- Token with insufficient permissions
-
-**Expected:** All tests should return `401 Unauthorized` or `403 Forbidden`
+- All secured endpoints return `401 Unauthorized` without authentication token
+- Public endpoints (like `/api/health`) are excluded from this test
 
 ---
 
-### 🏥 Health Check Tests
+## Healthcheck tests
 
-#### `health_ping.sh`
+### `health_ping.sh`
 **Purpose:** Basic API availability test
 
 **What it tests:**
 - API server is running and responding
-- Health endpoint accessibility
+- Ping endpoint accessibility
 - Response time and format
-
-**Endpoint:** `GET /api/health`
-
-**Expected:** `200 OK` with health status
+- Authenticated and unauthenticated access
 
 ---
 
-### 🏢 Competent Authority (CA) Endpoints
+## Competent Authority (CA) tests
 
-#### `ca_areas.sh`
+### `ca_areas.sh`
 **Purpose:** Test area submission for competent authorities
 
 **What it tests:**
@@ -109,7 +85,7 @@ CLIENT_ID=sdep-str-01 CLIENT_SECRET=sdep-str-01 \
 - **Validation error handling** (Layer 1: Pydantic, Layer 2: Business Logic)
 - Partial success/failure scenarios (some areas succeed, others fail)
 - Detailed error responses with field-level validation
-- Batch area creation (1-100 areas per request)
+- Bulk area creation (1-100 areas per request)
 - Duplicate detection
 - Required field validation (filename, filedata)
 
@@ -136,33 +112,54 @@ CLIENT_ID=sdep-str-01 CLIENT_SECRET=sdep-str-01 \
 - `200 OK` - Partial success (some succeeded, some failed)
 - `422 Unprocessable Entity` - All areas failed
 
-#### `ca_activities.sh`
-**Purpose:** Test activity query for competent authorities
+### `ca_activities.sh`
+**Purpose:** Comprehensive testing of activity query endpoints for competent authorities
 
 **What it tests:**
-- `GET /ca/activities` - Query activities in CA jurisdiction
-- Filtering by area, date range, status
-- Pagination support
-- Authorization checks (CA can only see their own jurisdiction)
+- **Test 1:** Count activities (`GET /ca/activities/count`)
+- **Test 2:** Get all activities
+- **Test 3:** Pagination (offset=0, limit=1)
+- **Test 4:** Verify response structure (activityId, activityName, platformId, platformName, url, registrationNumber, address, temporal, areaId)
+- **Test 5:** GET specific activity by URL filter
+- **Test 6:** GET activities filtered by areaId
+- **Test 7:** GET with non-existent areaId (should return empty or 404)
+- **Test 8:** Verify pagination consistency (offset and limit)
 
-**Authentication:** Requires CA client credentials with `sdep_ca` role
+**Endpoints:**
+- `GET /ca/activities/count`
+- `GET /ca/activities`
+- `GET /ca/activities?url={url}`
+- `GET /ca/activities?areaId={areaId}`
+- `GET /ca/activities?offset={offset}&limit={limit}`
 
 ---
 
-### 🏠 Short-Term Rental (STR) Platform Endpoints
+## Short-Term Rental (STR) Platform tests
 
-#### `str_areas.sh`
-**Purpose:** Test area lookup for STR platforms
+### `str_areas.sh`
+**Purpose:** Comprehensive testing of area lookup endpoints for STR platforms
 
 **What it tests:**
-- `GET /str/areas` - Query available areas
-- Area search by location/coordinates
-- Competent authority information retrieval
-- Response format validation
+- **Test 1:** Count areas (`GET /str/areas/count`) - expects minimal 28 areas
+- **Test 2:** GET all areas and extract area IDs for subsequent tests
+- **Test 3:** GET areas with pagination (offset=0, limit=1)
+- **Test 4:** Verify response structure (areaId, competentAuthorityId, competentAuthorityName, filename, createdAt)
+- **Test 5:** GET specific area by areaId (returns shapefile as `application/octet-stream`)
+- **Test 6:** GET another area by areaId
+- **Test 7:** GET non-existent area (should return 404)
+- **Test 8:** Verify Content-Disposition header contains filename
 
-**Authentication:** Requires STR platform credentials with `sdep_str` role
+**Endpoints:**
+- `GET /str/areas/count`
+- `GET /str/areas`
+- `GET /str/areas?offset={offset}&limit={limit}`
+- `GET /str/areas/{areaId}` - Downloads shapefile
 
-#### `str_activities.sh`
+**Response Formats:**
+- List endpoints: `application/json`
+- Download endpoint: `application/octet-stream` with `Content-Disposition: attachment`
+
+### `str_activities.sh`
 **Purpose:** Test activity submission for STR platforms
 
 **What it tests:**
@@ -170,11 +167,9 @@ CLIENT_ID=sdep-str-01 CLIENT_SECRET=sdep-str-01 \
 - **Validation error handling** (Layer 1: Pydantic, Layer 2: Business Logic)
 - Partial success/failure scenarios (some activities succeed, others fail)
 - Detailed error responses with field-level validation
-- Batch activity creation (1-100 activities per request)
+- Bulk activity creation (1-100 activities per request)
 - Duplicate detection
 - Required field validation (address, temporal, registration)
-
-**Authentication:** Requires STR platform credentials with `sdep_str` and `sdep_write` roles
 
 **Key Features Tested:**
 - ✅ Valid activity submission
@@ -196,17 +191,19 @@ This allows clients to see all validation issues at once instead of fixing one e
 
 ---
 
-## Test Client Credentials
+## Configuration
 
-Default test clients (defined in `keycloak/clients.yaml`):
+### Credentials
 
-### Competent Authority (CA) Client
+Default test clients are defined in `keycloak/clients.yaml`:
+
+**Competent Authority (CA)**
 - **Client ID:** `sdep-ca-0363`
 - **Client Secret:** `sdep-ca-0363`
 - **Roles:** `sdep_ca`, `sdep_write`, `sdep_read`
 - **Can access:** CA endpoints for area 0363 (Amsterdam)
 
-### STR Platform Client
+**STR Platform**
 - **Client ID:** `sdep-str-01`
 - **Client Secret:** `sdep-str-01`
 - **Roles:** `sdep_str`, `sdep_write`, `sdep_read`
@@ -214,7 +211,7 @@ Default test clients (defined in `keycloak/clients.yaml`):
 
 ---
 
-## Token Storage
+### Bearer tokens
 
 - Tokens are saved to `./tmp/.bearer_token` by `auth-client.sh`
 - Other scripts automatically load tokens from this file
@@ -222,7 +219,7 @@ Default test clients (defined in `keycloak/clients.yaml`):
 
 ---
 
-## Exit Codes
+### Exit Codes
 
 All test scripts follow standard Unix exit codes:
 - `0` - All tests passed
@@ -247,5 +244,6 @@ All test scripts follow standard Unix exit codes:
 - Verify client has appropriate permissions in Keycloak
 
 **Connection refused**
-- Ensure backend server is running: `make up` or `docker-compose up`
+- Ensure backend server is running: `make up`
 - Check `BACKEND_BASE_URL` points to correct host/port
+- Restart everything: `make restart`

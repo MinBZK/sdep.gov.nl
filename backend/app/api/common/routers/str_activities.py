@@ -31,6 +31,7 @@ from app.schemas.activity import (
     ActivityProcessingResponse,
     ActivityRequest,
     FailedActivity,
+    SuccessfulActivity,
 )
 from app.schemas.auth import UnauthorizedError
 from app.security import verify_bearer_token
@@ -43,22 +44,28 @@ router = APIRouter(tags=["str"])
 
 @router.post(
     "/str/activities",
-    summary="Submit activities for the current authenticated platform",
-    description="""Submit activities for the current authenticated platform (platformId).
-
-**Batch Size:** Maximum 1000 activities per request (minimum 1).
+    summary="Submit activities (bulk) for the current authenticated platform",
+    description="""Submit activities (bulk) for the current authenticated platform (platformId).
 
 **ID Pattern:**
-- `activityId` (optional): RFC 4122 UUID, auto-generated if not provided
+- `activityId: provided by client as business identitifer (optional), otherwise generated as UUID (RFC 9562 compliant)
 - `activityName` (optional): Human-readable name (max 128 chars)
-- `areaId` (required): RFC 4122 UUID referencing existing area
+- `areaId` (required): Functional ID referencing existing area
 
 **Versioning:**
 - Same `activityId` can be resubmitted → creates new version with different timestamp
 - Unique constraint: (activityId, createdAt)
 
-**Partial Success/Failure Support:**
-Activities are processed independently using nested transactions (savepoints). Each activity is validated and processed separately, allowing some to succeed while others fail.
+**Processing:**
+
+- Activities are processed independently using nested transactions (savepoints)
+- Each activity is validated and processed separately, allowing some to succeed while others can fail
+
+**Limiting:**
+
+- Min. 1 records per request
+- Max. 1,000 records per request
+- This to ensure predictable performance, control transaction size, and improve overall reliability and error handling
 
 **Response Codes:**
 - **201 Created:** All activities processed successfully
@@ -67,20 +74,222 @@ Activities are processed independently using nested transactions (savepoints). E
 - **401 Unauthorized:** Invalid or missing authentication token
 - **403 Forbidden:** Missing required authorization roles
 
-**Response:**
-- All IDs are functional UUIDs (technical IDs never exposed)
+**Response Structure:**
+Returns detailed results including:
+- `successes`: Array of successfully created activities (always present, even if empty)
+  - Each entry contains: `activityIndex` (0-based position in original request), `activity` object (original request data with generated `activityId`)
+- `failures`: Array of failed activities (always present, even if empty)
+  - Each entry contains: `activityIndex` (0-based position in original request), `activity` object (original request data), `errors` array (validation/processing errors)
+- Summary counts: `totalProcessed`, `succeeded`, `failed`
 
-Returns detailed results showing which activities succeeded and which failed, including specific error messages for failures.""",
+**Note:** The `activityIndex` values are unique and mutually exclusive between `successes` and `failures` - each index appears in exactly one array, representing whether that specific request item succeeded or failed.
+
+**Example:** If request contains 5 activities [0,1,2,3,4] and items at positions 0,2,4 succeed while 1,3 fail:
+- `successes` will contain entries with `activityIndex` values: 0, 2, 4
+- `failures` will contain entries with `activityIndex` values: 1, 3""",
     operation_id="postActivity",
     response_model=ActivityProcessingResponse,
     responses={
         "200": {
             "description": "Partial success - some activities succeeded, some failed",
             "model": ActivityProcessingResponse,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Processed 5 activities: 3 succeeded, 2 failed",
+                        "totalProcessed": 5,
+                        "succeeded": 3,
+                        "failed": 2,
+                        "successes": [
+                            {
+                                "activityIndex": 0,
+                                "activity": {
+                                    "activityId": "550e8400-e29b-41d4-a716-446655440000",
+                                    "activityName": "Amsterdam Summer Rental",
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "url": "http://example.com/listing-001",
+                                    "address": {
+                                        "street": "Prinsengracht",
+                                        "number": 263,
+                                        "postalCode": "1016HV",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0001",
+                                    "temporal": {
+                                        "startDatetime": "2025-06-01T14:00:00Z",
+                                        "endDatetime": "2025-06-07T11:00:00Z"
+                                    }
+                                }
+                            },
+                            {
+                                "activityIndex": 2,
+                                "activity": {
+                                    "activityId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "url": "http://example.com/listing-003",
+                                    "address": {
+                                        "street": "Keizersgracht",
+                                        "number": 123,
+                                        "postalCode": "1015CJ",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0003",
+                                    "temporal": {
+                                        "startDatetime": "2025-07-01T14:00:00Z",
+                                        "endDatetime": "2025-07-07T11:00:00Z"
+                                    }
+                                }
+                            },
+                            {
+                                "activityIndex": 4,
+                                "activity": {
+                                    "activityId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "url": "http://example.com/listing-005",
+                                    "address": {
+                                        "street": "Herengracht",
+                                        "number": 456,
+                                        "postalCode": "1017BV",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0005",
+                                    "temporal": {
+                                        "startDatetime": "2025-08-01T14:00:00Z",
+                                        "endDatetime": "2025-08-07T11:00:00Z"
+                                    }
+                                }
+                            }
+                        ],
+                        "failures": [
+                            {
+                                "activityIndex": 1,
+                                "activity": {
+                                    "areaId": "invalid-area-id",
+                                    "url": "http://example.com/listing-002",
+                                    "address": {
+                                        "street": "Test Street",
+                                        "number": 1,
+                                        "postalCode": "1000AA",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0002",
+                                    "temporal": {
+                                        "startDatetime": "2025-06-15T14:00:00Z",
+                                        "endDatetime": "2025-06-20T11:00:00Z"
+                                    }
+                                },
+                                "errors": [
+                                    {
+                                        "loc": ["activities", 1, "areaId"],
+                                        "msg": "Area with areaId 'invalid-area-id' not found",
+                                        "type": "business_logic_error"
+                                    }
+                                ]
+                            },
+                            {
+                                "activityIndex": 3,
+                                "activity": {
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "url": "invalid-url",
+                                    "address": {
+                                        "street": "Test Street",
+                                        "number": 2,
+                                        "postalCode": "1000BB",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0004",
+                                    "temporal": {
+                                        "startDatetime": "2025-07-15T14:00:00Z",
+                                        "endDatetime": "2025-07-20T11:00:00Z"
+                                    }
+                                },
+                                "errors": [
+                                    {
+                                        "loc": ["activities", 3, "url"],
+                                        "msg": "Invalid URL format",
+                                        "type": "value_error"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
         },
         "201": {
             "description": "Complete success - all activities processed successfully",
             "model": ActivityProcessingResponse,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Processed 3 activities: 3 succeeded, 0 failed",
+                        "totalProcessed": 3,
+                        "succeeded": 3,
+                        "failed": 0,
+                        "successes": [
+                            {
+                                "activityIndex": 0,
+                                "activity": {
+                                    "activityId": "550e8400-e29b-41d4-a716-446655440000",
+                                    "activityName": "Amsterdam Summer Rental",
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "url": "http://example.com/listing-001",
+                                    "address": {
+                                        "street": "Prinsengracht",
+                                        "number": 263,
+                                        "postalCode": "1016HV",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0001",
+                                    "temporal": {
+                                        "startDatetime": "2025-06-01T14:00:00Z",
+                                        "endDatetime": "2025-06-07T11:00:00Z"
+                                    }
+                                }
+                            },
+                            {
+                                "activityIndex": 1,
+                                "activity": {
+                                    "activityId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "url": "http://example.com/listing-002",
+                                    "address": {
+                                        "street": "Keizersgracht",
+                                        "number": 123,
+                                        "postalCode": "1015CJ",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0002",
+                                    "temporal": {
+                                        "startDatetime": "2025-07-01T14:00:00Z",
+                                        "endDatetime": "2025-07-07T11:00:00Z"
+                                    }
+                                }
+                            },
+                            {
+                                "activityIndex": 2,
+                                "activity": {
+                                    "activityId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "url": "http://example.com/listing-003",
+                                    "address": {
+                                        "street": "Herengracht",
+                                        "number": 456,
+                                        "postalCode": "1017BV",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0003",
+                                    "temporal": {
+                                        "startDatetime": "2025-08-01T14:00:00Z",
+                                        "endDatetime": "2025-08-07T11:00:00Z"
+                                    }
+                                }
+                            }
+                        ],
+                        "failures": []
+                    }
+                }
+            }
         },
         "401": {
             "model": UnauthorizedError,
@@ -92,6 +301,69 @@ Returns detailed results showing which activities succeeded and which failed, in
         "422": {
             "description": "Unprocessable Entity - All activities failed (or Pydantic validation error)",
             "model": ActivityProcessingResponse,
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Processed 2 activities: 0 succeeded, 2 failed",
+                        "totalProcessed": 2,
+                        "succeeded": 0,
+                        "failed": 2,
+                        "successes": [],
+                        "failures": [
+                            {
+                                "activityIndex": 0,
+                                "activity": {
+                                    "areaId": "invalid-area-id",
+                                    "url": "http://example.com/listing-001",
+                                    "address": {
+                                        "street": "Test Street",
+                                        "number": 1,
+                                        "postalCode": "1000AA",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0001",
+                                    "temporal": {
+                                        "startDatetime": "2025-06-01T14:00:00Z",
+                                        "endDatetime": "2025-06-07T11:00:00Z"
+                                    }
+                                },
+                                "errors": [
+                                    {
+                                        "loc": ["activities", 0, "areaId"],
+                                        "msg": "Area with areaId 'invalid-area-id' not found",
+                                        "type": "business_logic_error"
+                                    }
+                                ]
+                            },
+                            {
+                                "activityIndex": 1,
+                                "activity": {
+                                    "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                                    "url": "invalid-url",
+                                    "address": {
+                                        "street": "Test Street",
+                                        "number": 2,
+                                        "postalCode": "1000BB",
+                                        "city": "Amsterdam"
+                                    },
+                                    "registrationNumber": "REG0002",
+                                    "temporal": {
+                                        "startDatetime": "2025-07-01T14:00:00Z",
+                                        "endDatetime": "2025-07-07T11:00:00Z"
+                                    }
+                                },
+                                "errors": [
+                                    {
+                                        "loc": ["activities", 1, "url"],
+                                        "msg": "Invalid URL format",
+                                        "type": "value_error"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
         },
     },
     openapi_extra={
@@ -101,13 +373,8 @@ Returns detailed results showing which activities succeeded and which failed, in
                 "application/json": {
                     "schema": {
                         "type": "object",
-                        "required": ["metadata", "activities"],
+                        "required": ["activities"],
                         "properties": {
-                            "metadata": {
-                                "type": "object",
-                                "title": "MetaDataRequest",
-                                "description": "Metadata placeholder (currently unused)"
-                            },
                             "activities": {
                                 "type": "array",
                                 "minItems": 1,
@@ -122,7 +389,6 @@ Returns detailed results showing which activities succeeded and which failed, in
                         "valid_example": {
                             "summary": "Valid activities",
                             "value": {
-                                "metadata": {},
                                 "activities": [
                                     {
                                         "activityId": "550e8400-e29b-41d4-a716-446655440000",
@@ -464,11 +730,48 @@ async def post_activities(
                 )
             )
 
+        # Convert successes to response schema format
+        successful_activities = []
+        for success in result["successes"]:
+            activity_dict = success["activity"]
+
+            # Convert back from service dict to request schema
+            # Include the generated ID in the activity object
+            activity_request = ActivityRequest(**{
+                "activityId": success["activity_id"],  # Use the generated ID
+                "activityName": activity_dict.get("activity_name"),
+                "url": activity_dict["url"],
+                "registrationNumber": activity_dict["registration_number"],
+                "address": {
+                    "street": activity_dict["address_street"],
+                    "number": activity_dict["address_number"],
+                    "letter": activity_dict.get("address_letter"),
+                    "addition": activity_dict.get("address_addition"),
+                    "postalCode": activity_dict["address_postal_code"],
+                    "city": activity_dict["address_city"],
+                },
+                "temporal": {
+                    "startDatetime": activity_dict["temporal_start_date_time"].isoformat() if isinstance(activity_dict["temporal_start_date_time"], datetime) else activity_dict["temporal_start_date_time"],
+                    "endDatetime": activity_dict["temporal_end_date_time"].isoformat() if isinstance(activity_dict["temporal_end_date_time"], datetime) else activity_dict["temporal_end_date_time"],
+                },
+                "areaId": activity_dict["area_id"],
+                "numberOfGuests": activity_dict.get("number_of_guests"),
+                "countryOfGuests": activity_dict.get("country_of_guests"),
+            })
+
+            successful_activities.append(
+                SuccessfulActivity(
+                    activityIndex=success["activity_index"],
+                    activity=activity_request,
+                )
+            )
+
         response = ActivityProcessingResponse(
             message=f"Processed {total} activities: {succeeded} succeeded, {failed} failed",
             totalProcessed=total,
             succeeded=succeeded,
             failed=failed,
+            successes=successful_activities,
             failures=failed_activities,
         )
 

@@ -101,7 +101,7 @@ for area_def in "${AREAS[@]}"; do
     # Get hex-encoded data
     hex_bytea=$(encode_file_to_hex "${zipfile_path}")
 
-    # Generate a proper RFC 4122 UUID for the area_id (functional ID)
+    # Generate a proper RFC 9562 UUID for the area_id (functional ID)
     area_uuid=$(python3 -c "import uuid; print(str(uuid.uuid4()))")
 
     # Extract area name from comment (e.g., "Amsterdam area" -> "Amsterdam")

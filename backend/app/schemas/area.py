@@ -4,22 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
-
-
-class MetaDataRequest(BaseModel):
-    """Metadata schema for area batch submissions.
-
-    Contains metadata that applies to all areas in a batch submission.
-
-    Note: This is kept as a placeholder for future batch-level metadata.
-    Currently, no batch-level fields are required.
-    """
-
-    model_config = ConfigDict(
-        title="area.MetaDataRequest",
-        populate_by_name=True,
-    )
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
 
 
 class AreaRequest(BaseModel):
@@ -32,8 +17,7 @@ class AreaRequest(BaseModel):
     - Will be auto-created if it doesn't exist yet
 
     Area ID:
-    - Optional: If not provided, will be auto-generated (RFC 4122 UUID)
-    - If provided: Must be RFC 4122 UUID format
+    - Optional: If not provided, will be auto-generated (RFC 9562 UUID)
 
     Area Name:
     - Optional: Human-readable name (max 128 chars)
@@ -60,19 +44,19 @@ class AreaRequest(BaseModel):
     area_id: str | None = Field(
         None,
         alias="areaId",
-        min_length=36,
-        max_length=36,
-        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-        description="Area functional ID (optional, auto-generated RFC 4122 UUID if not provided)",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Area functional ID (optional, auto-generated UUID if not provided; lowercase alphanumeric with hyphens, max 64 chars)",
         examples=["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
     )  # Functional ID
 
     area_name: str | None = Field(
         None,
         alias="areaName",
-        max_length=128,
-        description="Area name (optional, human-readable)",
-        examples=["Amsterdam Central District"],
+        max_length=64,
+        description="Area name (optional, human-readable, max 64 chars)",
+        examples=["Amsterdam Central"],
     )  # Functional name
 
     filename: str = Field(
@@ -88,6 +72,21 @@ class AreaRequest(BaseModel):
         description="Base64-encoded binary file data. When sending JSON requests, encode your file as base64. Example: base64.b64encode(file_bytes).decode('utf-8'). The API will automatically decode the base64 string to bytes.",
         examples=["UEsDBBQAAAAIAG1heFkAAAAA..."],  # Truncated base64 example
     )  # Attribute
+
+    @field_validator("filedata")
+    @classmethod
+    def validate_filedata_size(cls, v: bytes) -> bytes:
+        """Validate that filedata is at most 1 MiB (1048576 bytes).
+
+        This limit ensures predictable performance and reduces abuse risk.
+        """
+        max_size = 1048576  # 1 MiB
+        if len(v) > max_size:
+            raise ValueError(
+                f"filedata exceeds maximum size of 1 MiB ({max_size} bytes). "
+                f"Received {len(v)} bytes."
+            )
+        return v
 
     def to_service_dict(
         self, competent_authority_id: str, competent_authority_name: str
@@ -129,11 +128,6 @@ class AreaListRequest(BaseModel):
     """
 
     model_config = ConfigDict(title="area.AreaListRequest")
-
-    metadata: MetaDataRequest = Field(
-        ...,
-        description="Metadata that applies to all areas in this batch (placeholder for future use)",
-    )
 
     areas: list[AreaRequest] = Field(
         ...,
@@ -178,17 +172,18 @@ class AreaResponse(BaseModel):
     area_id: str = Field(
         ...,
         alias="areaId",
-        min_length=36,
-        max_length=36,
-        pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-        description="Area functional ID (RFC 4122 UUID)",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Area functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
         examples=["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
     )  # Functional ID
     area_name: str | None = Field(
         None,
         alias="areaName",
-        description="Area name (optional)",
-        examples=["Amsterdam Central District"],
+        max_length=64,
+        description="Area name (optional, max 64 chars)",
+        examples=["Amsterdam Central"],
     )  # Functional name
     created_at: datetime = Field(
         ...,
@@ -199,15 +194,17 @@ class AreaResponse(BaseModel):
     competent_authority_id: str = Field(
         ...,
         alias="competentAuthorityId",
+        min_length=1,
         max_length=64,
-        description="Competent authority functional ID who submitted the area",
+        pattern=r"^[a-z0-9-]+$",
+        description="Competent authority functional ID who submitted the area (lowercase alphanumeric with hyphens, max 64 chars)",
         examples=["sdep-ca-0363"],
     )  # Attribute
-    competent_authority_name: str = Field(
-        ...,
+    competent_authority_name: str | None = Field(
+        None,
         alias="competentAuthorityName",
-        max_length=128,
-        description="Competent authority name (for convenience)",
+        max_length=64,
+        description="Competent authority name (optional, max 64 chars)",
         examples=["Gemeente Amsterdam"],
     )  # Attribute
     filename: str = Field(
@@ -216,6 +213,14 @@ class AreaResponse(BaseModel):
         description="Area filename",
         examples=["Amsterdam.zip"],
     )  # Attribute
+
+    @model_serializer(mode='wrap')
+    def _serialize_model(self, serializer, info):
+        """Exclude areaName from response when it's None."""
+        data = serializer(self)
+        if data.get('areaName') is None:
+            data.pop('areaName', None)
+        return data
 
 
 class AreasListResponse(BaseModel):
@@ -294,6 +299,26 @@ class FailedArea(BaseModel):
     )
 
 
+class SuccessfulArea(BaseModel):
+    """Represents a successfully processed area with its original request data (including generated ID)."""
+
+    model_config = ConfigDict(
+        title="area.SuccessfulArea",
+        populate_by_name=True,
+    )
+
+    areaIndex: int = Field(
+        ...,
+        alias="areaIndex",
+        description="Index of the area in the original request (0-based)",
+        examples=[0, 1, 2],
+    )
+    area: AreaRequest = Field(
+        ...,
+        description="Original area request data that succeeded (includes generated areaId)",
+    )
+
+
 class AreaProcessingResponse(BaseModel):
     """Response for area processing with partial success/failure support."""
 
@@ -326,6 +351,10 @@ class AreaProcessingResponse(BaseModel):
         ...,
         description="Number of areas that failed",
         examples=[2, 0, 3],
+    )
+    successes: list[SuccessfulArea] = Field(
+        default_factory=list,
+        description="List of areas that succeeded (empty if all failed)",
     )
     failures: list[FailedArea] = Field(
         default_factory=list,

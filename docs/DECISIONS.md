@@ -14,8 +14,8 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 **Table of content**
 
 - [Approach](#approach)
-- [API decisions](#api-decisions)
-- [Security decisions](#security-decisions)
+- [API](#api)
+- [Security](#security)
 - [Discussion list](#discussion-list)
 
 ## Approach
@@ -27,27 +27,27 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 - Use GitHub tags for initial versioning
 - Use API versioning later (once CAs and platforms are connected)
 
-## API decisions
+## API
 
 For selective additional motivation [*], see the text below the table.
 
-| #               | Decision                                           | Example                                                                                                                              |
-| :-------------- | :------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
-| **API&nbsp;01** | Support OpenAPI 3.1.0 [*]                          |                                                                                                                                      |
-| **API&nbsp;02** | All endpoints are well-documented                  | See e.g. `/str/activities` endpoint                                                                                                  |
-| **API&nbsp;03** | Use nouns instead of verbs [*]                     | `/ca/areas`                                                                                                                          |
-| **API&nbsp;04** | Use plurals for resources                          | `/ca/areas`                                                                                                                          |
-| **API&nbsp;05** | Consistent datamodel [*]                           | `Activity`, `Area`                                                                                                                   |
-| **API&nbsp;06** | Consistent endpoints                               | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                                                        |
-| **API&nbsp;07** | Consistent pagination                              | `offset`, `limit`, all endpoints                                                                                                     |
-| **API&nbsp;08** | Syntax validation                                  | `postal code`, ...                                                                                                                   |
-| **API&nbsp;09** | Semantical validation                              | `begin timestamp < end timestamp`                                                                                                    |
-| **API&nbsp;10** | Integrity validation and the use of ids            |                                                                                                                                      |
-| **API&nbsp;11** | Transaction size constraints (POST)                | If batches are supported: e.g. max 1000 (security)                                                                                   |
-| **API&nbsp;12** | Logical ordening => readability                    | See e.g. `/str/areas` endpoint                                                                                                       |
-| **API&nbsp;13** | Essentiality                                       | `POST /str/activities` => only `areaId` required (is technical key); `competentAuthorityId, competentAuthorityName` are not required |
-| **API&nbsp;14** | Consistent HTTP response codes                     | 200, 201, 400, 401, 403, 409, 422                                                                                                    |
-| **API&nbsp;15** | Submit activities always against current areas [*] |                                                                                                                                      |
+| #               | Decision                                           | Example                                                                                                                |
+| :-------------- | :------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------- |
+| **API&nbsp;01** | Support OpenAPI 3.1.0 [*]                          |                                                                                                                        |
+| **API&nbsp;02** | All endpoints are well-documented                  | See e.g. `/str/activities` endpoint                                                                                    |
+| **API&nbsp;03** | Use nouns instead of verbs [*]                     | `/ca/areas`                                                                                                            |
+| **API&nbsp;04** | Use plurals for resources                          | `/ca/areas`                                                                                                            |
+| **API&nbsp;05** | Consistent datamodel [*]                           | `Activity`, `Area`                                                                                                     |
+| **API&nbsp;06** | Consistent endpoints                               | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                                          |
+| **API&nbsp;07** | Consistent pagination                              | `offset`, `limit`, all endpoints                                                                                       |
+| **API&nbsp;08** | Syntax validation                                  | `postal code`, ...                                                                                                     |
+| **API&nbsp;09** | Semantical validation                              | `begin timestamp < end timestamp`                                                                                      |
+| **API&nbsp;10** | Integrity validation and the use of ids            |                                                                                                                        |
+| **API&nbsp;11** | Transaction size constraints (POST)                | Limit bulk updates to e.g. max 1000 [*]                                                                                |
+| **API&nbsp;12** | Logical ordening => readability                    | See e.g. `/str/areas` endpoint                                                                                         |
+| **API&nbsp;13** | Essentiality                                       | Only `areaId` in `POST /str/activities`; `competentAuthorityId, competentAuthorityName` are redundant and not required |
+| **API&nbsp;14** | Consistent HTTP response codes                     | 200, 201, 400, 401, 403, 409, 422                                                                                      |
+| **API&nbsp;15** | Submit activities always against current areas [*] |                                                                                                                        |
 
 Motivation:
 
@@ -64,13 +64,17 @@ Motivation:
 - No code duplication** between `ca-area` and `str-area`, if CA requires activity subset, then filter out themselves (activities.activity.areaId)
 - Consistent use of Address
 
+**API 11**
+
+- To ensure predictable performance, limit transaction size, and improve reliability and error handling.
+
 **API 15**
 
 - When new activities are submitted, first always retrieve the current areas
 - Because areas may change over time
 - This way, activities can always be correlated to the areas at that moment in time => point-in-time consistency
 
-## Security decisions
+## Security
 
 For selective additional motivation [*], see the text below the table.
 

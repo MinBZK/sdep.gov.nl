@@ -16,7 +16,7 @@ class Area(Base):
     An area is supplied by (regulated by) a competent authority (CA).
     An area is expressed as a binary (shapefile).
 
-    The area_id is a functional identifier (RFC 4122 UUID) that can be optionally
+    The area_id is a functional identifier that can be optionally
     provided by the competent authority or auto-generated. Combined with created_at,
     it enables versioning.
     """
@@ -40,15 +40,15 @@ class Area(Base):
     # Attributes
 
     area_id: Mapped[str] = mapped_column(
-        String(36),
+        String(64),
         nullable=False,
         index=True,
         default=lambda: str(uuid.uuid4()),
-    )  # Functional ID (business-facing, API-exposed, RFC 4122 UUID) e.g., "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+    )  # Functional ID (business-facing, API-exposed, lowercase alphanumeric with hyphens, max 64 chars) e.g., "7c9e6679-7425-40de-944b-e07fc1f90ae7"
 
     area_name: Mapped[str | None] = mapped_column(
-        String(128), nullable=True
-    ) # Functional name (optional, human-readable) e.g., "Amsterdam Central District"
+        String(64), nullable=True
+    )  # Functional name (optional, human-readable, max 64 chars) e.g., "Amsterdam Central"
 
     competent_authority_id: Mapped[int] = mapped_column(
         ForeignKey("competent_authority.id"), nullable=False, index=True

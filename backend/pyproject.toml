@@ -165,6 +165,7 @@ addopts = [
     "--strict-config",
     "--tb=short",
     "-v",
+    "-n", "auto",  # Enable parallel execution
 ]
 
 asyncio_mode = "auto"
@@ -187,6 +188,9 @@ filterwarnings = [
     "ignore:coroutine '.*' was never awaited:RuntimeWarning",
     "ignore:.*coroutine.*was never awaited:RuntimeWarning",
     "ignore::pytest.PytestUnraisableExceptionWarning",
+    # Suppress SQLAlchemy DISTINCT ON PostgreSQL-specific warning
+    # We intentionally use DISTINCT ON as this project uses PostgreSQL exclusively
+    "ignore:DISTINCT ON is currently supported only by the PostgreSQL dialect:sqlalchemy.exc.SADeprecationWarning",
 ]
 
 env = [
