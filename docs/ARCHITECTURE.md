@@ -163,7 +163,7 @@ sdep-app/
 │   ├── Datamodel.json            # Data model metadata
 │   ├── DECISIONS.md              # Decision log
 │   ├── DISCUSSIONS.md            # Discussion log
-│   ├── ID_DESIGN.md              # ID management design
+│   ├── IDS.md                    # ID management design
 │
 ├── .env                          # Environment variables
 ├── docker-compose.yml            # Multi-container orchestration

@@ -100,7 +100,7 @@ https://sdep.gov.nl/api/v0/docs
 
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Datamodel](./docs/DATAMODEL.md)
-- [ID-management](./docs/ID_DESIGN.md)
+- [ID-management](./docs/IDS.md)
 
 ## Discussion and decision log
 
