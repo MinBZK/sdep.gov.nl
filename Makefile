@@ -15,7 +15,7 @@ SHELL := /bin/bash
 	@echo "🧹 Cleaning stale containers..."
 	@set -a && source .env && set +a && \
 	docker ps -a --filter "name=$$APP_PREFIX" --filter "status=exited" -q | xargs -r docker rm -f || true
-	@docker-compose rm -f initdb 2>/dev/null || true
+	@docker compose rm -f initdb 2>/dev/null || true
 	@echo "✅ Stale containers cleaned!"
 
 
@@ -27,7 +27,7 @@ SHELL := /bin/bash
 
 .migrate-database: ## Migrate database (create/update tables)
 	@echo "🔄 Running database migrations..."
-	@docker exec -i $$(docker-compose ps -q backend) alembic upgrade head
+	@docker exec -i $$(docker compose ps -q backend) alembic upgrade head
 	@echo "✅ Database migrations completed!"
 
 .generate-area-sql: ## Helper to generate 02-area-generated.sql with embedded shapefile data
@@ -107,7 +107,7 @@ SHELL := /bin/bash
 
 .build: ## Build
 	@echo "🐳 Building fullstack..."
-	docker-compose build
+	docker compose build
 	@echo "✅ Fullstack built successfully!"
 	@echo "📊 Images"
 	@set -a && source .env && set +a && docker images | grep $$APP_PREFIX
@@ -116,19 +116,19 @@ SHELL := /bin/bash
 
 postgres-up: .clean-stale ## Start postgres
 	@echo "🚀 Starting postgres..."
-	docker-compose up -d postgres
+	docker compose up -d postgres
 	@echo "✅ Postgres started!"
 
 postgres-down: ## Stop and remove postgres (including volumes)
 	@echo "🛑 Stopping postgres..."
-	docker-compose stop postgres
-	docker-compose rm -f -v postgres
+	docker compose stop postgres
+	docker compose rm -f -v postgres
 	@docker volume rm $$(docker volume ls -q | grep postgres_data) 2>/dev/null || true
 	@echo "✅ Postgres stopped, removed, and volumes cleaned!"
 
 postgres-login: ## Login to postgres
 	@echo "🔐 Connecting to PostgreSQL..."
-	docker exec -it $$(docker-compose ps -q postgres) psql -U postgres -d sdep-data
+	docker exec -it $$(docker compose ps -q postgres) psql -U postgres -d sdep-data
 
 postgres-status: ## Show postgres tables (SDEP)
 	@set -a && source .env && set +a && \
@@ -169,13 +169,13 @@ postgres-reset: .clean-stale ## Reset postgres (drop, migrate, test data)
 	fi
 
 postgres-logs: ## Show postgres logs
-	docker-compose logs -f sdep-postgres
+	docker compose logs -f sdep-postgres
 
 ##@ Keycloak
 
 keycloak-up: postgres-up ## Start keycloak
 	@echo "🚀 Starting keycloak..."
-	docker-compose up -d keycloak
+	docker compose up -d keycloak
 	@echo "✅ Keycloak started!"
 	@echo "🚀 Configuring keycloak..."
 	@$(MAKE) --no-print-directory .keycloak-realm || echo Realm already added
@@ -185,36 +185,36 @@ keycloak-up: postgres-up ## Start keycloak
 
 keycloak-down: ## Stop and remove keycloak (including volumes)
 	@echo "🛑 Stopping keycloak..."
-	docker-compose stop keycloak
-	docker-compose rm -f -v keycloak
+	docker compose stop keycloak
+	docker compose rm -f -v keycloak
 	@echo "✅ Keycloak stopped, removed, and volumes cleaned!"
 
 keycloak-logs: ## Show keycloak logs
-	docker-compose logs -f sdep-keycloak
+	docker compose logs -f sdep-keycloak
 
 ##@ Backend
 
 backend-up: .build .clean-stale ## Start backend
 	@echo "🚀 Starting backend..."
-	docker-compose up -d backend
+	docker compose up -d backend
 	@echo "✅ Backend started!"
 
 backend-down: ## Stop and remove backend (including volumes)
 	@echo "🛑 Stopping backend..."
-	docker-compose stop backend
-	docker-compose rm -f -v backend
+	docker compose stop backend
+	docker compose rm -f -v backend
 	@echo "✅ Backend stopped, removed, and volumes cleaned!"
 
 backend-restart: backend-down backend-up ## Stop and restart backend
 
 backend-logs: ## Show backend logs
-	docker-compose logs -f backend
+	docker compose logs -f backend
 
 ##@ Fullstack (keycloak + postgres + backend)
 
 up: .build .clean-stale ## Start
 	@echo "🚀 Starting full-stack..."
-	docker-compose up -d
+	docker compose up -d
 	@echo "✅ Fullstack started!"
 
 	@echo "🚀 Configuring keycloak..."
@@ -233,7 +233,7 @@ up: .build .clean-stale ## Start
 
 down: ## Stop and remove
 	@echo "🛑 Stopping full-stack..."
-	docker-compose down -v # Includes volume deletion
+	docker compose down -v # Includes volume deletion
 	@echo "✅ Fullstack stopped!"
 
 restart: down up ## Stop and start
@@ -241,7 +241,7 @@ restart: down up ## Stop and start
 status: ## Show status
 	@echo ""
 	@echo "🔍 Images:"BACKEND_TEST_REPO
-	@docker-compose ps
+	@docker compose ps
 	@echo ""
 	@echo "🔍 Use these URLs when images are running:"
 	@set -a && source .env && set +a && \
@@ -252,7 +252,7 @@ status: ## Show status
 	@echo ""
 
 logs: ## Show logs
-	docker-compose logs -f
+	docker compose logs -f
 
 ##@ Test
 

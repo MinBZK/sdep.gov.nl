@@ -258,7 +258,7 @@ See [test/README.md](../test/README.md) for detailed test documentation.
 ## Key Configuration Files
 
 - **`.env`** - Environment variables (database, keycloak, backend config)
-- **`docker-compose.yml`** - Container orchestration
+- **`docker compose.yml`** - Container orchestration
 - **`backend/pyproject.toml`** - Python dependencies and tool configuration
 - **`backend/alembic.ini`** - Database migration configuration
 - **`keycloak/clients.yaml`** - Test client definitions (oAuth2)
