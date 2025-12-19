@@ -1,15 +1,14 @@
 """STR activities endpoint.
 
 Transaction Management Architecture (API Layer):
-- This API endpoint uses get_async_db dependency for automatic transaction management
-- get_async_db provides a session with automatic commit/rollback via context manager
-- Transaction boundary is at the API layer (aligned with HTTP request boundary)
-- Service layer contains business logic without transaction management
+- This API endpoint uses get_async_db_manual_commit for manual transaction management
+- Service layer uses nested transactions (savepoints) for partial success/failure support
+- API layer performs manual commit if any activities succeeded
 - CRUD layer only flushes, never commits
 
 Pattern:
-- API layer: Transaction boundary (auto-commit via dependency)
-- Service layer: Business logic (no transaction management)
+- API layer: Transaction boundary (manual commit)
+- Service layer: Business logic with savepoints (nested transactions)
 - CRUD layer: Data access (flush only, no commits)
 """
 
