@@ -10,10 +10,10 @@ This document provides an overview of the SDEP (Single Digital Entry Point) proj
 - [Directory Structure](#directory-structure)
 - [Backend Architecture](#backend-architecture)
   - [API Layer (`app/api/`)](#api-layer-appapi)
+  - [Schemas Layer (`app/schemas/`)](#schemas-layer-appschemas)
   - [Service Layer (`app/services/`)](#service-layer-appservices)
   - [CRUD Layer (`app/crud/`)](#crud-layer-appcrud)
   - [Models Layer (`app/models/`)](#models-layer-appmodels)
-  - [Schemas Layer (`app/schemas/`)](#schemas-layer-appschemas)
 - [Key Endpoints](#key-endpoints)
   - [Authentication](#authentication)
   - [Competent Authority (CA) - Requires `sdep_ca` role](#competent-authority-ca-requires-sdep_ca-role)
@@ -43,7 +43,6 @@ SDEP is a FastAPI-based REST API that enables:
 ### Backend
 - **Python:** 3.13+
 - **Framework:** FastAPI 0.115+
-- **Database:** PostgreSQL (with PostGIS for geospatial data)
 - **ORM:** SQLAlchemy 2.0+ (async)
 - **Migrations:** Alembic
 - **Validation:** Pydantic 2.10+
@@ -61,7 +60,7 @@ SDEP is a FastAPI-based REST API that enables:
 - **Type Checking:** Pyright
 - **Testing:** pytest (with pytest-asyncio, pytest-xdist for parallel execution)
 - **Pre-commit:** Hooks for code quality
-- **CI/CD:** GitLab CI
+- **CI/CD:** GitLab CI or otherwise (out of scope for this project)
 
 ## Directory Structure
 
@@ -185,6 +184,11 @@ The backend follows a **layered architecture** pattern:
 - Manual transaction boundaries (per HTTP request)
 - Commits transactions if at least one record succeeds
 
+### Schemas Layer (`app/schemas/`)
+- Pydantic models for request/response validation
+- Data serialization/deserialization
+- Validation (Layer 1: type/format validation)
+
 ### Service Layer (`app/services/`)
 - Business logic implementation
 - Validation (Layer 2: business rules)
@@ -203,18 +207,13 @@ The backend follows a **layered architecture** pattern:
 - Database table definitions
 - Relationships and constraints
 
-### Schemas Layer (`app/schemas/`)
-- Pydantic models for request/response validation
-- Data serialization/deserialization
-- Validation (Layer 1: type/format validation)
-
 ## Key Endpoints
 
 ### Authentication
 - `POST /api/v0/auth/token` - OAuth2 token endpoint
 
 ### Competent Authority (CA) - Requires `sdep_ca` role
-- `POST /api/v0/ca/areas` - Submit regulated areas (bulk, 1-100 areas)
+- `POST /api/v0/ca/areas` - Submit regulated areas (bulk, 1-1000 areas)
 - `GET /api/v0/ca/activities` - Query rental activities
 - `GET /api/v0/ca/activities/count` - Count activities
 
@@ -222,7 +221,7 @@ The backend follows a **layered architecture** pattern:
 - `GET /api/v0/str/areas` - List regulated areas
 - `GET /api/v0/str/areas/count` - Count areas
 - `GET /api/v0/str/areas/{areaId}` - Download shapefile for area
-- `POST /api/v0/str/activities` - Submit rental activities (bulk, 1-100 activities)
+- `POST /api/v0/str/activities` - Submit rental activities (bulk, 1-1000 activities)
 
 ### Health
 - `GET /api/health` - Health check (unauthenticated)
