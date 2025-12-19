@@ -107,60 +107,60 @@ Returns detailed results including:
                                     "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
                                     "areaName": "Amsterdam Central",
                                     "filename": "Amsterdam.zip",
-                                    "filedata": "UEsDBBQAAAA..."
-                                }
+                                    "filedata": "UEsDBBQAAAA...",
+                                },
                             },
                             {
                                 "areaIndex": 2,
                                 "area": {
                                     "areaId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
                                     "filename": "Rotterdam.zip",
-                                    "filedata": "UEsDBBQAAAA..."
-                                }
+                                    "filedata": "UEsDBBQAAAA...",
+                                },
                             },
                             {
                                 "areaIndex": 4,
                                 "area": {
                                     "areaId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
                                     "filename": "Utrecht.zip",
-                                    "filedata": "UEsDBBQAAAA..."
-                                }
-                            }
+                                    "filedata": "UEsDBBQAAAA...",
+                                },
+                            },
                         ],
                         "failures": [
                             {
                                 "areaIndex": 1,
                                 "area": {
                                     "filename": "Invalid.zip",
-                                    "filedata": "corrupted..."
+                                    "filedata": "corrupted...",
                                 },
                                 "errors": [
                                     {
                                         "loc": ["areas", 1, "filedata"],
                                         "msg": "Invalid file format",
-                                        "type": "value_error"
+                                        "type": "value_error",
                                     }
-                                ]
+                                ],
                             },
                             {
                                 "areaIndex": 3,
                                 "area": {
                                     "areaId": "duplicate-id",
                                     "filename": "Duplicate.zip",
-                                    "filedata": "UEsDBBQAAAA..."
+                                    "filedata": "UEsDBBQAAAA...",
                                 },
                                 "errors": [
                                     {
                                         "loc": ["areas", 3],
                                         "msg": "Duplicate area ID",
-                                        "type": "integrity_error"
+                                        "type": "integrity_error",
                                     }
-                                ]
-                            }
-                        ]
+                                ],
+                            },
+                        ],
                     }
                 }
-            }
+            },
         },
         "201": {
             "description": "Complete success - all areas processed successfully",
@@ -179,30 +179,30 @@ Returns detailed results including:
                                     "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
                                     "areaName": "Amsterdam Central",
                                     "filename": "Amsterdam.zip",
-                                    "filedata": "UEsDBBQAAAA..."
-                                }
+                                    "filedata": "UEsDBBQAAAA...",
+                                },
                             },
                             {
                                 "areaIndex": 1,
                                 "area": {
                                     "areaId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
                                     "filename": "Rotterdam.zip",
-                                    "filedata": "UEsDBBQAAAA..."
-                                }
+                                    "filedata": "UEsDBBQAAAA...",
+                                },
                             },
                             {
                                 "areaIndex": 2,
                                 "area": {
                                     "areaId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
                                     "filename": "Utrecht.zip",
-                                    "filedata": "UEsDBBQAAAA..."
-                                }
-                            }
+                                    "filedata": "UEsDBBQAAAA...",
+                                },
+                            },
                         ],
-                        "failures": []
+                        "failures": [],
                     }
                 }
-            }
+            },
         },
         "401": {
             "model": UnauthorizedError,
@@ -227,34 +227,34 @@ Returns detailed results including:
                                 "areaIndex": 0,
                                 "area": {
                                     "filename": "Invalid1.zip",
-                                    "filedata": "corrupted..."
+                                    "filedata": "corrupted...",
                                 },
                                 "errors": [
                                     {
                                         "loc": ["areas", 0, "filedata"],
                                         "msg": "Invalid file format",
-                                        "type": "value_error"
+                                        "type": "value_error",
                                     }
-                                ]
+                                ],
                             },
                             {
                                 "areaIndex": 1,
                                 "area": {
                                     "filename": "Invalid2.zip",
-                                    "filedata": "corrupted..."
+                                    "filedata": "corrupted...",
                                 },
                                 "errors": [
                                     {
                                         "loc": ["areas", 1, "filename"],
                                         "msg": "Filename too short",
-                                        "type": "string_too_short"
+                                        "type": "string_too_short",
                                     }
-                                ]
-                            }
-                        ]
+                                ],
+                            },
+                        ],
                     }
                 }
-            }
+            },
         },
     },
     openapi_extra={
@@ -270,11 +270,9 @@ Returns detailed results including:
                                 "type": "array",
                                 "minItems": 1,
                                 "maxItems": 1000,
-                                "items": {
-                                    "$ref": "#/components/schemas/AreaRequest"
-                                }
+                                "items": {"$ref": "#/components/schemas/AreaRequest"},
                             }
-                        }
+                        },
                     },
                     "examples": {
                         "valid_example": {
@@ -285,14 +283,14 @@ Returns detailed results including:
                                         "areaId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
                                         "areaName": "Amsterdam Central District",
                                         "filename": "Amsterdam.zip",
-                                        "filedata": "UEsDBBQAAAAIAG1heFkAAAAAAAAAAAAAAAAOAAAAQW1zdGVyZGFtLnNocA=="
+                                        "filedata": "UEsDBBQAAAAIAG1heFkAAAAAAAAAAAAAAAAOAAAAQW1zdGVyZGFtLnNocA==",
                                     }
                                 ]
-                            }
+                            },
                         }
-                    }
+                    },
                 }
-            }
+            },
         }
     },
 )
@@ -406,11 +404,13 @@ async def post_areas(
                     area_index = error["loc"][1]
                     if area_index not in pydantic_errors_by_index:
                         pydantic_errors_by_index[area_index] = []
-                    pydantic_errors_by_index[area_index].append({
-                        "loc": list(error["loc"]),
-                        "msg": error["msg"],
-                        "type": error.get("type", "validation_error"),
-                    })
+                    pydantic_errors_by_index[area_index].append(
+                        {
+                            "loc": list(error["loc"]),
+                            "msg": error["msg"],
+                            "type": error.get("type", "validation_error"),
+                        }
+                    )
                 else:
                     # Top-level validation error (e.g., empty list, missing metadata)
                     top_level_errors.append(error)
@@ -418,8 +418,9 @@ async def post_areas(
         # Handle top-level validation errors (e.g., empty areas list)
         if top_level_errors:
             # Return standard error response for top-level validation errors
-            from app.schemas.error import ErrorDetail, ErrorResponse
             from datetime import UTC
+
+            from app.schemas.error import ErrorDetail, ErrorResponse
 
             error_response = ErrorResponse(
                 detail=[
@@ -465,12 +466,14 @@ async def post_areas(
                 if idx in pydantic_errors_by_index:
                     # This area failed Pydantic validation
                     # Create a minimal dict with the raw data for error reporting
-                    areas_dict.append({
-                        "_pydantic_validation_failed": True,
-                        "_raw_data": area_raw,
-                        "competent_authority_id_str": competent_authority_id,
-                        "competent_authority_name": competent_authority_name,
-                    })
+                    areas_dict.append(
+                        {
+                            "_pydantic_validation_failed": True,
+                            "_raw_data": area_raw,
+                            "competent_authority_id_str": competent_authority_id,
+                            "competent_authority_name": competent_authority_name,
+                        }
+                    )
                 else:
                     # This area passed Pydantic validation - convert it
                     try:
@@ -483,12 +486,14 @@ async def post_areas(
                         )
                     except PydanticValidationError:
                         # Shouldn't happen, but handle it gracefully
-                        areas_dict.append({
-                            "_pydantic_validation_failed": True,
-                            "_raw_data": area_raw,
-                            "competent_authority_id_str": competent_authority_id,
-                            "competent_authority_name": competent_authority_name,
-                        })
+                        areas_dict.append(
+                            {
+                                "_pydantic_validation_failed": True,
+                                "_raw_data": area_raw,
+                                "competent_authority_id_str": competent_authority_id,
+                                "competent_authority_name": competent_authority_name,
+                            }
+                        )
 
         # Call service layer with manual commit session
         # Service handles nested transactions (savepoints)
@@ -526,21 +531,20 @@ async def post_areas(
                 area_request = AreaRequest.model_construct(**raw_data)
             else:
                 # Convert back from service dict to request schema (business logic failure)
-                area_request = AreaRequest(**{
-                    "areaId": area_dict.get("area_id"),
-                    "areaName": area_dict.get("area_name"),
-                    "filename": area_dict["filename"],
-                    "filedata": area_dict["filedata"],
-                })
+                area_request = AreaRequest(
+                    **{
+                        "areaId": area_dict.get("area_id"),
+                        "areaName": area_dict.get("area_name"),
+                        "filename": area_dict["filename"],
+                        "filedata": area_dict["filedata"],
+                    }
+                )
 
             failed_areas.append(
                 FailedArea(
                     areaIndex=failure["area_index"],
                     area=area_request,
-                    errors=[
-                        AreaErrorDetail(**error)
-                        for error in failure["errors"]
-                    ],
+                    errors=[AreaErrorDetail(**error) for error in failure["errors"]],
                 )
             )
 
@@ -551,12 +555,14 @@ async def post_areas(
 
             # Convert back from service dict to request schema
             # Include the generated ID in the area object
-            area_request = AreaRequest(**{
-                "areaId": success["area_id"],  # Use the generated ID
-                "areaName": area_dict.get("area_name"),
-                "filename": area_dict["filename"],
-                "filedata": area_dict["filedata"],
-            })
+            area_request = AreaRequest(
+                **{
+                    "areaId": success["area_id"],  # Use the generated ID
+                    "areaName": area_dict.get("area_name"),
+                    "filename": area_dict["filename"],
+                    "filedata": area_dict["filedata"],
+                }
+            )
 
             successful_areas.append(
                 SuccessfulArea(

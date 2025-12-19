@@ -32,9 +32,7 @@ class ErrorResponse(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "detail": [
-                    {"msg": "Resource not found", "type": "not_found_error"}
-                ],
+                "detail": [{"msg": "Resource not found", "type": "not_found_error"}],
                 "timestamp": "2025-01-15T14:22:15Z",
                 "path": "/api/v0/str/areas/123",
                 "status_code": 404,

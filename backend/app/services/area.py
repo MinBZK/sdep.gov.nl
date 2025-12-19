@@ -27,7 +27,6 @@ from sqlalchemy.orm import selectinload
 
 from app.crud import area as area_crud
 from app.crud import competent_authority as competent_authority_crud
-from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 from app.models.area import Area
 
 
@@ -144,9 +143,7 @@ async def validate_area(
     return errors
 
 
-async def process_single_area(
-    session: AsyncSession, area: dict
-) -> Area:
+async def process_single_area(session: AsyncSession, area: dict) -> Area:
     """
     Process and save a single area (assumes validation already passed).
 
@@ -265,11 +262,13 @@ async def process_area_list(
     pydantic_failures = []
     for idx, errors in pydantic_errors_by_index.items():
         area = areas[idx]
-        pydantic_failures.append({
-            "area_index": idx,
-            "area": area,
-            "errors": errors,
-        })
+        pydantic_failures.append(
+            {
+                "area_index": idx,
+                "area": area,
+                "errors": errors,
+            }
+        )
 
     # PHASE 1: Validate all areas (business logic validation)
     # Skip areas that already failed Pydantic validation
@@ -288,11 +287,13 @@ async def process_area_list(
 
         errors = await validate_area(session, area, idx)
         if errors:
-            validation_failures.append({
-                "area_index": idx,
-                "area": area,
-                "errors": errors,
-            })
+            validation_failures.append(
+                {
+                    "area_index": idx,
+                    "area": area,
+                    "errors": errors,
+                }
+            )
         else:
             valid_indices.append(idx)
 
@@ -314,11 +315,13 @@ async def process_area_list(
             await session.flush()
 
             # Success - track it
-            successes.append({
-                "area_index": idx,
-                "area_id": area_obj.area_id,
-                "area": area,
-            })
+            successes.append(
+                {
+                    "area_index": idx,
+                    "area_id": area_obj.area_id,
+                    "area": area,
+                }
+            )
             succeeded += 1
 
         except IntegrityError as e:
@@ -333,17 +336,21 @@ async def process_area_list(
                 msg = f"Area with areaId '{area_id}' and timestamp already exists (versioning constraint violated)"
             else:
                 error_type = "integrity_error"
-                msg = f"Database constraint violation: {str(e)}"
+                msg = f"Database constraint violation: {e!s}"
 
-            failures.append({
-                "area_index": idx,
-                "area": area,
-                "errors": [{
-                    "loc": ["areas", idx],
-                    "msg": msg,
-                    "type": error_type,
-                }],
-            })
+            failures.append(
+                {
+                    "area_index": idx,
+                    "area": area,
+                    "errors": [
+                        {
+                            "loc": ["areas", idx],
+                            "msg": msg,
+                            "type": error_type,
+                        }
+                    ],
+                }
+            )
             failed += 1
 
         except Exception as e:
@@ -351,15 +358,19 @@ async def process_area_list(
             await savepoint.rollback()
 
             # Other errors
-            failures.append({
-                "area_index": idx,
-                "area": area,
-                "errors": [{
-                    "loc": ["areas", idx],
-                    "msg": f"Unexpected error: {str(e)}",
-                    "type": "processing_error",
-                }],
-            })
+            failures.append(
+                {
+                    "area_index": idx,
+                    "area": area,
+                    "errors": [
+                        {
+                            "loc": ["areas", idx],
+                            "msg": f"Unexpected error: {e!s}",
+                            "type": "processing_error",
+                        }
+                    ],
+                }
+            )
             failed += 1
 
     # Combine all failures

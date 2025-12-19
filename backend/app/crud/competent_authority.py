@@ -102,7 +102,7 @@ async def get_all(
         .distinct(CompetentAuthority.competent_authority_id)
         .order_by(
             CompetentAuthority.competent_authority_id,
-            CompetentAuthority.created_at.desc()
+            CompetentAuthority.created_at.desc(),
         )
         .offset(offset)
     )
@@ -174,7 +174,7 @@ async def get_by_competent_authority_name(
         .distinct(CompetentAuthority.competent_authority_id)
         .order_by(
             CompetentAuthority.competent_authority_id,
-            CompetentAuthority.created_at.desc()
+            CompetentAuthority.created_at.desc(),
         )
         .offset(offset)
     )

@@ -214,12 +214,12 @@ class AreaResponse(BaseModel):
         examples=["Amsterdam.zip"],
     )  # Attribute
 
-    @model_serializer(mode='wrap')
+    @model_serializer(mode="wrap")
     def _serialize_model(self, serializer, info):
         """Exclude areaName from response when it's None."""
         data = serializer(self)
-        if data.get('areaName') is None:
-            data.pop('areaName', None)
+        if data.get("areaName") is None:
+            data.pop("areaName", None)
         return data
 
 

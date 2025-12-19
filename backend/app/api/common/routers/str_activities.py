@@ -112,14 +112,14 @@ Returns detailed results including:
                                         "street": "Prinsengracht",
                                         "number": 263,
                                         "postalCode": "1016HV",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0001",
                                     "temporal": {
                                         "startDatetime": "2025-06-01T14:00:00Z",
-                                        "endDatetime": "2025-06-07T11:00:00Z"
-                                    }
-                                }
+                                        "endDatetime": "2025-06-07T11:00:00Z",
+                                    },
+                                },
                             },
                             {
                                 "activityIndex": 2,
@@ -131,14 +131,14 @@ Returns detailed results including:
                                         "street": "Keizersgracht",
                                         "number": 123,
                                         "postalCode": "1015CJ",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0003",
                                     "temporal": {
                                         "startDatetime": "2025-07-01T14:00:00Z",
-                                        "endDatetime": "2025-07-07T11:00:00Z"
-                                    }
-                                }
+                                        "endDatetime": "2025-07-07T11:00:00Z",
+                                    },
+                                },
                             },
                             {
                                 "activityIndex": 4,
@@ -150,15 +150,15 @@ Returns detailed results including:
                                         "street": "Herengracht",
                                         "number": 456,
                                         "postalCode": "1017BV",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0005",
                                     "temporal": {
                                         "startDatetime": "2025-08-01T14:00:00Z",
-                                        "endDatetime": "2025-08-07T11:00:00Z"
-                                    }
-                                }
-                            }
+                                        "endDatetime": "2025-08-07T11:00:00Z",
+                                    },
+                                },
+                            },
                         ],
                         "failures": [
                             {
@@ -170,21 +170,21 @@ Returns detailed results including:
                                         "street": "Test Street",
                                         "number": 1,
                                         "postalCode": "1000AA",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0002",
                                     "temporal": {
                                         "startDatetime": "2025-06-15T14:00:00Z",
-                                        "endDatetime": "2025-06-20T11:00:00Z"
-                                    }
+                                        "endDatetime": "2025-06-20T11:00:00Z",
+                                    },
                                 },
                                 "errors": [
                                     {
                                         "loc": ["activities", 1, "areaId"],
                                         "msg": "Area with areaId 'invalid-area-id' not found",
-                                        "type": "business_logic_error"
+                                        "type": "business_logic_error",
                                     }
-                                ]
+                                ],
                             },
                             {
                                 "activityIndex": 3,
@@ -195,26 +195,26 @@ Returns detailed results including:
                                         "street": "Test Street",
                                         "number": 2,
                                         "postalCode": "1000BB",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0004",
                                     "temporal": {
                                         "startDatetime": "2025-07-15T14:00:00Z",
-                                        "endDatetime": "2025-07-20T11:00:00Z"
-                                    }
+                                        "endDatetime": "2025-07-20T11:00:00Z",
+                                    },
                                 },
                                 "errors": [
                                     {
                                         "loc": ["activities", 3, "url"],
                                         "msg": "Invalid URL format",
-                                        "type": "value_error"
+                                        "type": "value_error",
                                     }
-                                ]
-                            }
-                        ]
+                                ],
+                            },
+                        ],
                     }
                 }
-            }
+            },
         },
         "201": {
             "description": "Complete success - all activities processed successfully",
@@ -238,14 +238,14 @@ Returns detailed results including:
                                         "street": "Prinsengracht",
                                         "number": 263,
                                         "postalCode": "1016HV",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0001",
                                     "temporal": {
                                         "startDatetime": "2025-06-01T14:00:00Z",
-                                        "endDatetime": "2025-06-07T11:00:00Z"
-                                    }
-                                }
+                                        "endDatetime": "2025-06-07T11:00:00Z",
+                                    },
+                                },
                             },
                             {
                                 "activityIndex": 1,
@@ -257,14 +257,14 @@ Returns detailed results including:
                                         "street": "Keizersgracht",
                                         "number": 123,
                                         "postalCode": "1015CJ",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0002",
                                     "temporal": {
                                         "startDatetime": "2025-07-01T14:00:00Z",
-                                        "endDatetime": "2025-07-07T11:00:00Z"
-                                    }
-                                }
+                                        "endDatetime": "2025-07-07T11:00:00Z",
+                                    },
+                                },
                             },
                             {
                                 "activityIndex": 2,
@@ -276,20 +276,20 @@ Returns detailed results including:
                                         "street": "Herengracht",
                                         "number": 456,
                                         "postalCode": "1017BV",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0003",
                                     "temporal": {
                                         "startDatetime": "2025-08-01T14:00:00Z",
-                                        "endDatetime": "2025-08-07T11:00:00Z"
-                                    }
-                                }
-                            }
+                                        "endDatetime": "2025-08-07T11:00:00Z",
+                                    },
+                                },
+                            },
                         ],
-                        "failures": []
+                        "failures": [],
                     }
                 }
-            }
+            },
         },
         "401": {
             "model": UnauthorizedError,
@@ -319,21 +319,21 @@ Returns detailed results including:
                                         "street": "Test Street",
                                         "number": 1,
                                         "postalCode": "1000AA",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0001",
                                     "temporal": {
                                         "startDatetime": "2025-06-01T14:00:00Z",
-                                        "endDatetime": "2025-06-07T11:00:00Z"
-                                    }
+                                        "endDatetime": "2025-06-07T11:00:00Z",
+                                    },
                                 },
                                 "errors": [
                                     {
                                         "loc": ["activities", 0, "areaId"],
                                         "msg": "Area with areaId 'invalid-area-id' not found",
-                                        "type": "business_logic_error"
+                                        "type": "business_logic_error",
                                     }
-                                ]
+                                ],
                             },
                             {
                                 "activityIndex": 1,
@@ -344,26 +344,26 @@ Returns detailed results including:
                                         "street": "Test Street",
                                         "number": 2,
                                         "postalCode": "1000BB",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG0002",
                                     "temporal": {
                                         "startDatetime": "2025-07-01T14:00:00Z",
-                                        "endDatetime": "2025-07-07T11:00:00Z"
-                                    }
+                                        "endDatetime": "2025-07-07T11:00:00Z",
+                                    },
                                 },
                                 "errors": [
                                     {
                                         "loc": ["activities", 1, "url"],
                                         "msg": "Invalid URL format",
-                                        "type": "value_error"
+                                        "type": "value_error",
                                     }
-                                ]
-                            }
-                        ]
+                                ],
+                            },
+                        ],
                     }
                 }
-            }
+            },
         },
     },
     openapi_extra={
@@ -381,9 +381,9 @@ Returns detailed results including:
                                 "maxItems": 1000,
                                 "items": {
                                     "$ref": "#/components/schemas/ActivityRequest"
-                                }
+                                },
                             }
-                        }
+                        },
                     },
                     "examples": {
                         "valid_example": {
@@ -401,22 +401,22 @@ Returns detailed results including:
                                             "letter": "a",
                                             "addition": "5h",
                                             "postalCode": "1016HV",
-                                            "city": "Amsterdam"
+                                            "city": "Amsterdam",
                                         },
                                         "registrationNumber": "REG0001",
                                         "numberOfGuests": 4,
                                         "countryOfGuests": ["NLD", "DEU", "BEL"],
                                         "temporal": {
                                             "startDatetime": "2025-06-01T14:00:00Z",
-                                            "endDatetime": "2025-06-07T11:00:00Z"
-                                        }
+                                            "endDatetime": "2025-06-07T11:00:00Z",
+                                        },
                                     }
                                 ]
-                            }
+                            },
                         }
-                    }
+                    },
                 }
-            }
+            },
         }
     },
 )
@@ -544,11 +544,13 @@ async def post_activities(
                     activity_index = error["loc"][1]
                     if activity_index not in pydantic_errors_by_index:
                         pydantic_errors_by_index[activity_index] = []
-                    pydantic_errors_by_index[activity_index].append({
-                        "loc": list(error["loc"]),
-                        "msg": error["msg"],
-                        "type": error.get("type", "validation_error"),
-                    })
+                    pydantic_errors_by_index[activity_index].append(
+                        {
+                            "loc": list(error["loc"]),
+                            "msg": error["msg"],
+                            "type": error.get("type", "validation_error"),
+                        }
+                    )
                 else:
                     # Top-level validation error (e.g., empty list, missing metadata)
                     top_level_errors.append(error)
@@ -556,8 +558,9 @@ async def post_activities(
         # Handle top-level validation errors (e.g., empty activities list)
         if top_level_errors:
             # Return standard error response for top-level validation errors
-            from app.schemas.error import ErrorDetail, ErrorResponse
             from datetime import UTC
+
+            from app.schemas.error import ErrorDetail, ErrorResponse
 
             error_response = ErrorResponse(
                 detail=[
@@ -602,12 +605,14 @@ async def post_activities(
                 if idx in pydantic_errors_by_index:
                     # This activity failed Pydantic validation
                     # Create a minimal dict with the raw data for error reporting
-                    activities_dict.append({
-                        "_pydantic_validation_failed": True,
-                        "_raw_data": activity_raw,
-                        "platform_id": platform_id,
-                        "platform_name": platform_name,
-                    })
+                    activities_dict.append(
+                        {
+                            "_pydantic_validation_failed": True,
+                            "_raw_data": activity_raw,
+                            "platform_id": platform_id,
+                            "platform_name": platform_name,
+                        }
+                    )
                 else:
                     # This activity passed Pydantic validation - convert it
                     try:
@@ -619,12 +624,14 @@ async def post_activities(
                         )
                     except PydanticValidationError:
                         # Shouldn't happen, but handle it gracefully
-                        activities_dict.append({
-                            "_pydantic_validation_failed": True,
-                            "_raw_data": activity_raw,
-                            "platform_id": platform_id,
-                            "platform_name": platform_name,
-                        })
+                        activities_dict.append(
+                            {
+                                "_pydantic_validation_failed": True,
+                                "_raw_data": activity_raw,
+                                "platform_id": platform_id,
+                                "platform_name": platform_name,
+                            }
+                        )
 
         # Call service layer with manual commit session
         # Service handles nested transactions (savepoints)
@@ -660,8 +667,9 @@ async def post_activities(
                 raw_data = activity_dict.get("_raw_data", {})
 
                 # Import nested model types
-                from app.schemas.activity import AddressRequest, TemporalRequest
                 from datetime import datetime as dt
+
+                from app.schemas.activity import AddressRequest, TemporalRequest
 
                 # Parse datetime strings to avoid serialization warnings
                 # Other type mismatches (e.g., str instead of int) are left as-is
@@ -672,7 +680,7 @@ async def post_activities(
                         return dt_str
                     try:
                         # Handle both 'Z' and timezone offset formats
-                        return dt.fromisoformat(dt_str.replace('Z', '+00:00'))
+                        return dt.fromisoformat(dt_str.replace("Z", "+00:00"))
                     except:
                         return dt_str  # Return as-is if parsing fails
 
@@ -680,7 +688,9 @@ async def post_activities(
                 temporal_data = raw_data.get("temporal", {})
                 if temporal_data:
                     temporal_parsed = {
-                        "startDatetime": parse_datetime(temporal_data.get("startDatetime")),
+                        "startDatetime": parse_datetime(
+                            temporal_data.get("startDatetime")
+                        ),
                         "endDatetime": parse_datetime(temporal_data.get("endDatetime")),
                     }
                 else:
@@ -692,40 +702,57 @@ async def post_activities(
                 activity_request = ActivityRequest.model_construct(
                     **{
                         **raw_data,
-                        "address": AddressRequest.model_construct(**address_data) if address_data else None,
-                        "temporal": TemporalRequest.model_construct(**temporal_parsed) if temporal_parsed else None,
+                        "address": AddressRequest.model_construct(**address_data)
+                        if address_data
+                        else None,
+                        "temporal": TemporalRequest.model_construct(**temporal_parsed)
+                        if temporal_parsed
+                        else None,
                     }
                 )
             else:
                 # Convert back from service dict to request schema (business logic failure)
-                activity_request = ActivityRequest(**{
-                    "platformActivityId": activity_dict.get("platform_activity_id"),
-                    "url": activity_dict["url"],
-                    "registrationNumber": activity_dict["registration_number"],
-                    "address": {
-                        "street": activity_dict["address_street"],
-                        "number": activity_dict["address_number"],
-                        "letter": activity_dict.get("address_letter"),
-                        "addition": activity_dict.get("address_addition"),
-                        "postalCode": activity_dict["address_postal_code"],
-                        "city": activity_dict["address_city"],
-                    },
-                    "temporal": {
-                        "startDatetime": activity_dict["temporal_start_date_time"].isoformat() if isinstance(activity_dict["temporal_start_date_time"], datetime) else activity_dict["temporal_start_date_time"],
-                        "endDatetime": activity_dict["temporal_end_date_time"].isoformat() if isinstance(activity_dict["temporal_end_date_time"], datetime) else activity_dict["temporal_end_date_time"],
-                    },
-                    "areaId": activity_dict["area_id"],
-                    "numberOfGuests": activity_dict.get("number_of_guests"),
-                    "countryOfGuests": activity_dict.get("country_of_guests"),
-                })
+                activity_request = ActivityRequest(
+                    **{
+                        "platformActivityId": activity_dict.get("platform_activity_id"),
+                        "url": activity_dict["url"],
+                        "registrationNumber": activity_dict["registration_number"],
+                        "address": {
+                            "street": activity_dict["address_street"],
+                            "number": activity_dict["address_number"],
+                            "letter": activity_dict.get("address_letter"),
+                            "addition": activity_dict.get("address_addition"),
+                            "postalCode": activity_dict["address_postal_code"],
+                            "city": activity_dict["address_city"],
+                        },
+                        "temporal": {
+                            "startDatetime": activity_dict[
+                                "temporal_start_date_time"
+                            ].isoformat()
+                            if isinstance(
+                                activity_dict["temporal_start_date_time"], datetime
+                            )
+                            else activity_dict["temporal_start_date_time"],
+                            "endDatetime": activity_dict[
+                                "temporal_end_date_time"
+                            ].isoformat()
+                            if isinstance(
+                                activity_dict["temporal_end_date_time"], datetime
+                            )
+                            else activity_dict["temporal_end_date_time"],
+                        },
+                        "areaId": activity_dict["area_id"],
+                        "numberOfGuests": activity_dict.get("number_of_guests"),
+                        "countryOfGuests": activity_dict.get("country_of_guests"),
+                    }
+                )
 
             failed_activities.append(
                 FailedActivity(
                     activityIndex=failure["activity_index"],
                     activity=activity_request,
                     errors=[
-                        ActivityErrorDetail(**error)
-                        for error in failure["errors"]
+                        ActivityErrorDetail(**error) for error in failure["errors"]
                     ],
                 )
             )
@@ -737,27 +764,39 @@ async def post_activities(
 
             # Convert back from service dict to request schema
             # Include the generated ID in the activity object
-            activity_request = ActivityRequest(**{
-                "activityId": success["activity_id"],  # Use the generated ID
-                "activityName": activity_dict.get("activity_name"),
-                "url": activity_dict["url"],
-                "registrationNumber": activity_dict["registration_number"],
-                "address": {
-                    "street": activity_dict["address_street"],
-                    "number": activity_dict["address_number"],
-                    "letter": activity_dict.get("address_letter"),
-                    "addition": activity_dict.get("address_addition"),
-                    "postalCode": activity_dict["address_postal_code"],
-                    "city": activity_dict["address_city"],
-                },
-                "temporal": {
-                    "startDatetime": activity_dict["temporal_start_date_time"].isoformat() if isinstance(activity_dict["temporal_start_date_time"], datetime) else activity_dict["temporal_start_date_time"],
-                    "endDatetime": activity_dict["temporal_end_date_time"].isoformat() if isinstance(activity_dict["temporal_end_date_time"], datetime) else activity_dict["temporal_end_date_time"],
-                },
-                "areaId": activity_dict["area_id"],
-                "numberOfGuests": activity_dict.get("number_of_guests"),
-                "countryOfGuests": activity_dict.get("country_of_guests"),
-            })
+            activity_request = ActivityRequest(
+                **{
+                    "activityId": success["activity_id"],  # Use the generated ID
+                    "activityName": activity_dict.get("activity_name"),
+                    "url": activity_dict["url"],
+                    "registrationNumber": activity_dict["registration_number"],
+                    "address": {
+                        "street": activity_dict["address_street"],
+                        "number": activity_dict["address_number"],
+                        "letter": activity_dict.get("address_letter"),
+                        "addition": activity_dict.get("address_addition"),
+                        "postalCode": activity_dict["address_postal_code"],
+                        "city": activity_dict["address_city"],
+                    },
+                    "temporal": {
+                        "startDatetime": activity_dict[
+                            "temporal_start_date_time"
+                        ].isoformat()
+                        if isinstance(
+                            activity_dict["temporal_start_date_time"], datetime
+                        )
+                        else activity_dict["temporal_start_date_time"],
+                        "endDatetime": activity_dict[
+                            "temporal_end_date_time"
+                        ].isoformat()
+                        if isinstance(activity_dict["temporal_end_date_time"], datetime)
+                        else activity_dict["temporal_end_date_time"],
+                    },
+                    "areaId": activity_dict["area_id"],
+                    "numberOfGuests": activity_dict.get("number_of_guests"),
+                    "countryOfGuests": activity_dict.get("country_of_guests"),
+                }
+            )
 
             successful_activities.append(
                 SuccessfulActivity(

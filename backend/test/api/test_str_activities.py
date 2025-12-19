@@ -87,7 +87,9 @@ class TestSTRActivitiesAPI:
 
         # Also create areas for transaction atomicity test (0000-0009)
         for i in range(10):
-            area_configs.append((f"{i:04d}", f"550e8400-e29b-41d4-a716-44665544{i:04d}"))
+            area_configs.append(
+                (f"{i:04d}", f"550e8400-e29b-41d4-a716-44665544{i:04d}")
+            )
 
         # Get or create areas (check if they exist first to avoid unique constraint violations)
         areas = {}
@@ -1075,7 +1077,9 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["ceaba747-15ca-4d8a-81f7"].area_id,  # Valid: alphanumeric with hyphens
+                    "areaId": test_areas[
+                        "ceaba747-15ca-4d8a-81f7"
+                    ].area_id,  # Valid: alphanumeric with hyphens
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
                 }

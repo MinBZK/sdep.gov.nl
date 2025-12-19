@@ -46,8 +46,9 @@ For selective additional motivation [*], see the text below the table.
 | **API&nbsp;11** | Transaction size constraints (POST)                | Limit bulk updates to e.g. max 1000 [*]                                                                                |
 | **API&nbsp;12** | Logical ordening => readability                    | See e.g. `/str/areas` endpoint                                                                                         |
 | **API&nbsp;13** | Essentiality                                       | Only `areaId` in `POST /str/activities`; `competentAuthorityId, competentAuthorityName` are redundant and not required |
-| **API&nbsp;14** | Consistent HTTP response codes                     | 200, 201, 400, 401, 403, 409, 422                                                                                      |
-| **API&nbsp;15** | Submit activities always against current areas [*] |                                                                                                                        |
+| **API&nbsp;14** | Essentiality/security                              | When POST, no need (and do not) include submitter id (competentAuthorityId, platformId) in request                     |
+| **API&nbsp;15** | Consistent HTTP response codes                     | 200, 201, 400, 401, 403, 409, 422                                                                                      |
+| **API&nbsp;16** | Submit activities always against current areas [*] |                                                                                                                        |
 
 Motivation:
 
@@ -68,7 +69,7 @@ Motivation:
 
 - To ensure predictable performance, limit transaction size, and improve reliability and error handling.
 
-**API 15**
+**API 16**
 
 - When new activities are submitted, first always retrieve the current areas
 - Because areas may change over time

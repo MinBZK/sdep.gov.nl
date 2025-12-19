@@ -69,15 +69,15 @@ router = APIRouter(tags=["ca"])
                                         "letter": "A",
                                         "addition": "2",
                                         "postalCode": "1016HV",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG-AMS-2025-001",
                                     "numberOfGuests": 4,
                                     "countryOfGuests": ["NLD", "DEU", "BEL"],
                                     "temporal": {
                                         "startDatetime": "2025-07-01T15:00:00Z",
-                                        "endDatetime": "2025-07-07T11:00:00Z"
-                                    }
+                                        "endDatetime": "2025-07-07T11:00:00Z",
+                                    },
                                 },
                                 {
                                     "activityId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
@@ -93,16 +93,16 @@ router = APIRouter(tags=["ca"])
                                         "letter": None,
                                         "addition": None,
                                         "postalCode": "1015CJ",
-                                        "city": "Amsterdam"
+                                        "city": "Amsterdam",
                                     },
                                     "registrationNumber": "REG-AMS-2025-002",
                                     "numberOfGuests": 2,
                                     "countryOfGuests": ["FRA", "ITA"],
                                     "temporal": {
                                         "startDatetime": "2025-07-10T16:00:00Z",
-                                        "endDatetime": "2025-07-15T12:00:00Z"
-                                    }
-                                }
+                                        "endDatetime": "2025-07-15T12:00:00Z",
+                                    },
+                                },
                             ]
                         }
                     }

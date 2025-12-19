@@ -5,7 +5,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_serializer
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+)
 
 
 def validate_year_ge_2025(v: datetime) -> datetime:
@@ -231,7 +238,9 @@ class ActivityRequest(BaseModel):
         if v is None:
             return v
         if len(v) < 1:
-            raise ValueError("Country codes list must contain at least 1 item when provided")
+            raise ValueError(
+                "Country codes list must contain at least 1 item when provided"
+            )
         for country_code in v:
             if len(country_code) != 3:
                 raise ValueError(
@@ -395,7 +404,7 @@ class ActivityResponse(BaseModel):
         min_length=1,
         max_length=64,
         pattern=r"^[a-z0-9-]+$",
-        description="Platform functional ID (lowercase alphanumeric with hyphens, max 64 chars)"
+        description="Platform functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
     )  # Attribute
     platform_name: str | None = Field(
         None,
@@ -409,9 +418,11 @@ class ActivityResponse(BaseModel):
         min_length=1,
         max_length=64,
         pattern=r"^[a-z0-9-]+$",
-        description="Area functional ID (lowercase alphanumeric with hyphens, max 64 chars)"
+        description="Area functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
     )  # Functional ID reference
-    url: str | None = Field(None, description="URL of the advertisement (optional)")  # Attribute
+    url: str | None = Field(
+        None, description="URL of the advertisement (optional)"
+    )  # Attribute
     address: AddressResponse = Field(..., description="Address composite")  # Composite
     registration_number: str = Field(
         ...,
@@ -422,18 +433,20 @@ class ActivityResponse(BaseModel):
         None, alias="numberOfGuests", description="Number of guests (optional)"
     )  # Attribute
     country_of_guests: list[str] | None = Field(
-        None, alias="countryOfGuests", description="Array of country codes of guests (optional)"
+        None,
+        alias="countryOfGuests",
+        description="Array of country codes of guests (optional)",
     )  # Attribute
     temporal: TemporalResponse = Field(
         ..., description="Temporal composite"
     )  # Composite
 
-    @model_serializer(mode='wrap')
+    @model_serializer(mode="wrap")
     def _serialize_model(self, serializer, info):
         """Exclude activityName from response when it's None."""
         data = serializer(self)
-        if data.get('activityName') is None:
-            data.pop('activityName', None)
+        if data.get("activityName") is None:
+            data.pop("activityName", None)
         return data
 
 
@@ -442,9 +455,7 @@ class ActivityListResponse(BaseModel):
 
     model_config = ConfigDict(title="activity.ActivityListResponse")
 
-    activities: list[ActivityResponse] = Field(
-        ..., description="List of activities"
-    )
+    activities: list[ActivityResponse] = Field(..., description="List of activities")
 
 
 class ActivityCountResponse(BaseModel):

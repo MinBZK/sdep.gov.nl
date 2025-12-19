@@ -36,7 +36,9 @@ def get_keycloak_public_key() -> dict[str, Any]:
         )
 
     # Construct the certs endpoint URL
-    certs_url = f"{settings.KC_BASE_URL.rstrip('/')}/realms/sdep/protocol/openid-connect/certs"
+    certs_url = (
+        f"{settings.KC_BASE_URL.rstrip('/')}/realms/sdep/protocol/openid-connect/certs"
+    )
 
     try:
         response = httpx.get(certs_url, timeout=10.0)

@@ -3,9 +3,7 @@
 from typing import Any
 
 import pytest
-import pytest_asyncio
 from app.api.v0.main import app_v0
-from app.crud import area as area_crud
 from app.db.config import get_async_db_manual_commit
 from app.security import verify_bearer_token
 from fastapi import status
@@ -46,18 +44,23 @@ class TestCAAreaAPI:
         async def override_get_db_manual_commit():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual_commit
+        app_v0.dependency_overrides[get_async_db_manual_commit] = (
+            override_get_db_manual_commit
+        )
 
         yield
 
     @pytest.fixture
     def setup_db_only(self, async_session: AsyncSession):
         """Setup database override only (no auth override)."""
+
         # Override database session with manual commit
         async def override_get_db_manual_commit():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual_commit
+        app_v0.dependency_overrides[get_async_db_manual_commit] = (
+            override_get_db_manual_commit
+        )
 
         yield
 
@@ -73,7 +76,7 @@ class TestCAAreaAPI:
                 {
                     "competentAuthorityAreaId": f"area-{i:03d}",
                     "filename": f"Area{i:03d}.zip",
-                    "filedata": f"ZGF0YV97aX0=",  # base64 encoded
+                    "filedata": "ZGF0YV97aX0=",  # base64 encoded
                 }
                 for i in range(1, 4)
             ],
@@ -227,13 +230,16 @@ class TestCAAreaAPI:
         self, async_session: AsyncSession
     ):
         """Test POST /ca/areas with missing sdep_write role."""
+
         # Arrange
         def mock_token_without_write_role():
             return {
                 "sub": "test_user",
                 "client_id": "0363",
                 "client_name": "Gemeente Amsterdam",
-                "realm_access": {"roles": ["sdep_ca", "sdep_read"]},  # Missing sdep_write
+                "realm_access": {
+                    "roles": ["sdep_ca", "sdep_read"]
+                },  # Missing sdep_write
             }
 
         app_v0.dependency_overrides[verify_bearer_token] = mock_token_without_write_role
@@ -241,7 +247,9 @@ class TestCAAreaAPI:
         async def override_get_db_manual_commit():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual_commit
+        app_v0.dependency_overrides[get_async_db_manual_commit] = (
+            override_get_db_manual_commit
+        )
 
         payload = {
             "areas": [
@@ -288,4 +296,3 @@ class TestCAAreaAPI:
 
         # Assert
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-

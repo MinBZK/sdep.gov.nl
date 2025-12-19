@@ -4,7 +4,6 @@ from datetime import datetime
 
 import pytest
 from app.crud import area
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from test.fixtures.factories import AreaFactory, CompetentAuthorityFactory

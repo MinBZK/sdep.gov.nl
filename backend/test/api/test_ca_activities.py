@@ -339,7 +339,9 @@ class TestCAActivitiesAPI:
         # Verify top-level fields
         assert isinstance(activity["url"], str)
         assert isinstance(activity["registrationNumber"], str)
-        assert isinstance(activity["areaId"], str)  # areaId is technical ID (20-char UUID)
+        assert isinstance(
+            activity["areaId"], str
+        )  # areaId is technical ID (20-char UUID)
         assert isinstance(activity["numberOfGuests"], int)
         assert isinstance(activity["countryOfGuests"], list)
         assert isinstance(activity["platformId"], str)

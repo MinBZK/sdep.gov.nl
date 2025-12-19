@@ -25,9 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud import activity as activity_crud
 from app.crud import area as area_crud
-from app.crud import competent_authority as competent_authority_crud
 from app.crud import platform as platform_crud
-from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 from app.models.activity import Activity
 
 
@@ -58,11 +56,13 @@ async def validate_activity(
     area_id_uuid = activity["area_id"]  # Functional ID (UUID string)
     area = await area_crud.get_by_area_id(session, area_id_uuid)
     if area is None:
-        errors.append({
-            "loc": ["activities", activity_index, "areaId"],
-            "msg": f"Area with areaId '{area_id_uuid}' not found",
-            "type": "business_logic_error",
-        })
+        errors.append(
+            {
+                "loc": ["activities", activity_index, "areaId"],
+                "msg": f"Area with areaId '{area_id_uuid}' not found",
+                "type": "business_logic_error",
+            }
+        )
     else:
         # Store resolved technical ID for Phase 2 processing
         activity["_area_technical_id"] = area.id  # Integer FK
@@ -70,9 +70,7 @@ async def validate_activity(
     return errors
 
 
-async def process_single_activity(
-    session: AsyncSession, activity: dict
-) -> Activity:
+async def process_single_activity(session: AsyncSession, activity: dict) -> Activity:
     """
     Process and save a single activity (assumes validation already passed).
 
@@ -197,11 +195,13 @@ async def process_activity_list(
     pydantic_failures = []
     for idx, errors in pydantic_errors_by_index.items():
         activity = activities[idx]
-        pydantic_failures.append({
-            "activity_index": idx,
-            "activity": activity,
-            "errors": errors,
-        })
+        pydantic_failures.append(
+            {
+                "activity_index": idx,
+                "activity": activity,
+                "errors": errors,
+            }
+        )
 
     # PHASE 1: Validate all activities (business logic validation)
     # Skip activities that already failed Pydantic validation
@@ -220,11 +220,13 @@ async def process_activity_list(
 
         errors = await validate_activity(session, activity, idx)
         if errors:
-            validation_failures.append({
-                "activity_index": idx,
-                "activity": activity,
-                "errors": errors,
-            })
+            validation_failures.append(
+                {
+                    "activity_index": idx,
+                    "activity": activity,
+                    "errors": errors,
+                }
+            )
         else:
             valid_indices.append(idx)
 
@@ -246,11 +248,13 @@ async def process_activity_list(
             await session.flush()
 
             # Success - track it
-            successes.append({
-                "activity_index": idx,
-                "activity_id": activity_obj.activity_id,
-                "activity": activity,
-            })
+            successes.append(
+                {
+                    "activity_index": idx,
+                    "activity_id": activity_obj.activity_id,
+                    "activity": activity,
+                }
+            )
             succeeded += 1
 
         except IntegrityError as e:
@@ -265,17 +269,21 @@ async def process_activity_list(
                 msg = f"Activity with activityId '{activity_id}' and timestamp already exists (versioning constraint violated)"
             else:
                 error_type = "integrity_error"
-                msg = f"Database constraint violation: {str(e)}"
+                msg = f"Database constraint violation: {e!s}"
 
-            failures.append({
-                "activity_index": idx,
-                "activity": activity,
-                "errors": [{
-                    "loc": ["activities", idx],
-                    "msg": msg,
-                    "type": error_type,
-                }],
-            })
+            failures.append(
+                {
+                    "activity_index": idx,
+                    "activity": activity,
+                    "errors": [
+                        {
+                            "loc": ["activities", idx],
+                            "msg": msg,
+                            "type": error_type,
+                        }
+                    ],
+                }
+            )
             failed += 1
 
         except Exception as e:
@@ -283,15 +291,19 @@ async def process_activity_list(
             await savepoint.rollback()
 
             # Other errors
-            failures.append({
-                "activity_index": idx,
-                "activity": activity,
-                "errors": [{
-                    "loc": ["activities", idx],
-                    "msg": f"Unexpected error: {str(e)}",
-                    "type": "processing_error",
-                }],
-            })
+            failures.append(
+                {
+                    "activity_index": idx,
+                    "activity": activity,
+                    "errors": [
+                        {
+                            "loc": ["activities", idx],
+                            "msg": f"Unexpected error: {e!s}",
+                            "type": "processing_error",
+                        }
+                    ],
+                }
+            )
             failed += 1
 
     # Combine all failures: Pydantic + business logic validation + processing errors

@@ -4,7 +4,6 @@ from datetime import datetime
 
 import pytest
 from app.crud import activity
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from test.fixtures.factories import ActivityFactory, AreaFactory, PlatformFactory
@@ -203,9 +202,7 @@ class TestActivityCRUD:
         # Assert
         assert len(results) == 2
 
-    async def test_get_all_activity_with_pagination(
-        self, async_session: AsyncSession
-    ):
+    async def test_get_all_activity_with_pagination(self, async_session: AsyncSession):
         """Test getting activities with pagination."""
         # Arrange
         for _ in range(5):
@@ -341,7 +338,9 @@ class TestActivityCRUD:
     async def test_get_by_platform_id_not_found(self, async_session: AsyncSession):
         """Test getting activities by non-existent platform_id."""
         # Act
-        results = await activity.get_by_platform_id(async_session, 99999)  # platform_id is still int
+        results = await activity.get_by_platform_id(
+            async_session, 99999
+        )  # platform_id is still int
 
         # Assert
         assert len(results) == 0
@@ -379,9 +378,7 @@ class TestActivityCRUD:
         act = await ActivityFactory.create_async(async_session, area_id=area.id)
 
         # Act
-        results = await activity.get_by_competent_authority_id(
-            async_session, "0363"
-        )
+        results = await activity.get_by_competent_authority_id(async_session, "0363")
 
         # Assert
         assert len(results) == 1
@@ -392,9 +389,7 @@ class TestActivityCRUD:
     ):
         """Test getting activities by non-existent competent_authority_id."""
         # Act
-        results = await activity.get_by_competent_authority_id(
-            async_session, "9999"
-        )
+        results = await activity.get_by_competent_authority_id(async_session, "9999")
 
         # Assert
         assert len(results) == 0
@@ -412,9 +407,7 @@ class TestActivityCRUD:
         await ActivityFactory.create_async(async_session, area_id=area.id)
 
         # Act
-        total = await activity.count_by_competent_authority_id(
-            async_session, "0518"
-        )
+        total = await activity.count_by_competent_authority_id(async_session, "0518")
 
         # Assert
         assert total == 3
@@ -424,9 +417,7 @@ class TestActivityCRUD:
     ):
         """Test counting activities by non-existent competent_authority_id."""
         # Act
-        total = await activity.count_by_competent_authority_id(
-            async_session, "9999"
-        )
+        total = await activity.count_by_competent_authority_id(async_session, "9999")
 
         # Assert
         assert total == 0

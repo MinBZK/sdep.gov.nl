@@ -152,9 +152,7 @@ async def get_all(
     return list(result.scalars().all())
 
 
-async def get_by_id(
-    session: AsyncSession, activity_id: int
-) -> Activity | None:
+async def get_by_id(session: AsyncSession, activity_id: int) -> Activity | None:
     """
     Get an activity by technical id (internal use only).
 
@@ -256,11 +254,7 @@ async def get_by_platform_id(
     Returns:
         List of Activity instances matching the platform_id
     """
-    stmt = (
-        select(Activity)
-        .where(Activity.platform_id == platform_id)
-        .offset(offset)
-    )
+    stmt = select(Activity).where(Activity.platform_id == platform_id).offset(offset)
     if limit is not None:
         stmt = stmt.limit(limit)
 

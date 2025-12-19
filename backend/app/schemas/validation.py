@@ -44,9 +44,7 @@ class HTTPValidationError(BaseModel):
 
     model_config = ConfigDict(title="validation.HTTPValidationError")
 
-    detail: list[ValidationError] = Field(
-        ..., description="List of validation errors"
-    )
+    detail: list[ValidationError] = Field(..., description="List of validation errors")
 
 
 class HTTPBadRequestError(BaseModel):
@@ -54,6 +52,4 @@ class HTTPBadRequestError(BaseModel):
 
     model_config = ConfigDict(title="validation.HTTPBadRequestError")
 
-    detail: list[BadRequestError] = Field(
-        ..., description="List of validation errors"
-    )
+    detail: list[BadRequestError] = Field(..., description="List of validation errors")

@@ -64,6 +64,7 @@ async def validation_exception_handler(
             body = await request.body()
             if body:
                 import json
+
                 data = json.loads(body)
                 if "activities" in data and isinstance(data["activities"], list):
                     total_activities = len(data["activities"])

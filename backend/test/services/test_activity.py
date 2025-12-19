@@ -3,14 +3,12 @@
 from datetime import datetime, timedelta
 
 import pytest
-from app.exceptions.business import BusinessLogicError, DuplicateResourceError
 from app.services import activity as activity_service
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from test.fixtures.factories import (
     ActivityFactory,
     AreaFactory,
-    CompetentAuthorityFactory,
     PlatformFactory,
 )
 
@@ -52,9 +50,7 @@ class TestActivityService:
         ]
 
         # Act
-        result = await activity_service.process_activity_list(
-            async_session, activities
-        )
+        result = await activity_service.process_activity_list(async_session, activities)
 
         # Assert
         assert result["succeeded"] == 1
@@ -96,9 +92,7 @@ class TestActivityService:
         ]
 
         # Act
-        result = await activity_service.process_activity_list(
-            async_session, activities
-        )
+        result = await activity_service.process_activity_list(async_session, activities)
 
         # Assert
         assert result["succeeded"] == 5
@@ -136,9 +130,7 @@ class TestActivityService:
         ]
 
         # Act
-        result = await activity_service.process_activity_list(
-            async_session, activities
-        )
+        result = await activity_service.process_activity_list(async_session, activities)
 
         # Assert - verify success and platform was created
         assert result["succeeded"] == 1
@@ -184,9 +176,7 @@ class TestActivityService:
         ]
 
         # Act
-        result = await activity_service.process_activity_list(
-            async_session, activities
-        )
+        result = await activity_service.process_activity_list(async_session, activities)
 
         # Assert - verify success and no new platform was created
         assert result["succeeded"] == 1
@@ -229,9 +219,7 @@ class TestActivityService:
         ]
 
         # Act
-        result = await activity_service.process_activity_list(
-            async_session, activities
-        )
+        result = await activity_service.process_activity_list(async_session, activities)
 
         # Assert
         assert result["succeeded"] == 1
@@ -265,16 +253,17 @@ class TestActivityService:
         ]
 
         # Act
-        result = await activity_service.process_activity_list(
-            async_session, activities
-        )
+        result = await activity_service.process_activity_list(async_session, activities)
 
         # Assert - Activity fails validation due to nonexistent area
         assert result["total_processed"] == 1
         assert result["succeeded"] == 0
         assert result["failed"] == 1
         assert len(result["failures"]) == 1
-        assert "Area with areaId '00000000-0000-0000-0000-000000000000' not found" in result["failures"][0]["errors"][0]["msg"]
+        assert (
+            "Area with areaId '00000000-0000-0000-0000-000000000000' not found"
+            in result["failures"][0]["errors"][0]["msg"]
+        )
 
     # Tests for count_activity
 
@@ -411,15 +400,11 @@ class TestActivityService:
         await ActivityFactory.create_async(async_session, area_id=area2.id)
 
         # Act
-        result1 = (
-            await activity_service.count_activity_by_competent_authority(
-                async_session, "0363"
-            )
+        result1 = await activity_service.count_activity_by_competent_authority(
+            async_session, "0363"
         )
-        result2 = (
-            await activity_service.count_activity_by_competent_authority(
-                async_session, "0599"
-            )
+        result2 = await activity_service.count_activity_by_competent_authority(
+            async_session, "0599"
         )
 
         # Assert
@@ -431,9 +416,7 @@ class TestActivityService:
     async def test_get_activity_list_empty(self, async_session: AsyncSession):
         """Test getting activities list when database is empty"""
         # Act
-        result = await activity_service.get_activity_list(
-            async_session, "0363"
-        )
+        result = await activity_service.get_activity_list(async_session, "0363")
 
         # Assert
         assert result == []
@@ -449,16 +432,12 @@ class TestActivityService:
         await ActivityFactory.create_async(async_session, area_id=area.id)
 
         # Act
-        result = await activity_service.get_activity_list(
-            async_session, "0599"
-        )
+        result = await activity_service.get_activity_list(async_session, "0599")
 
         # Assert
         assert result == []
 
-    async def test_get_activity_list_single_record(
-        self, async_session: AsyncSession
-    ):
+    async def test_get_activity_list_single_record(self, async_session: AsyncSession):
         """Test getting activities list with single record"""
         # Arrange
         area = await AreaFactory.create_async(
@@ -479,9 +458,7 @@ class TestActivityService:
         )
 
         # Act
-        result = await activity_service.get_activity_list(
-            async_session, "0363"
-        )
+        result = await activity_service.get_activity_list(async_session, "0363")
 
         # Assert
         assert len(result) == 1
@@ -505,9 +482,7 @@ class TestActivityService:
         )
 
         # Act
-        result = await activity_service.get_activity_list(
-            async_session, "0363"
-        )
+        result = await activity_service.get_activity_list(async_session, "0363")
 
         # Assert
         assert len(result) == 1
@@ -539,7 +514,9 @@ class TestActivityService:
         # Verify types
         assert isinstance(activity_dict["activity_id"], str)
         assert len(activity_dict["activity_id"]) == 36  # Functional ID
-        assert isinstance(activity_dict["activity_name"], (str, type(None)))  # Optional field
+        assert isinstance(
+            activity_dict["activity_name"], (str, type(None))
+        )  # Optional field
         assert isinstance(activity_dict["platform_id"], str)
         assert isinstance(activity_dict["platform_name"], str)
         assert isinstance(activity_dict["url"], str)
@@ -580,9 +557,7 @@ class TestActivityService:
         )
 
         # Act
-        result = await activity_service.get_activity_list(
-            async_session, "0363"
-        )
+        result = await activity_service.get_activity_list(async_session, "0363")
 
         # Assert
         assert len(result) == 3
@@ -614,12 +589,8 @@ class TestActivityService:
         )
 
         # Act
-        result1 = await activity_service.get_activity_list(
-            async_session, "0363"
-        )
-        result2 = await activity_service.get_activity_list(
-            async_session, "0599"
-        )
+        result1 = await activity_service.get_activity_list(async_session, "0363")
+        result2 = await activity_service.get_activity_list(async_session, "0599")
 
         # Assert
         assert len(result1) == 2
@@ -770,9 +741,7 @@ class TestActivityService:
         )
 
         # Act
-        result = await activity_service.get_activity_list(
-            async_session, "0363"
-        )
+        result = await activity_service.get_activity_list(async_session, "0363")
 
         # Assert
         assert len(result) == 1
@@ -812,9 +781,7 @@ class TestActivityService:
         ]
 
         # Act
-        result = await activity_service.process_activity_list(
-            async_session, activities
-        )
+        result = await activity_service.process_activity_list(async_session, activities)
 
         # Assert
         assert result["succeeded"] == 1

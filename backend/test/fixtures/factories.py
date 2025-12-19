@@ -198,9 +198,13 @@ class ActivityFactory(AsyncSQLAlchemyFactory):
         platform_id_param = kwargs.pop("platform_id", None)
         if isinstance(platform_id_param, str):
             # UUID string - resolve to technical ID
-            platform = await platform_crud.get_by_platform_id(session, platform_id_param)
+            platform = await platform_crud.get_by_platform_id(
+                session, platform_id_param
+            )
             if not platform:
-                platform = await PlatformFactory.create_async(session, platform_id=platform_id_param)
+                platform = await PlatformFactory.create_async(
+                    session, platform_id=platform_id_param
+                )
             kwargs["platform_id"] = platform.id  # Integer FK
         elif platform_id_param is None:
             # Create a new Platform

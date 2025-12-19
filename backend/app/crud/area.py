@@ -1,7 +1,5 @@
 """CRUD operations for Area model."""
 
-from datetime import datetime
-
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

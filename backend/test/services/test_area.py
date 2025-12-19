@@ -326,9 +326,7 @@ class TestAreaService:
         count = await area.count_areas(async_session)
         assert count == 1
 
-    async def test_process_area_list_multiple_areas(
-        self, async_session: AsyncSession
-    ):
+    async def test_process_area_list_multiple_areas(self, async_session: AsyncSession):
         """Test processing multiple areas in a list"""
         # Arrange
         areas_list = [
@@ -404,10 +402,11 @@ class TestAreaService:
         area_count = await area.count_areas(async_session)
         assert area_count == 3  # But three areas
 
-
     # Tests for three-phase processing with savepoints
 
-    async def test_process_area_list_returns_result_dict(self, async_session: AsyncSession):
+    async def test_process_area_list_returns_result_dict(
+        self, async_session: AsyncSession
+    ):
         """Test that process_area_list returns a result dictionary."""
         # Arrange
         areas_list = [

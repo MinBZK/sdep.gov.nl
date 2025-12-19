@@ -74,7 +74,9 @@ async def post_auth_token(
     }
 
     # Construct the full token endpoint URL with realm path
-    token_endpoint = f"{settings.KC_BASE_URL.rstrip('/')}/realms/sdep/protocol/openid-connect/token"
+    token_endpoint = (
+        f"{settings.KC_BASE_URL.rstrip('/')}/realms/sdep/protocol/openid-connect/token"
+    )
 
     # Forward the request to Keycloak
     try:

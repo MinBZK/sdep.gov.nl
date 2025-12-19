@@ -55,12 +55,13 @@ async def async_engine() -> AsyncGenerator[AsyncEngine]:
         else:
             test_db_url = database_url_env
             from sqlalchemy.engine.url import make_url
+
             url_obj = make_url(database_url_env)
             test_db_name = url_obj.database
             print(f"TEST DB: Using DATABASE_URL: {database_url_env}")
 
         # Connect to postgres database to create test database
-        from sqlalchemy import URL, text
+        from sqlalchemy import text
         from sqlalchemy.engine.url import make_url
 
         url_obj = make_url(test_db_url)
