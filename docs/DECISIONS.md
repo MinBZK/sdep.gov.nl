@@ -29,7 +29,7 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 ## API
 
-For selective additional motivation [*], see the text below the table.
+For additional motivation [*], see the text below the table.
 
 | #               | Decision                                           | Example                                                                                                                |
 | :-------------- | :------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------- |
@@ -46,7 +46,7 @@ For selective additional motivation [*], see the text below the table.
 | **API&nbsp;11** | Transaction size constraints (POST)                | Limit bulk updates to e.g. max 1000 [*]                                                                                |
 | **API&nbsp;12** | Logical ordening => readability                    | See e.g. `/str/areas` endpoint                                                                                         |
 | **API&nbsp;13** | Essentiality                                       | Only `areaId` in `POST /str/activities`; `competentAuthorityId, competentAuthorityName` are redundant and not required |
-| **API&nbsp;14** | Essentiality/security                              | When POST, no need (and do not) include submitter id (competentAuthorityId, platformId) in request                     |
+| **API&nbsp;14** | Essentiality/security                              | In POST, no need to include the submitter id in the request (competentAuthorityId, platformId)                         |
 | **API&nbsp;15** | Consistent HTTP response codes                     | 200, 201, 400, 401, 403, 409, 422                                                                                      |
 | **API&nbsp;16** | Submit activities always against current areas [*] |                                                                                                                        |
 
@@ -71,13 +71,13 @@ Motivation:
 
 **API 16**
 
-- When new activities are submitted, first always retrieve the current areas
-- Because areas may change over time
+- When a platform submits new activities, the platform first has to retrieve the current areas
+- Because these may have changed over time
 - This way, activities can always be correlated to the areas at that moment in time => point-in-time consistency
 
 ## Security
 
-For selective additional motivation [*], see the text below the table.
+For additional motivation [*], see the text below the table.
 
 | #               | Decision                                                                       | Example |
 | :-------------- | :----------------------------------------------------------------------------- | :------ |

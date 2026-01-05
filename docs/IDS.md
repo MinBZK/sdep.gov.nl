@@ -12,10 +12,10 @@ SDEP uses:
 
 Functional IDs:
 
-- May be provided by competent authorities or platforms if desired.
-- If not, they are generated conform UID / RFC 9562 standard (except for `platformId` and `competentAuthorityId`, which are supplied by the authorization provider).
-- After a POST, the functional IDs are always returned/made visible.
-- This allows them to be reused in subsequent submissions.
-- This also enables versioning (in combination with a timestamp).
+- May be provided by competent authorities or platforms if desired
+- If not, they are generated according to the UID / RFC 9562 standard (except for `platformId` and `competentAuthorityId`, which are supplied by the authorization provider)
+- After a POST, the functional IDs are always returned/made visible
+- This allows them to be reused in subsequent submissions
+- This also enables versioning (in combination with a timstamp)
 
 https://datatracker.ietf.org/doc/rfc9562/

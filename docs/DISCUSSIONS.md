@@ -7,7 +7,7 @@ This page described open and closed discussion items.
 
 ## Open
 
-For selective additional motivation [*], see the text below the table.
+For additional motivation [*], see the text below the table.
 
 | #               | Topic                                                                          |
 | :-------------- | :----------------------------------------------------------------------------- |
@@ -32,9 +32,9 @@ For selective additional motivation [*], see the text below the table.
 - For POST requests, consider an async request/response model
 - That is: acknowledge receipt, process the transactions asynchronously
 - Complexity: API needs to be extended for reporting back the status of each record
+- For example: what happens when a validation error occurs on storing the submitted data
 - Consideration: performance gain (test)?
 - Consideration: when SDEP is down, this is not an issue => the entire transaction is rolled back => try again later
-- **Proposal**: for now, don't do
 
 **DIS 06**
 - Keep number of guests and country of guests as optional (in activity)?
