@@ -6,7 +6,7 @@ SDEP Netherlands:
 
 Overview:
 
-- [Quick start (local workstation)](#quick-start-local-workstation)
+- [Quick start](#quick-start)
 - [Background](#background)
 - [Main functionality](#main-functionality)
 - [Unit tests](#unit-tests)
@@ -14,7 +14,9 @@ Overview:
 - [Design](#design)
 - [Discussion](#discussion)
 
-## Quick start (local workstation)
+## Quick start
+
+On local workstation.
 
 **Pre-requistes**
 
