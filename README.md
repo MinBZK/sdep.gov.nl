@@ -21,6 +21,10 @@ Overview:
 - Docker installed
 - "jq" and "yq" installed
 
+**Clone this repo**
+
+To your local workstation.
+
 **Run SDEP fullstack** (incl. local infra)
 
 Start (postgres + keycloak + backend):
