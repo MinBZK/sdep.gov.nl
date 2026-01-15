@@ -77,7 +77,7 @@ async def validation_exception_handler(
         for error in exc.errors():
             errors.append(
                 ActivityErrorDetail(
-                    loc=error["loc"],
+                    loc=list(error["loc"]),
                     msg=error["msg"],
                     type=error["type"],
                 )

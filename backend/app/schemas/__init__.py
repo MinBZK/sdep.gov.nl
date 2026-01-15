@@ -1,3 +1,3 @@
 """Schemas package"""
 
-__all__ = ["handler"]
+__all__: list[str] = []

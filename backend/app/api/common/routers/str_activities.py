@@ -16,7 +16,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +47,7 @@ router = APIRouter(tags=["str"])
     description="""Submit activities (bulk) for the current authenticated platform (platformId).
 
 **ID Pattern:**
-- `activityId: provided by client as business identitifer (optional), otherwise generated as UUID (RFC 9562 compliant)
+- `activityId`: provided by client as business identitifer (optional), otherwise generated as UUID (RFC 9562 compliant)
 - `activityName` (optional): Human-readable name (max 128 chars)
 - `areaId` (required): Functional ID referencing existing area
 
@@ -57,7 +57,7 @@ router = APIRouter(tags=["str"])
 
 **Processing:**
 
-- Activities are processed independently using nested transactions (savepoints)
+- Activities are processed independently, typically using nested transactions (savepoints)
 - Each activity is validated and processed separately, allowing some to succeed while others can fail
 
 **Limiting:**
@@ -423,7 +423,7 @@ async def post_activities(
     request: Request,
     session: AsyncSession = Depends(get_async_db_manual_commit),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
-) -> ActivityProcessingResponse:
+) -> Response:
     """
     Submit rental activities for processing with partial success/failure support.
 
@@ -540,7 +540,7 @@ async def post_activities(
                 # Error location format: ('activities', index, 'field', ...) for activity errors
                 # or ('activities',) or ('metadata',) for top-level errors
                 if len(error["loc"]) >= 2 and error["loc"][0] == "activities":
-                    activity_index = error["loc"][1]
+                    activity_index = int(error["loc"][1])
                     if activity_index not in pydantic_errors_by_index:
                         pydantic_errors_by_index[activity_index] = []
                     pydantic_errors_by_index[activity_index].append(
@@ -680,7 +680,7 @@ async def post_activities(
                     try:
                         # Handle both 'Z' and timezone offset formats
                         return dt.fromisoformat(dt_str.replace("Z", "+00:00"))
-                    except:
+                    except Exception:
                         return dt_str  # Return as-is if parsing fails
 
                 # Prepare temporal data with parsed datetimes
@@ -701,12 +701,18 @@ async def post_activities(
                 activity_request = ActivityRequest.model_construct(
                     **{
                         **raw_data,
-                        "address": AddressRequest.model_construct(**address_data)
-                        if address_data
-                        else None,
-                        "temporal": TemporalRequest.model_construct(**temporal_parsed)
-                        if temporal_parsed
-                        else None,
+                        "address": (
+                            AddressRequest.model_construct(**address_data)
+                            if address_data
+                            else None
+                        ),
+                        "temporal": (
+                            TemporalRequest.model_construct(
+                                **temporal_parsed  # pyright: ignore[reportArgumentType]
+                            )
+                            if temporal_parsed
+                            else None
+                        ),
                     }
                 )
             else:
@@ -725,20 +731,20 @@ async def post_activities(
                             "city": activity_dict["address_city"],
                         },
                         "temporal": {
-                            "startDatetime": activity_dict[
-                                "temporal_start_date_time"
-                            ].isoformat()
-                            if isinstance(
-                                activity_dict["temporal_start_date_time"], datetime
-                            )
-                            else activity_dict["temporal_start_date_time"],
-                            "endDatetime": activity_dict[
-                                "temporal_end_date_time"
-                            ].isoformat()
-                            if isinstance(
-                                activity_dict["temporal_end_date_time"], datetime
-                            )
-                            else activity_dict["temporal_end_date_time"],
+                            "startDatetime": (
+                                activity_dict["temporal_start_date_time"].isoformat()
+                                if isinstance(
+                                    activity_dict["temporal_start_date_time"], datetime
+                                )
+                                else activity_dict["temporal_start_date_time"]
+                            ),
+                            "endDatetime": (
+                                activity_dict["temporal_end_date_time"].isoformat()
+                                if isinstance(
+                                    activity_dict["temporal_end_date_time"], datetime
+                                )
+                                else activity_dict["temporal_end_date_time"]
+                            ),
                         },
                         "areaId": activity_dict["area_id"],
                         "numberOfGuests": activity_dict.get("number_of_guests"),
@@ -778,18 +784,20 @@ async def post_activities(
                         "city": activity_dict["address_city"],
                     },
                     "temporal": {
-                        "startDatetime": activity_dict[
-                            "temporal_start_date_time"
-                        ].isoformat()
-                        if isinstance(
-                            activity_dict["temporal_start_date_time"], datetime
-                        )
-                        else activity_dict["temporal_start_date_time"],
-                        "endDatetime": activity_dict[
-                            "temporal_end_date_time"
-                        ].isoformat()
-                        if isinstance(activity_dict["temporal_end_date_time"], datetime)
-                        else activity_dict["temporal_end_date_time"],
+                        "startDatetime": (
+                            activity_dict["temporal_start_date_time"].isoformat()
+                            if isinstance(
+                                activity_dict["temporal_start_date_time"], datetime
+                            )
+                            else activity_dict["temporal_start_date_time"]
+                        ),
+                        "endDatetime": (
+                            activity_dict["temporal_end_date_time"].isoformat()
+                            if isinstance(
+                                activity_dict["temporal_end_date_time"], datetime
+                            )
+                            else activity_dict["temporal_end_date_time"]
+                        ),
                     },
                     "areaId": activity_dict["area_id"],
                     "numberOfGuests": activity_dict.get("number_of_guests"),

@@ -21,13 +21,11 @@ from app.security.headers import (
 )
 
 __all__ = [
-    # Bearer token authentication
+    "ApiSecurityHeadersMiddleware",
+    "SecurityHeadersMiddleware",
     "create_verify_bearer_token",
     "get_keycloak_public_key",
     "oauth2_scheme",
     "validate_jwt_token",
     "verify_bearer_token",
-    # Security headers middleware
-    "ApiSecurityHeadersMiddleware",
-    "SecurityHeadersMiddleware",
 ]

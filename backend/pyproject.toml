@@ -6,7 +6,7 @@ authors = [
     {name = "ICTU"}
 ]
 license = {text = "MIT"}
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"  # Pin to 3.13 until psycopg2-binary has wheels for 3.14
 keywords = ["fastapi", "pydantic", "sqlalchemy", "alembic"]
 
 classifiers = [
@@ -124,12 +124,17 @@ ignore = [
     "E712",  # avoid equality comparisons to False - needed for SQLAlchemy boolean queries
     "RUF012", # mutable class attributes
     "TC003", # datetime is needed at runtime for models
+    "B008",  # function call in argument defaults - standard FastAPI Depends() pattern
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
 "backend/app/schemas/*.py" = ["TCH002"]  # Allow third-party imports in runtime
+"app/schemas/*.py" = ["TCH002", "N815"]  # Allow runtime imports and camelCase for API contracts
 "**/test/**" = ["S101"]  # Allow assert statements in tests
+"app/api/v0/main.py" = ["E402"]  # Allow imports after app configuration
+"app/api/common/routers/str_activities.py" = ["TC002"]  # datetime needed at runtime
+"app/api/common/routers/*.py" = ["N803"]  # Path parameters must match URL (e.g., areaId)
 
 [tool.ruff.format]
 quote-style = "double"
@@ -139,6 +144,12 @@ line-ending = "auto"
 
 [tool.ty.environment]
 python-version = "3.13"
+
+# Ignore rules that produce false positives for Pydantic/FastAPI patterns
+[tool.ty.rules]
+invalid-argument-type = "ignore"  # Pydantic model_construct and FastAPI middleware patterns
+invalid-assignment = "ignore"     # FastAPI openapi override
+unused-ignore-comment = "ignore"  # Alembic generated code has type: ignore comments
 
 [tool.pyright]
 pythonVersion = "3.13"

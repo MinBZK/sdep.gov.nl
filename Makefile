@@ -197,7 +197,8 @@ keycloak-logs: ## Show keycloak logs
 backend-up: .build .clean-stale ## Start backend
 	@echo "🚀 Starting backend..."
 	docker compose up -d backend
-	@echo "✅ Backend started!"
+	@echo "✅ Backend started! "
+	@echo "Run 'make status' to explore URLs"
 
 backend-down: ## Stop and remove backend (including volumes)
 	@echo "🛑 Stopping backend..."
@@ -247,7 +248,6 @@ status: ## Show status
 	@set -a && source .env && set +a && \
 	printf "  %-30s %s\n" "Backend API docs:" "$$BACKEND_BASE_URL/api/v0/docs" && \
 	printf "  %-30s %s\n" "Backend health:" "$$BACKEND_BASE_URL/api/health" && \
-	printf "  %-30s %s\n" "Backend health (restore):" "$$BACKEND_BASE_URL/api/health-br" && \
 	printf "  %-30s %s\n" "Keycloak:" "$$KC_BASE_URL/admin"
 	@echo ""
 

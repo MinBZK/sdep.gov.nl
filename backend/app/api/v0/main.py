@@ -28,7 +28,7 @@ app_v0.openapi = create_custom_openapi(app_v0)
 
 # Register exception handlers for app_v0
 # This is needed for tests that use app_v0 directly
-from app.api.common.exception_handlers import register_exception_handlers  # noqa: E402
+from app.api.common.exception_handlers import register_exception_handlers
 
 register_exception_handlers(app_v0)
 

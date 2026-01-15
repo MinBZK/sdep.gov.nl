@@ -47,7 +47,7 @@ echo "Testing secured endpoints without authentication..."
 echo
 
 # Version-independent common endpoints - None currently require authentication
-# /api/health and /api/health-br are public health checks
+# /api/health is public health check
 
 # API v0 secured endpoints
 echo "Testing API v0 endpoints..."

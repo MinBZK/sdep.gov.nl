@@ -44,10 +44,10 @@ def replace_auto_generated_body_schemas(
             del schemas[old_name]
 
     # Replace references in paths
-    for path, path_item in openapi_schema.get("paths", {}).items():
-        for method, operation in path_item.items():
+    for _path, path_item in openapi_schema.get("paths", {}).items():
+        for _method, operation in path_item.items():
             if "requestBody" in operation:
-                for content_type, content in (
+                for _content_type, content in (
                     operation["requestBody"].get("content", {}).items()
                 ):
                     if "schema" in content and "$ref" in content["schema"]:

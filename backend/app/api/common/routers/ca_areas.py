@@ -16,7 +16,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,7 +56,7 @@ router = APIRouter(tags=["ca"])
 
 **Processing:**
 
-- Areas are processed independently using nested transactions (savepoints)
+- Areas are processed independently, typically using nested transactions (savepoints)
 - Each area is validated and processed separately, allowing some to succeed while others can fail
 
 **Limiting:**
@@ -298,7 +298,7 @@ async def post_areas(
     request: Request,
     session: AsyncSession = Depends(get_async_db_manual_commit),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
-) -> AreaProcessingResponse:
+) -> Response:
     """
     Submit areas for processing with partial success/failure support.
 
@@ -401,7 +401,7 @@ async def post_areas(
                 # Error location format: ('areas', index, 'field', ...) for area errors
                 # or ('areas',) or ('metadata',) for top-level errors
                 if len(error["loc"]) >= 2 and error["loc"][0] == "areas":
-                    area_index = error["loc"][1]
+                    area_index = int(error["loc"][1])
                     if area_index not in pydantic_errors_by_index:
                         pydantic_errors_by_index[area_index] = []
                     pydantic_errors_by_index[area_index].append(

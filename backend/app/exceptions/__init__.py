@@ -11,19 +11,15 @@ from .business import (
 from .validation import DataValidationError, FileValidationError, ValidationError
 
 __all__ = [
-    # Base
-    "SDEPError",
-    # Business
-    "BusinessLogicError",
-    "ResourceNotFoundError",
-    "DuplicateResourceError",
-    "InvalidOperationError",
-    # Validation
-    "ValidationError",
-    "FileValidationError",
-    "DataValidationError",
-    # Auth
     "AuthenticationError",
     "AuthorizationError",
+    "BusinessLogicError",
+    "DataValidationError",
+    "DuplicateResourceError",
+    "FileValidationError",
+    "InvalidOperationError",
     "InvalidTokenError",
+    "ResourceNotFoundError",
+    "SDEPError",
+    "ValidationError",
 ]

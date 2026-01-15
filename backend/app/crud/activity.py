@@ -172,16 +172,21 @@ async def get_by_activity_id(
     session: AsyncSession, activity_id: str
 ) -> Activity | None:
     """
-    Get an activity by functional ID.
+    Get an activity by functional ID (latest version).
 
     Args:
         session: Async database session
         activity_id: Activity functional ID
 
     Returns:
-        Activity instance or None if not found
+        Latest Activity instance for the given activity_id, or None if not found
     """
-    stmt = select(Activity).where(Activity.activity_id == activity_id)
+    stmt = (
+        select(Activity)
+        .where(Activity.activity_id == activity_id)
+        .order_by(Activity.created_at.desc())
+        .limit(1)
+    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 

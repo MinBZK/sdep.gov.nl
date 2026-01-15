@@ -1,7 +1,10 @@
 """Area model."""
 
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -15,6 +18,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.config import Base
+
+if TYPE_CHECKING:
+    from app.models.activity import Activity
+    from app.models.competent_authority import CompetentAuthority
 
 
 class Area(Base):
@@ -76,11 +83,11 @@ class Area(Base):
     )  # Always present, stored in UTC
 
     # References
-    competent_authority: Mapped["CompetentAuthority"] = relationship(
+    competent_authority: Mapped[CompetentAuthority] = relationship(
         "CompetentAuthority", back_populates="areas"
     )  # One to one (mandatory)
 
-    activities: Mapped[list["Activity"]] = relationship(
+    activities: Mapped[list[Activity]] = relationship(
         "Activity", back_populates="area"
     )  # Zero to many
 

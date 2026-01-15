@@ -11,8 +11,8 @@ Overview:
 - [Main functionality](#main-functionality)
 - [Unit tests](#unit-tests)
 - [Integration tests](#integration-tests)
-- [Documentation](#documentation)
-- [Discussion and decision log](#discussion-and-decision-log)
+- [Design](#design)
+- [Discussion](#discussion)
 
 ## Quick start (local workstation)
 
@@ -96,13 +96,13 @@ These deployments are out of scope of this project, contact SDEP NLD for more in
 
 https://sdep.gov.nl/api/v0/docs
 
-## Documentation
+## Design
 
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Datamodel](./docs/DATAMODEL.md)
 - [ID-management](./docs/IDS.md)
+- [Decision log](./docs/DECISIONS.md)
 
-## Discussion and decision log
+## Discussion
 
 - [Discussion log](./docs/DISCUSSIONS.md)
-- [Decision log](./docs/DECISIONS.md)

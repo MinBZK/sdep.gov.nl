@@ -55,18 +55,22 @@ async def get_by_platform_id(
     session: AsyncSession, platform_id: str
 ) -> Platform | None:
     """
-    Get a platform by platform_id string.
+    Get a platform by platform_id string (latest version).
 
     Args:
         session: Async database session
         platform_id: Platform ID string (e.g., "platform01")
 
     Returns:
-        Platform instance if found, None otherwise
+        Latest Platform instance for the given platform_id, or None if not found
     """
-    result = await session.execute(
-        select(Platform).where(Platform.platform_id == platform_id)
+    stmt = (
+        select(Platform)
+        .where(Platform.platform_id == platform_id)
+        .order_by(Platform.created_at.desc())
+        .limit(1)
     )
+    result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
 

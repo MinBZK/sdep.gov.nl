@@ -48,7 +48,7 @@ def get_keycloak_public_key() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Failed to fetch Keycloak public key: {e!s}",
-        )
+        ) from e
 
 
 def validate_jwt_token(token: str) -> dict[str, Any]:
@@ -90,25 +90,25 @@ def validate_jwt_token(token: str) -> dict[str, Any]:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
     except JWTClaimsError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token claims: {e!s}",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
     except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token: {e!s}",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
 
 
 def create_verify_bearer_token(

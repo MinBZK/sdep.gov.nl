@@ -20,7 +20,7 @@ class OAuth2ClientCredentials(OAuth2):
     from the Authorization header for the Client Credentials flow.
     """
 
-    async def __call__(self, request: Request) -> str:
+    async def __call__(self, request: Request) -> str | None:
         """Extract Bearer token from Authorization header.
 
         Args:

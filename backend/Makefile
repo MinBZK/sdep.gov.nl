@@ -84,6 +84,16 @@ show-postgres-full: .check-postgres ## Smoke test (full)
 
 ##@ Backend
 
+check: ## Format, lint, type check
+	@echo "🧪 Checking backend quality..."
+	uv run ruff format . ## Format code and auto-fix
+	uv run ruff format --check . ## Verify formatting is correct
+	uv run ruff check --select I --fix-only . ## Organize imports
+	uv run pyright . ## Check typing
+	uv run ruff check . ## Lint (check for errors and style issues)
+	uvx ty check ## Verify type completeness
+	@echo "✅ Quality check completed!"
+
 clean-stale: # Kill any stale uvicorn/backend processes
 	@echo "🧹 Cleaning stale backend processes..."
 	@# Method 1: Kill by process name pattern
@@ -165,33 +175,6 @@ test-coverage: ## Run tests with coverage report
 	@echo "🧪 Running tests with coverage..."
 	uv run python -m pytest -n auto --cov=app --cov-report=term-missing --cov-report=html --cov-report=xml
 	@echo "✅ Coverage tests completed! Coverage report in htmlcov/"
-
-##@ Code Quality
-
-format: ## Format the code and sort imports
-	@echo "✨ Formatting code..."
-	uv run ruff format .
-	uv run ruff check --select I --fix .
-	uv run ruff check --fix .
-	@echo "✅ Code formatted!"
-
-lint: ## Lint the code
-	@echo "🔍 Linting code..."
-	uv run ruff check --fix .
-	uv run ruff check --select I --fix .
-	@echo "✅ Linting completed!"
-
-typecheck: ## Type check the code
-	@echo "🔎 Type checking..."
-	uvx ty check
-	@echo "✅ Type checking completed!"
-
-check: ## Run all code quality checks (format, lint, type check)
-	@echo "🧪 Running backend quality checks..."
-	uv run ruff format . --check
-	uv run ruff check .
-	uvx ty check
-	@echo "✅ All checks completed!"
 
 ##@ Housekeeping
 

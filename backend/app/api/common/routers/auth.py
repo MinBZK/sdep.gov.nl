@@ -114,4 +114,4 @@ async def post_auth_token(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Failed to connect to Keycloak: {e!s}",
-        )
+        ) from e

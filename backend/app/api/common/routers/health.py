@@ -3,7 +3,6 @@
 from fastapi import APIRouter, Response, status
 from sqlalchemy import text
 
-from app.config import settings
 from app.db.config import create_async_session
 
 router = APIRouter(tags=["health"])
@@ -57,42 +56,3 @@ async def health(response: Response):
 
     # Return JSON response
     return {"database_available": database_available}
-
-
-@router.get(
-    "/health-br",
-    summary="Health check on backup/restore)",
-    description="Health check endpoint to verify if backup/restore status is OK",
-    operation_id="health-br",
-    include_in_schema=False,
-    responses={
-        200: {
-            "description": "Health check passed",
-            "content": {
-                "application/json": {"example": {"backup_restore_status": "OK"}}
-            },
-        },
-        422: {
-            "description": "Health check failed - backup/restore check failed",
-            "content": {
-                "application/json": {"example": {"backup_restore_status": "NOK"}}
-            },
-        },
-    },
-)
-async def health_br(response: Response):
-    """Health check endpoint to verify if backup/restore is OK"""
-
-    # Check backup/restore status
-    backup_restore_status = settings.BACKUP_RESTORE_STATUS
-
-    # Set HTTP status code based on backup/restore status
-    if backup_restore_status == "NOK":
-        response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
-    else:
-        response.status_code = status.HTTP_200_OK
-
-    # Return JSON response
-    return {
-        "backup_restore_status": backup_restore_status,
-    }

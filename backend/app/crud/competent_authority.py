@@ -134,17 +134,20 @@ async def get_by_competent_authority_id(
     competent_authority_id: str,
 ) -> CompetentAuthority | None:
     """
-    Get a competent authority by competent_authority_id (unique identifier).
+    Get a competent authority by competent_authority_id (latest version).
 
     Args:
         session: Async database session
-        competent_authority_id: Competent authority identifier (unique)
+        competent_authority_id: Competent authority identifier
 
     Returns:
-        CompetentAuthority instance or None if not found
+        Latest CompetentAuthority instance for the given competent_authority_id, or None if not found
     """
-    stmt = select(CompetentAuthority).where(
-        CompetentAuthority.competent_authority_id == competent_authority_id
+    stmt = (
+        select(CompetentAuthority)
+        .where(CompetentAuthority.competent_authority_id == competent_authority_id)
+        .order_by(CompetentAuthority.created_at.desc())
+        .limit(1)
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()

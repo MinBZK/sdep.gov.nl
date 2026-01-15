@@ -321,10 +321,10 @@ class TestActivityCRUD:
         """Test getting activities by platform_id (foreign key)."""
         # Arrange
         platform = await PlatformFactory.create_async(async_session)
-        act1 = await ActivityFactory.create_async(
+        _act1 = await ActivityFactory.create_async(
             async_session, platform_id=platform.id
         )
-        act2 = await ActivityFactory.create_async(
+        _act2 = await ActivityFactory.create_async(
             async_session, platform_id=platform.id
         )
 
@@ -349,8 +349,8 @@ class TestActivityCRUD:
         """Test getting activities by area_id (foreign key)."""
         # Arrange
         area = await AreaFactory.create_async(async_session)
-        act1 = await ActivityFactory.create_async(async_session, area_id=area.id)
-        act2 = await ActivityFactory.create_async(async_session, area_id=area.id)
+        _act1 = await ActivityFactory.create_async(async_session, area_id=area.id)
+        _act2 = await ActivityFactory.create_async(async_session, area_id=area.id)
 
         # Act
         results = await activity.get_by_area_id(async_session, area.id)
@@ -425,7 +425,7 @@ class TestActivityCRUD:
     async def test_get_by_activity_id(self, async_session: AsyncSession):
         """Test getting activity by functional activity_id (UUID)."""
         # Arrange
-        activity_id = "550e8400-e29b-41d4-a716-446655440000"
+        _activity_id = "550e8400-e29b-41d4-a716-446655440000"
         act = await ActivityFactory.create_async(async_session)
         # Store the auto-generated ID
         generated_id = act.activity_id

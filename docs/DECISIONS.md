@@ -25,7 +25,7 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 - Take shared, commonly supported design decisions
 - Implement changes quick, to stay agile
 - Use GitHub tags for initial versioning
-- Use API versioning later (once CAs and platforms are connected)
+- Use API versioning later (once competent authorities and platforms are connected)
 
 ## API
 

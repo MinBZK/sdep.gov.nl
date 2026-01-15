@@ -1,7 +1,12 @@
 """Centralized exception handler registration for FastAPI apps."""
 
+from typing import TYPE_CHECKING, cast
+
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
+
+if TYPE_CHECKING:
+    from starlette.types import ExceptionHandler
 
 from app.exceptions import (
     AuthenticationError,
@@ -32,17 +37,34 @@ def register_exception_handlers(app: FastAPI) -> None:
     Args:
         app: FastAPI application instance
     """
-    app.add_exception_handler(HTTPException, http_exception_handler)
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
-    app.add_exception_handler(ValidationError, app_validation_exception_handler)
-    app.add_exception_handler(BusinessLogicError, business_logic_exception_handler)
     app.add_exception_handler(
-        ResourceNotFoundError, resource_not_found_exception_handler
+        HTTPException, cast("ExceptionHandler", http_exception_handler)
     )
-    app.add_exception_handler(AuthenticationError, authentication_exception_handler)
-    app.add_exception_handler(AuthorizationError, authorization_exception_handler)
-    app.add_exception_handler(InvalidTokenError, authentication_exception_handler)
-    app.add_exception_handler(Exception, general_exception_handler)
+    app.add_exception_handler(
+        RequestValidationError, cast("ExceptionHandler", validation_exception_handler)
+    )
+    app.add_exception_handler(
+        ValidationError, cast("ExceptionHandler", app_validation_exception_handler)
+    )
+    app.add_exception_handler(
+        BusinessLogicError, cast("ExceptionHandler", business_logic_exception_handler)
+    )
+    app.add_exception_handler(
+        ResourceNotFoundError,
+        cast("ExceptionHandler", resource_not_found_exception_handler),
+    )
+    app.add_exception_handler(
+        AuthenticationError, cast("ExceptionHandler", authentication_exception_handler)
+    )
+    app.add_exception_handler(
+        AuthorizationError, cast("ExceptionHandler", authorization_exception_handler)
+    )
+    app.add_exception_handler(
+        InvalidTokenError, cast("ExceptionHandler", authentication_exception_handler)
+    )
+    app.add_exception_handler(
+        Exception, cast("ExceptionHandler", general_exception_handler)
+    )
 
 
 __all__ = ["register_exception_handlers"]

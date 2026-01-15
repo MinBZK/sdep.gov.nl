@@ -733,7 +733,7 @@ class TestStrAreaAPI:
     ):
         """Test GET /str/areas/{areaId} returns correct area when multiple exist."""
         # Arrange
-        area1 = await AreaFactory.create_async(
+        _area1 = await AreaFactory.create_async(
             async_session,
             competent_authority_id=competent_authority.id,
             filename="area1.zip",
@@ -745,7 +745,7 @@ class TestStrAreaAPI:
             filename="area2.zip",
             filedata=b"data2",
         )
-        area3 = await AreaFactory.create_async(
+        _area3 = await AreaFactory.create_async(
             async_session,
             competent_authority_id=competent_authority.id,
             filename="area3.zip",

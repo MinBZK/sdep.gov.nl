@@ -1,3 +1,3 @@
 """Common API utilities and routers"""
 
-__all__ = ["routers", "security"]
+__all__: list[str] = []

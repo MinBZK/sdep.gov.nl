@@ -1,5 +1,7 @@
 """Factory definitions for test data generation using factory_boy."""
 
+# pyright: reportPrivateImportUsage=false
+
 from datetime import datetime, timedelta
 
 import factory
@@ -9,7 +11,7 @@ from app.models.area import Area
 from app.models.competent_authority import CompetentAuthority
 from app.models.platform import Platform
 from app.models.temporal import Temporal
-from factory import Faker
+from factory.faker import Faker
 from sqlalchemy.ext.asyncio import AsyncSession
 
 

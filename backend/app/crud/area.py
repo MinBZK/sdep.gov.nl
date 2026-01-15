@@ -140,16 +140,21 @@ async def get_by_id(session: AsyncSession, area_id: int) -> Area | None:
 
 async def get_by_area_id(session: AsyncSession, area_id: str) -> Area | None:
     """
-    Get an area by functional ID.
+    Get an area by functional ID (latest version).
 
     Args:
         session: Async database session
         area_id: Area functional ID (UUID string)
 
     Returns:
-        Area instance or None if not found
+        Latest Area instance for the given area_id, or None if not found
     """
-    stmt = select(Area).where(Area.area_id == area_id)
+    stmt = (
+        select(Area)
+        .where(Area.area_id == area_id)
+        .order_by(Area.created_at.desc())
+        .limit(1)
+    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 

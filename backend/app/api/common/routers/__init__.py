@@ -1,3 +1,3 @@
 """Common routers package"""
 
-__all__ = ["auth", "health", "ping"]
+__all__: list[str] = []

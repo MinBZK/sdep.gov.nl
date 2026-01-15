@@ -150,7 +150,7 @@ class TestActivityService:
         # Need to refresh to get the competent_authority relationship loaded
         await async_session.refresh(area, ["competent_authority"])
 
-        existing_platform = await PlatformFactory.create_async(
+        _existing_platform = await PlatformFactory.create_async(
             async_session,
             platform_id="existing_platform",
             platform_name="Existing Platform",
@@ -450,7 +450,7 @@ class TestActivityService:
             platform_id="platform01",
             platform_name="Test Platform",
         )
-        activity = await ActivityFactory.create_async(
+        _activity = await ActivityFactory.create_async(
             async_session,
             url="http://example.com/listing-1",
             area_id=area.id,

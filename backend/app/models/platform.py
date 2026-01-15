@@ -1,11 +1,17 @@
 """Platform model."""
 
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.config import Base
+
+if TYPE_CHECKING:
+    from app.models.activity import Activity
 
 
 class Platform(Base):
@@ -43,7 +49,7 @@ class Platform(Base):
     )  # Always present
 
     # Relationships
-    activities: Mapped[list["Activity"]] = relationship(
+    activities: Mapped[list[Activity]] = relationship(
         "Activity", back_populates="platform"
     )  # One to many (0..n)
 

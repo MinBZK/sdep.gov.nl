@@ -55,6 +55,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       network: host
+      # Use public Docker Hub image for local development (avoids dependency on custom image registry)
+      args:
+        PYTHON_IMAGE: python:3.13-slim
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -64,7 +67,6 @@ services:
     ports:
       - "${BACKEND_PORT}:8000"
     environment:
-      # IMAGE_TAG: ${IMAGE_TAG:-undefined}
       KC_BASE_URL: ${BACKEND_KC_BASE_URL}
       POSTGRES_HOST: ${POSTGRES_CONTAINER_NAME}
       POSTGRES_PORT: 5432

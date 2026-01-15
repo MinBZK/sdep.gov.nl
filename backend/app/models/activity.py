@@ -1,8 +1,11 @@
 """Activity model."""
 
+from __future__ import annotations
+
 import json
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -17,6 +20,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, composite, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.area import Area
+    from app.models.platform import Platform
 
 from app.db.config import Base
 from app.models.address import Address
@@ -165,11 +172,11 @@ class Activity(Base):
     )
 
     # References
-    area: Mapped["Area"] = relationship(
+    area: Mapped[Area] = relationship(
         "Area", back_populates="activities"
     )  # Zero to many to one (mandatory)
 
-    platform: Mapped["Platform"] = relationship(
+    platform: Mapped[Platform] = relationship(
         "Platform", back_populates="activities"
     )  # Zero to many to one (mandatory)
 

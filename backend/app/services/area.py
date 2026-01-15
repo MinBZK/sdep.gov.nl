@@ -297,7 +297,7 @@ async def process_area_list(
         else:
             valid_indices.append(idx)
 
-    # PHASE 2: Process valid areas using nested transactions (savepoints)
+    # PHASE 2: Process valid areas, typically using nested transactions (savepoints)
     # Each area processes in its own savepoint
     # NOTE: Savepoints only protect against individual area failures.
     # If system crashes before API commit, ALL savepoints are rolled back.

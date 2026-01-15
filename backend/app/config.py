@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Settings priority:
@@ -35,18 +35,6 @@ class Settings(BaseSettings):
         default="undefined",
         description="Image tag from container build",
     )
-    BACKUP_RESTORE_STATUS: str = Field(
-        default="undefined",
-        description="Current backup/restore status",
-    )
-
-    @field_validator("IMAGE_TAG", "BACKUP_RESTORE_STATUS", mode="before")
-    @classmethod
-    def empty_string_to_default(cls, v: str | None, info) -> str:
-        """Convert empty strings to 'undefined' for optional fields."""
-        if v == "" or v is None:
-            return "undefined"
-        return v
 
     # Backend settings
     BACKEND_BASE_URL: str = Field(

@@ -230,7 +230,7 @@ async def process_activity_list(
         else:
             valid_indices.append(idx)
 
-    # PHASE 2: Process valid activities using nested transactions (savepoints)
+    # PHASE 2: Process valid activities, typically using nested transactions (savepoints)
     # Each activity processes in its own savepoint
     # NOTE: Savepoints only protect against individual activity failures.
     # If system crashes before API commit, ALL savepoints are rolled back.

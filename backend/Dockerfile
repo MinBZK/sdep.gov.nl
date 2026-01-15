@@ -4,7 +4,10 @@
 
 # -- Stage 1 - prepare
 
-FROM python:3.13-slim AS builder
+# Default to public Docker Hub image, can be overridden with --build-arg to refer to a custom image registry (such as Harbor)
+ARG PYTHON_IMAGE=python:3.13-slim
+
+FROM ${PYTHON_IMAGE} AS builder
 LABEL "maintainer"="ICTU"
 
 # The installer requires curl (and certificates) to download the release archive
@@ -53,7 +56,7 @@ RUN uv sync --frozen --no-install-project
 
 # -- Stage 2 - runtime (final image with build artifacts and without source code)
 
-FROM python:3.13-slim
+FROM ${PYTHON_IMAGE}
 
 # Pass IMAGE_TAG (injected from build environment/pipeline)
 ARG IMAGE_TAG
