@@ -20,6 +20,7 @@ Overview:
 
 - Docker installed
 - "jq" and "yq" installed
+- "make" installed
 
 **Clone this repo**
 
