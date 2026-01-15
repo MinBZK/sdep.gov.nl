@@ -160,7 +160,7 @@ sdep-app/
 │   ├── Datamodel.drawio          # Data model diagram (draw.io)
 │   ├── Datamodel.svg             # Data model diagram (SVG)
 │   ├── Datamodel.json            # Data model metadata
-│   ├── DECISIONS.md              # Decision log
+│   ├── DESIGN.md              # Decision log
 │   ├── DISCUSSIONS.md            # Discussion log
 │   ├── IDS.md                    # ID management design
 │
