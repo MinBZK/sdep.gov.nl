@@ -28,9 +28,9 @@ On local workstation.
 
 To your local workstation.
 
-**Run SDEP fullstack** (incl. local infra)
+**Run SDEP fullstack**
 
-Start (postgres + keycloak + backend):
+Incl. local infra (postgres + keycloak + backend):
 ```
 make up
 ```
@@ -54,7 +54,9 @@ Authorize in Swagger UI:
 Explore endpoints in your current role (ca, str).
 
 
-**Run SDEP backend only** (without local infra)
+**Run SDEP backend only**
+
+Excl. local infra:
 ```
 cd backend
 make up
@@ -105,12 +107,12 @@ https://sdep.gov.nl/api/v0/docs
 
 ## Design
 
-- [Architecture](./docs/ARCHITECTURE.md)
 - [Datamodel](./docs/DATAMODEL.md)
-- [ID-management](./docs/IDS.md)
+- [Architecture](./docs/ARCHITECTURE.md)
 - [Design log](./docs/DESIGN.md)
 
 ## Discussion
 
 - [Approach](./docs/APPROACH.md)
+- [Limitations](./docs/LIMITATIONS.md)
 - [Discussion log](./docs/DISCUSSIONS.md)

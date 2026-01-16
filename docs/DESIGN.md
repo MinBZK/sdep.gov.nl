@@ -1,6 +1,6 @@
 <h1>Design log</h1>
 
-**Keep the API as simple and concise as possible**.
+In general, **keep the API as simple and concise as possible**.
 
 *REST APIs are one of the most common kinds of web interfaces available today. Therefore, it's very important to design REST APIs properly so that we won't run into problems down the road.*
 
@@ -10,7 +10,7 @@
 
 https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
-**Table of content**
+<h2>Table of Contents</h2>
 
 - [API](#api)
 - [Security](#security)
