@@ -11,7 +11,7 @@ from fastapi import status
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import AreaFactory, CompetentAuthorityFactory
+from tests.fixtures.factories import AreaFactory, CompetentAuthorityFactory
 
 
 def mock_verify_bearer_token() -> dict[str, Any]:

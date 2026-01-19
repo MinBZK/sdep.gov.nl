@@ -6,7 +6,7 @@ import pytest
 from app.services import activity as activity_service
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import (
+from tests.fixtures.factories import (
     ActivityFactory,
     AreaFactory,
     PlatformFactory,

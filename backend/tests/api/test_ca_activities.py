@@ -11,7 +11,7 @@ from fastapi import status
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import (
+from tests.fixtures.factories import (
     ActivityFactory,
     AreaFactory,
     CompetentAuthorityFactory,

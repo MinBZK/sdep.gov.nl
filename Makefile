@@ -281,13 +281,13 @@ test-security: .check-client-credentials .is-up ## Test security (headers, unaut
 	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
 	echo "Testing security headers..." && \
-	./test/auth_headers.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/auth_headers.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "" && \
 	echo "Testing unauthorized access..." && \
-	./test/auth_unauthorized.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/auth_unauthorized.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "" && \
 	echo "Testing credentials..." && \
-	./test/auth_credentials.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/auth_credentials.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ Security tested"
 
 test-ca: .check-client-credentials .is-up ## Test CA endpoints
@@ -297,15 +297,15 @@ test-ca: .check-client-credentials .is-up ## Test CA endpoints
 	echo "🏛️  Testing CA endpoints..." && \
 	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
-	if CLIENT_ID=$$CA_CLIENT_ID CLIENT_SECRET=$$CA_CLIENT_SECRET ./test/auth_client.sh; then \
+	if CLIENT_ID=$$CA_CLIENT_ID CLIENT_SECRET=$$CA_CLIENT_SECRET ./tests/auth_client.sh; then \
 		echo "✅ CA client authorized"; \
 	else \
 		echo "❌ CA client authorization failed"; \
 		exit 1; \
 	fi && \
-	./test/health_ping.sh 2>&1 | tee $$OUTPUT_FILE && \
-	./test/ca_areas.sh 2>&1 | tee $$OUTPUT_FILE && \
-	./test/ca_activities.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/health_ping.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/ca_areas.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/ca_activities.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ CA endpoints tested"
 
 test-str: .check-client-credentials .is-up ## Test STR endpoints
@@ -315,15 +315,15 @@ test-str: .check-client-credentials .is-up ## Test STR endpoints
 	echo "🏘️  Testing STR endpoints..." && \
 	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
-	if CLIENT_ID=$$STR_CLIENT_ID CLIENT_SECRET=$$STR_CLIENT_SECRET ./test/auth_client.sh; then \
+	if CLIENT_ID=$$STR_CLIENT_ID CLIENT_SECRET=$$STR_CLIENT_SECRET ./tests/auth_client.sh; then \
 		echo "✅ STR client authorized"; \
 	else \
 		echo "❌ STR client authorization failed"; \
 		exit 1; \
 	fi && \
-	./test/health_ping.sh 2>&1 | tee $$OUTPUT_FILE && \
-	./test/str_areas.sh 2>&1 | tee $$OUTPUT_FILE && \
-	./test/str_activities.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/health_ping.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/str_areas.sh 2>&1 | tee $$OUTPUT_FILE && \
+	./tests/str_activities.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ STR endpoints tested"
 
 test-verbose: .check-client-credentials .is-up ## Test all (verbose)

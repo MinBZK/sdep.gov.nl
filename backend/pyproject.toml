@@ -131,7 +131,7 @@ ignore = [
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
 "backend/app/schemas/*.py" = ["TCH002"]  # Allow third-party imports in runtime
 "app/schemas/*.py" = ["TCH002", "N815"]  # Allow runtime imports and camelCase for API contracts
-"**/test/**" = ["S101"]  # Allow assert statements in tests
+"**/tests/**" = ["S101"]  # Allow assert statements in tests
 "app/api/v0/main.py" = ["E402"]  # Allow imports after app configuration
 "app/api/common/routers/str_activities.py" = ["TC002"]  # datetime needed at runtime
 "app/api/common/routers/*.py" = ["N803"]  # Path parameters must match URL (e.g., areaId)
@@ -166,7 +166,7 @@ reportUnusedImport = true
 reportUnusedVariable = true
 
 [tool.pytest.ini_options]
-testpaths = ["test"]
+testpaths = ["tests"]
 pythonpath = ["."]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -211,12 +211,12 @@ env = [
 [tool.coverage.run]
 source = ["app"]
 omit = [
-    "*/test/*",
+    "*/tests/*",
     "*/migrations/*",
     "*/__pycache__/*",
     "*/venv/*",
     "*/.venv/*",
-    "app/test/*",
+    "app/tests/*",
     "alembic/*",
     "*/__init__.py",
     "*/orm_integration.py",

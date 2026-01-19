@@ -126,6 +126,7 @@ up: clean-stale ## Start backend
 		exit 1; \
 	fi
 	@echo "🚀 Starting backend..."
+	@echo "API docs running at http://localhost:8000/api/v0/docs"
 	uv run uvicorn app.main:app --reload --no-server-header
 	@echo "✅ Backend started!"
 
@@ -143,22 +144,22 @@ down: ## Stop backend
 
 test-crud: ## Run CRUD tests only
 	@echo "🧪 Running CRUD tests..."
-	uv run python -m pytest test/crud/ -n auto
+	uv run python -m pytest tests/crud/ -n auto
 	@echo "✅ CRUD tests completed!"
 
 test-services: ## Run service tests only
 	@echo "🧪 Running service tests..."
-	uv run python -m pytest test/services/ -n auto
+	uv run python -m pytest tests/services/ -n auto
 	@echo "✅ Service tests completed!"
 
 test-api: ## Run API tests only
 	@echo "🧪 Running API tests..."
-	uv run python -m pytest test/api/ -n auto
+	uv run python -m pytest tests/api/ -n auto
 	@echo "✅ API tests completed!"
 
 test-security: ## Run security tests only
 	@echo "🧪 Running security tests..."
-	uv run python -m pytest test/security/ -n auto
+	uv run python -m pytest tests/security/ -n auto
 	@echo "✅ Security tests completed!"
 
 test-verbose: ## Run all tests

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # OS settings
     DTAP: str = Field(
         default="DEV",
-        description="DTAP environment (DEV/TEST/ACC/PROD)",
+        description="DTAP environment (DEV/tests/ACC/PROD)",
     )
     IMAGE_TAG: str = Field(
         default="undefined",

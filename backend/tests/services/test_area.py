@@ -4,7 +4,7 @@ import pytest
 from app.services import area
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import AreaFactory
+from tests.fixtures.factories import AreaFactory
 
 
 @pytest.mark.database

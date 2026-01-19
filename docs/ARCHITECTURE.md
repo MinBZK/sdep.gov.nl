@@ -21,8 +21,8 @@ This document provides an overview of the SDEP (Single Digital Entry Point) proj
   - [Health](#health)
 - [Development Workflow](#development-workflow)
 - [Testing Strategy](#testing-strategy)
-  - [Unit Tests (`backend/test/`)](#unit-tests-backendtest)
-  - [Integration Tests (`test/`)](#integration-tests-test)
+  - [Unit Tests (`backend/tests/`)](#unit-tests-backendtest)
+  - [Integration Tests (`tests/`)](#integration-tests-test)
   - [Test Coverage](#test-coverage)
 - [Key Configuration Files](#key-configuration-files)
 - [Authentication \& Authorization](#authentication-authorization)
@@ -113,7 +113,7 @@ sdep-app/
 │   │   └── main.py               # Application entry point
 │   ├── alembic/                  # Database migrations
 │   │   └── versions/             # Migration scripts
-│   ├── test/                     # Unit tests (mirrors app/ structure)
+│   ├── tests/                     # Unit tests (mirrors app/ structure)
 │   │   ├── api/
 │   │   ├── crud/
 │   │   ├── fixtures/
@@ -125,7 +125,7 @@ sdep-app/
 │   ├── pyproject.toml            # Python project configuration (uv/pip)
 │   └── uv.lock                   # Locked dependencies
 │
-├── test/                         # Integration tests (shell scripts)
+├── tests/                         # Integration tests (shell scripts)
 │   ├── auth_client.sh            # OAuth2 token acquisition utility
 │   ├── auth_credentials.sh       # Test client credentials flow
 │   ├── auth_headers.sh           # Security headers compliance
@@ -236,14 +236,14 @@ make
 
 ## Testing Strategy
 
-### Unit Tests (`backend/test/`)
+### Unit Tests (`backend/tests/`)
 - pytest with parallel execution (`-n auto`)
 - Async test support
 - Fixtures for database and authentication
 - Code coverage tracking
 - **Run:** `cd backend && make test`
 
-### Integration Tests (`test/`)
+### Integration Tests (`tests/`)
 - Shell scripts using curl
 - Test OAuth2 flows
 - Test API endpoints
@@ -253,7 +253,7 @@ make
 - **Run:** `make test`
 
 ### Test Coverage
-See [test/README.md](../test/README.md) for detailed test documentation.
+See [tests/README.md](../tests/README.md) for detailed test documentation.
 
 ## Key Configuration Files
 

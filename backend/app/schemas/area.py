@@ -4,7 +4,20 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
+from typing import Annotated
+
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_serializer
+
+
+def empty_string_to_none(v: str | None) -> str | None:
+    """Convert empty string to None for optional ID fields.
+
+    This allows clients to send "" instead of omitting the field,
+    and the ID will be auto-generated as UUID downstream.
+    """
+    if v == "":
+        return None
+    return v
 
 
 class AreaRequest(BaseModel):
@@ -41,7 +54,7 @@ class AreaRequest(BaseModel):
         populate_by_name=True,
     )
 
-    area_id: str | None = Field(
+    area_id: Annotated[str | None, BeforeValidator(empty_string_to_none)] = Field(
         None,
         alias="areaId",
         min_length=1,

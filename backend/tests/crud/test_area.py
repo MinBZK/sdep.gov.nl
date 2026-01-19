@@ -6,7 +6,7 @@ import pytest
 from app.crud import area
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import AreaFactory, CompetentAuthorityFactory
+from tests.fixtures.factories import AreaFactory, CompetentAuthorityFactory
 
 
 @pytest.mark.database

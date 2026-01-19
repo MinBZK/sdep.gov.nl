@@ -8,6 +8,7 @@ from typing import Annotated
 from pydantic import (
     AfterValidator,
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     field_validator,
@@ -19,6 +20,17 @@ def validate_year_ge_2025(v: datetime) -> datetime:
     """Validate that datetime year is >= 2025."""
     if v.year < 2025:
         raise ValueError("Start datetime year must be >= 2025")
+    return v
+
+
+def empty_string_to_none(v: str | None) -> str | None:
+    """Convert empty string to None for optional ID fields.
+
+    This allows clients to send "" instead of omitting the field,
+    and the ID will be auto-generated as UUID downstream.
+    """
+    if v == "":
+        return None
     return v
 
 
@@ -164,7 +176,7 @@ class ActivityRequest(BaseModel):
         populate_by_name=True,  # Allow both snake_case and camelCase
     )
 
-    activity_id: str | None = Field(
+    activity_id: Annotated[str | None, BeforeValidator(empty_string_to_none)] = Field(
         None,
         alias="activityId",
         min_length=1,

@@ -7,7 +7,7 @@ from app.crud import platform
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import PlatformFactory
+from tests.fixtures.factories import PlatformFactory
 
 
 @pytest.mark.database

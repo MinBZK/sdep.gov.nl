@@ -93,7 +93,7 @@ make test-verbose
 
 ## Integration tests
 
-Fullstack, using this [coverage](./test/README.md):
+Fullstack, using this [coverage](./tests/README.md):
 ```
 make test
 make test-verbose

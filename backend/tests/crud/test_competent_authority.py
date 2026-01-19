@@ -6,7 +6,7 @@ import pytest
 from app.crud import competent_authority
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from test.fixtures.factories import CompetentAuthorityFactory
+from tests.fixtures.factories import CompetentAuthorityFactory
 
 
 @pytest.mark.database

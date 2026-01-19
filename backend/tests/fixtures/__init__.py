@@ -1,6 +1,6 @@
 """Test fixtures and factories."""
 
-from test.fixtures.factories import (
+from tests.fixtures.factories import (
     AddressFactory,
     AreaFactory,
     PlatformFactory,
