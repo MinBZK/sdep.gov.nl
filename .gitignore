@@ -345,7 +345,6 @@ htmlcov/
 
 # Claude
 **/settings.local.json
-**/CLAUDE.md
 
 # Test
 .bearer_token
