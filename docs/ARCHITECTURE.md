@@ -21,8 +21,8 @@ This document provides an overview of the SDEP (Single Digital Entry Point) proj
   - [Health](#health)
 - [Development Workflow](#development-workflow)
 - [Testing Strategy](#testing-strategy)
-  - [Unit Tests (`backend/tests/`)](#unit-tests-backendtest)
-  - [Integration Tests (`tests/`)](#integration-tests-test)
+  - [Unit Tests (`backend/tests/`)](#unit-tests-backendtests)
+  - [Integration Tests (`tests/`)](#integration-tests-tests)
   - [Test Coverage](#test-coverage)
 - [Key Configuration Files](#key-configuration-files)
 - [Authentication \& Authorization](#authentication-authorization)
@@ -66,111 +66,128 @@ SDEP is a FastAPI-based REST API that enables:
 
 ```
 sdep-app/
-├── backend/                      # Python FastAPI application
-│   ├── app/                      # Application code
-│   │   ├── api/                  # API layer (routers, endpoints)
-│   │   │   ├── common/           # Shared API components
-│   │   │   │   ├── routers/      # API routers (health, auth, areas, activities)
+├── backend/                       # Python FastAPI application
+│   ├── app/                       # Application code
+│   │   ├── api/                   # API layer (routers, endpoints)
+│   │   │   ├── common/            # Shared API components
+│   │   │   │   ├── routers/       # API routers
+│   │   │   │   │   ├── auth.py          # Authentication router
+│   │   │   │   │   ├── ca_activities.py # CA activity endpoints
+│   │   │   │   │   ├── ca_areas.py      # CA area endpoints
+│   │   │   │   │   ├── health.py        # Health check router
+│   │   │   │   │   ├── ping.py          # Ping endpoint
+│   │   │   │   │   ├── str_activities.py # STR activity endpoints
+│   │   │   │   │   └── str_areas.py     # STR area endpoints
 │   │   │   │   ├── exception_handlers.py
 │   │   │   │   ├── openapi.py
 │   │   │   │   └── security.py
-│   │   │   └── v0/               # API version 0
-│   │   │       └── main.py       # API v0 entry point
-│   │   ├── crud/                 # Database operations (Create, Read, Update, Delete)
+│   │   │   └── v0/                # API version 0
+│   │   │       ├── main.py        # API v0 entry point
+│   │   │       └── security.py    # v0 security configuration
+│   │   ├── crud/                  # Database operations (CRUD)
 │   │   │   ├── activity.py
 │   │   │   ├── area.py
 │   │   │   ├── competent_authority.py
 │   │   │   └── platform.py
-│   │   ├── db/                   # Database configuration
-│   │   │   └── config.py         # Database session management
-│   │   ├── exceptions/           # Custom exceptions
-│   │   │   ├── auth.py           # Authentication exceptions
-│   │   │   ├── base.py           # Base exception classes
-│   │   │   ├── business.py       # Business logic exceptions
-│   │   │   ├── handlers.py       # Exception handlers
-│   │   │   └── validation.py     # Validation exceptions
-│   │   ├── models/               # SQLAlchemy ORM models
+│   │   ├── db/                    # Database configuration
+│   │   │   └── config.py          # Database session management
+│   │   ├── exceptions/            # Custom exceptions
+│   │   │   ├── auth.py            # Authentication exceptions
+│   │   │   ├── base.py            # Base exception classes
+│   │   │   ├── business.py        # Business logic exceptions
+│   │   │   ├── handlers.py        # Exception handlers
+│   │   │   └── validation.py      # Validation exceptions
+│   │   ├── models/                # SQLAlchemy ORM models
 │   │   │   ├── activity.py
 │   │   │   ├── address.py
 │   │   │   ├── area.py
 │   │   │   ├── competent_authority.py
 │   │   │   ├── platform.py
 │   │   │   └── temporal.py
-│   │   ├── schemas/              # Pydantic schemas (request/response models)
+│   │   ├── schemas/               # Pydantic schemas (request/response)
 │   │   │   ├── activity.py
 │   │   │   ├── area.py
 │   │   │   ├── auth.py
 │   │   │   ├── error.py
 │   │   │   ├── health.py
 │   │   │   └── validation.py
-│   │   ├── security/             # Security utilities
-│   │   │   ├── bearer.py         # Bearer token handling
-│   │   │   └── headers.py        # Security headers
-│   │   ├── services/             # Business logic layer
+│   │   ├── security/              # Security utilities
+│   │   │   ├── bearer.py          # Bearer token handling
+│   │   │   └── headers.py         # Security headers
+│   │   ├── services/              # Business logic layer
 │   │   │   ├── activity.py
 │   │   │   └── area.py
-│   │   ├── config.py             # Application configuration
-│   │   └── main.py               # Application entry point
-│   ├── alembic/                  # Database migrations
-│   │   └── versions/             # Migration scripts
+│   │   ├── config.py              # Application configuration
+│   │   └── main.py                # Application entry point
+│   ├── alembic/                   # Database migrations
+│   │   ├── env.py                 # Alembic environment config
+│   │   └── versions/              # Migration scripts
+│   │       └── 001_initial.py     # Initial migration
 │   ├── tests/                     # Unit tests (mirrors app/ structure)
-│   │   ├── api/
-│   │   ├── crud/
-│   │   ├── fixtures/
-│   │   ├── security/
-│   │   └── services/
-│   ├── alembic.ini               # Alembic configuration
-│   ├── Dockerfile                # Backend container image
-│   ├── Makefile                  # Backend-specific make targets
-│   ├── pyproject.toml            # Python project configuration (uv/pip)
-│   └── uv.lock                   # Locked dependencies
+│   │   ├── api/                   # API layer tests
+│   │   ├── crud/                  # CRUD layer tests
+│   │   ├── fixtures/              # Test fixtures and factories
+│   │   ├── security/              # Security tests
+│   │   ├── services/              # Service layer tests
+│   │   └── conftest.py            # pytest configuration
+│   ├── alembic.ini                # Alembic configuration
+│   ├── Dockerfile                 # Backend container image
+│   ├── Makefile                   # Backend-specific make targets
+│   ├── pyproject.toml             # Python project configuration (uv)
+│   └── uv.lock                    # Locked dependencies
 │
 ├── tests/                         # Integration tests (shell scripts)
-│   ├── auth_client.sh            # OAuth2 token acquisition utility
-│   ├── auth_credentials.sh       # Test client credentials flow
-│   ├── auth_headers.sh           # Security headers compliance
-│   ├── auth_unauthorized.sh      # Test unauthorized access rejection
-│   ├── ca_activities.sh          # Test CA activity endpoints
-│   ├── ca_areas.sh               # Test CA area submission
-│   ├── health_ping.sh            # Health check tests
-│   ├── str_activities.sh         # Test STR activity submission
-│   ├── str_areas.sh              # Test STR area query endpoints
-│   └── README.md                 # Test documentation
+│   ├── auth_client.sh             # OAuth2 token acquisition utility
+│   ├── auth_credentials.sh        # Test client credentials flow
+│   ├── auth_headers.sh            # Security headers compliance
+│   ├── auth_unauthorized.sh       # Test unauthorized access rejection
+│   ├── ca_activities.sh           # Test CA activity endpoints
+│   ├── ca_areas.sh                # Test CA area submission
+│   ├── health_ping.sh             # Health check tests
+│   ├── str_activities.sh          # Test STR activity submission
+│   ├── str_areas.sh               # Test STR area query endpoints
+│   └── README.md                  # Test documentation
 │
-├── keycloak/                     # Keycloak configuration
-│   ├── add-realm-admin.sh        # Create realm admin user
-│   ├── add-realm-clients.sh      # Configure OAuth2 clients
-│   ├── add-realm-roles.sh        # Configure roles
-│   ├── add-realm.sh              # Initialize realm
-│   ├── clients.yaml              # Client definitions (CA, STR)
-│   ├── roles.yaml                # Role definitions
-│   └── wait.sh                   # Wait for Keycloak startup
+├── keycloak/                      # Keycloak configuration
+│   ├── add-realm-admin.sh         # Create realm admin user
+│   ├── add-realm-clients.sh       # Configure OAuth2 clients
+│   ├── add-realm-roles.sh         # Configure roles
+│   ├── add-realm.sh               # Initialize realm
+│   ├── clients.yaml               # Client definitions (CA, STR)
+│   ├── roles.yaml                 # Role definitions
+│   └── wait.sh                    # Wait for Keycloak startup
 │
-├── postgres/                     # PostgreSQL initialization
-│   ├── init-keycloak.sql         # Keycloak database setup
-│   ├── init-sdep.sql             # SDEP database setup
-│   └── clean.sql                 # Database cleanup
+├── postgres/                      # PostgreSQL initialization
+│   ├── clean.sql                  # Database cleanup
+│   ├── init-keycloak.sql          # Keycloak database setup
+│   └── init-sdep.sql              # SDEP database setup
 │
-├── test-data/                    # Test data for integration tests
-│   └── *.sql                     # SQL data fixtures
+├── test-data/                     # Test data for integration tests
+│   ├── 01-competent-authority.sql # Competent authority fixtures
+│   ├── 02-area-generated.sql      # Generated area data
+│   └── generate-area-sql.sh       # Area data generator script
 │
-├── docs/                         # Documentation
-│   ├── ARCHITECTURE.md           # Architecture overview
-│   ├── DATAMODEL.md              # Data model documentation
-│   ├── Datamodel.drawio          # Data model diagram (draw.io)
-│   ├── Datamodel.svg             # Data model diagram (SVG)
-│   ├── Datamodel.json            # Data model metadata
-│   ├── DESIGN.md              # Decision log
-│   ├── DISCUSSIONS.md            # Discussion log
-│   ├── IDS.md                    # ID management design
+├── docs/                          # Documentation
+│   ├── APPROACH.md                # Development approach
+│   ├── ARCHITECTURE.md            # Architecture overview (this file)
+│   ├── DATAMODEL.md               # Data model documentation
+│   ├── Datamodel.drawio           # Data model diagram (draw.io)
+│   ├── Datamodel.svg              # Data model diagram (SVG)
+│   ├── DESIGN.md                  # Design decisions log
+│   └── LIMITATIONS.md             # Known limitations
 │
-├── .env                          # Environment variables
-├── docker-compose.yml            # Multi-container orchestration
-├── Makefile                      # Root-level make targets
-├── .gitignore                    # Git ignore rules
-├── LICENSE.md                    # EUPL License
-├── README.md                     # Quick start guide
-└── AGENTS.md                     # Claude agent configuration
+├── .claude/                       # Claude Code configuration
+│   └── commands/                  # Custom slash commands
+│
+├── .env                           # Environment variables
+├── .gitignore                     # Git ignore rules
+├── .gitlab-ci.yml                 # GitLab CI/CD configuration
+├── AGENTS.md                      # Claude agent configuration
+├── CLAUDE.md                      # Claude Code instructions
+├── docker-compose.yml             # Multi-container orchestration
+├── LICENSE.md                     # EUPL License
+├── Makefile                       # Root-level make targets
+└── README.md                      # Quick start guide
 ```
 
 ## Backend Architecture

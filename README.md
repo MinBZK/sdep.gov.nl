@@ -115,4 +115,4 @@ https://sdep.gov.nl/api/v0/docs
 
 - [Approach](./docs/APPROACH.md)
 - [Limitations](./docs/LIMITATIONS.md)
-- [Discussion log](./docs/DISCUSSIONS.md)
+- [Issues](https://github.com/MinBZK/sdep.gov.nl/issues)
