@@ -16,7 +16,7 @@ Overview:
 
 ## Quick start
 
-On local workstation.
+On local workstation (tested on Linux, for Windows consider using WSL).
 
 **Pre-requistes**
 
