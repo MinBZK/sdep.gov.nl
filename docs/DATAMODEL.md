@@ -1,9 +1,11 @@
+
 <h1>Data Model</h1>
 
-This datamodel supports the Single Digital Entry Point (**SDEP**) for short-term rental regulation. It enables:
+This UML datamodel represents the SDEP implementation (**internal view**).
 
-- **Platforms** to submit rental activities to competent authorities
-- **Competent Authorities** to define geographic areas and receive activity data
+It is reflected in the OpenAPI/Swagger datamodel (**external view**).
+
+API-clients should ONLY look at the external view.
 
 <h2>Table of Contents</h2>
 
@@ -21,7 +23,6 @@ This datamodel supports the Single Digital Entry Point (**SDEP**) for short-term
   - [Versioning](#versioning)
   - [Bulk Processing](#bulk-processing)
   - [Authorization](#authorization)
-
 
 ## Classes and associations
 

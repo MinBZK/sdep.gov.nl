@@ -107,7 +107,7 @@ https://sdep.gov.nl/api/v0/docs
 
 ## Design
 
-- [Datamodel](./docs/DATAMODEL.md)
+- [Datamodel (internal)](./docs/DATAMODEL.md)
 - [Architecture](./docs/ARCHITECTURE.md)
 - [Design log](./docs/DESIGN.md)
 
