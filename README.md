@@ -4,6 +4,8 @@ SDEP Netherlands:
 
 - https://sdep.gov.nl/api/v0/docs
 
+**DISCLAIMER** - API endpoints are work in progress, and are still subject to change.
+
 Overview:
 
 - [Quick start](#quick-start)
@@ -16,7 +18,7 @@ Overview:
 
 ## Quick start
 
-On local workstation (tested on Linux, for Windows consider using WSL).
+On a local workstation (tested on Linux; for Windows, consider using WSL).
 
 **Pre-requistes**
 
@@ -99,11 +101,62 @@ make test
 make test-verbose
 ```
 
-Integration tests are also run against real deployments (TST, ACC, PRE, PRD).
+Integration tests can also run against real deployments (TST, ACC, PRE, PRD).
 
-These deployments are out of scope of this project, contact SDEP NLD for more info.
+These deployments are out of scope of this project, contact SDEP NL for more info.
 
 https://sdep.gov.nl/api/v0/docs
+
+
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│              Integration tests - Environment Variable Flow                     │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────┐  ┌─────────────────────┐  ┌───────────────────────┐
+│           .env             │  │    keycloak/.env    │  │   ENV_LOADED (CI/CD)  │
+│                            │  │                     │  │                       │
+│ • POSTGRES_*               │  │ • KC_APP_REALM      │  │ Override for remote   │
+│ • KC_BASE_URL              │  │ • KC_APP_REALM_*    │  │ deployments           │
+│ • BACKEND_BASE_URL         │  │ • Role/client YAML  │  │ (TST, ACC, PRE, PRD)  │
+│ • STR_CLIENT_ID            │  │   paths             │  │                       │
+│ • STR_CLIENT_SECRET        │  │                     │  │                       │
+│ • CA_CLIENT_ID             │  │                     │  │                       │
+│ • CA_CLIENT_SECRET         │  │                     │  │                       │
+└─────────────┬──────────────┘  └──────────┬──────────┘  └───────────┬───────────┘
+              │                            │                         │
+              │  source .env               │  (keycloak setup only)  │ if set
+              │  (all targets)             │                         │
+              └────────────────────────────┴─────────────────────────┘
+                                           │
+                                           ▼
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                                  Makefile                                      │
+│                                                                                │
+│  • source .env                         → all targets                           │
+│  • source .env + keycloak/.env         → keycloak setup targets (.keycloak-*)  │
+│  • Orchestrates: postgres, keycloak, backend                                   │
+│  • Targets: up, down, test, test-verbose, etc.                                 │
+└───────────────────────────────────────┬────────────────────────────────────────┘
+                                        │
+                                        │ Environment variables exported
+                                        ▼
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                                    tests/                                      │
+│                                                                                │
+│  Shell scripts using environment variables:                                    │
+│  • auth_client.sh      (KC_BASE_URL, CLIENT_ID/SECRET)                         │
+│  • auth_headers.sh     (BACKEND_BASE_URL)                                      │
+│  • auth_credentials.sh (KC_BASE_URL, STR_CLIENT_*, CA_CLIENT_*)                │
+│  • str_*.sh            (BACKEND_BASE_URL, STR_CLIENT_*)                        │
+│  • ca_*.sh             (BACKEND_BASE_URL, CA_CLIENT_*)                         │
+│  • health_ping.sh      (BACKEND_BASE_URL)                                      │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+Usage:
+  Local:   make test                            # Uses .env automatically
+  Remote (CI/CD):  ENV_LOADED=1 ... make test   # Uses pre-set environment variables, out of scope of this repo, contact SDEP NL for more detail
+```
 
 ## Design
 
