@@ -43,7 +43,7 @@ Explore API docs (Swagger UI):
 
 Select client credentials (by roles):
 
-- Choose `id`, `secret` from [clients.yaml](./keycloak/clients.yaml)
+- Choose `id`, `secret` from [machine-clients.yaml](./keycloak/machine-clients.yaml)
 
 Authorize in Swagger UI:
 

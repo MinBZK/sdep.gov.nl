@@ -137,32 +137,38 @@ sdep-app/
 │   └── uv.lock                             # Locked dependencies
 │
 ├── tests/                                  # Integration tests (shell scripts)
-│   ├── auth_client.sh                      # OAuth2 token acquisition utility
-│   ├── auth_credentials.sh                 # Test client credentials flow
-│   ├── auth_headers.sh                     # Security headers compliance
-│   ├── auth_unauthorized.sh                # Test unauthorized access rejection
-│   ├── ca_activities.sh                    # Test CA activity endpoints
-│   ├── ca_areas.sh                         # Test CA area submission
-│   ├── health_ping.sh                      # Health check tests
-│   ├── str_activities.sh                   # Test STR activity submission
-│   ├── str_areas.sh                        # Test STR area query endpoints
+│   ├── lib/                                # Test library utilities
+│   │   └── create_fixture_areas.sh         # Area fixture creation
+│   ├── test_auth_client.sh                 # OAuth2 token acquisition utility
+│   ├── test_auth_credentials.sh            # Test client credentials flow
+│   ├── test_auth_headers.sh                # Security headers compliance
+│   ├── test_auth_unauthorized.sh           # Test unauthorized access rejection
+│   ├── test_ca_activities.sh               # Test CA activity endpoints
+│   ├── test_ca_areas.sh                    # Test CA area submission
+│   ├── test_health_ping.sh                 # Health check tests
+│   ├── test_str_activities.sh              # Test STR activity submission
+│   ├── test_str_areas.sh                   # Test STR area query endpoints
 │   └── README.md                           # Test documentation
 │
 ├── keycloak/                               # Keycloak configuration
 │   ├── add-realm-admin.sh                  # Create realm admin user
-│   ├── add-realm-clients.sh                # Configure OAuth2 clients
+│   ├── add-realm-machine-clients.sh        # Configure OAuth2 machine clients
 │   ├── add-realm-roles.sh                  # Configure roles
 │   ├── add-realm.sh                        # Initialize realm
-│   ├── clients.yaml                        # Client definitions (CA, STR)
+│   ├── get-client-secret.sh                # Retrieve client secret
+│   ├── machine-clients.yaml                # Machine client definitions (CA, STR)
 │   ├── roles.yaml                          # Role definitions
 │   └── wait.sh                             # Wait for Keycloak startup
 │
 ├── postgres/                               # PostgreSQL initialization
 │   ├── clean-app.sql                       # Database cleanup
+│   ├── clean-testrun.sql                   # Test run cleanup
+│   ├── count-app.sql                       # Row count queries
 │   ├── init-keycloak.sql                   # Keycloak database setup
 │   └── init-app.sql                        # SDEP database setup
 │
 ├── test-data/                              # Test data for integration tests
+│   ├── shapefiles/                         # Shapefile test data (zipped)
 │   ├── 01-competent-authority.sql          # Competent authority fixtures
 │   ├── 02-area-generated.sql               # Generated area data
 │   └── generate-area-sql.sh                # Area data generator script
@@ -175,9 +181,6 @@ sdep-app/
 │   ├── DATAMODEL.svg                       # Data model diagram (SVG)
 │   ├── DESIGN.md                           # Design decisions log
 │   └── LIMITATIONS.md                      # Known limitations
-│
-├── .claude/                                # Claude Code configuration
-│   └── commands/                           # Custom slash commands
 │
 ├── .env                                    # Environment variables
 ├── .gitignore                              # Git ignore rules
@@ -275,10 +278,10 @@ See [tests/README.md](../tests/README.md) for detailed test documentation.
 ## Key Configuration Files
 
 - **`.env`** - Environment variables (database, keycloak, backend config)
-- **`docker compose.yml`** - Container orchestration
+- **`docker-compose.yml`** - Container orchestration
 - **`backend/pyproject.toml`** - Python dependencies and tool configuration
 - **`backend/alembic.ini`** - Database migration configuration
-- **`keycloak/clients.yaml`** - Test client definitions (oAuth2)
+- **`keycloak/machine-clients.yaml`** - Test machine client definitions (OAuth2)
 - **`keycloak/roles.yaml`** - Test role definitions
 - **`Makefile`** - Development automation
 
