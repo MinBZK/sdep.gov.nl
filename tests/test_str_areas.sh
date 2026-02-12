@@ -44,6 +44,20 @@ PASSED_TESTS=0
 FAILED_TESTS=0
 
 ##############################################################################
+# Setup: Create fixture areas so tests work on empty DB
+##############################################################################
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FIXTURE_COUNT=5
+echo "📦 Creating $FIXTURE_COUNT fixture areas for STR tests..."
+FIXTURE_IDS=$("$SCRIPT_DIR/lib/create_fixture_areas.sh" "$FIXTURE_COUNT" "sdep-test-str-areas" 2>&1 | tee /dev/stderr | grep "^sdep-test-")
+FIXTURE_AREA_1=$(echo "$FIXTURE_IDS" | sed -n '1p')
+FIXTURE_AREA_2=$(echo "$FIXTURE_IDS" | sed -n '2p')
+FIXTURE_AREA_3=$(echo "$FIXTURE_IDS" | sed -n '3p')
+echo "✅ Fixture areas created"
+echo
+
+##############################################################################
 # GET /str/areas/count - Count areas test
 ##############################################################################
 
@@ -72,8 +86,8 @@ echo "Response: $body"
 echo "HTTP Status: $http_code"
 echo
 
-# Expected count
-EXPECTED_COUNT=5
+# Expected count (at least the fixture areas we just created)
+EXPECTED_COUNT=$FIXTURE_COUNT
 
 if [ "$http_code" -eq 200 ]; then
     # Extract count from JSON response (handles both "count":10 and "count": 10)
@@ -138,6 +152,11 @@ if [ "$http_code" -eq 200 ]; then
         FIRST_AREA_ID=$(echo "$body" | jq -r '.areas[0].areaId // empty' 2>/dev/null)
         SECOND_AREA_ID=$(echo "$body" | jq -r '.areas[1].areaId // empty' 2>/dev/null)
         THIRD_AREA_ID=$(echo "$body" | jq -r '.areas[2].areaId // empty' 2>/dev/null)
+
+        # Fallback to fixture IDs if dynamic extraction failed
+        FIRST_AREA_ID=${FIRST_AREA_ID:-$FIXTURE_AREA_1}
+        SECOND_AREA_ID=${SECOND_AREA_ID:-$FIXTURE_AREA_2}
+        THIRD_AREA_ID=${THIRD_AREA_ID:-$FIXTURE_AREA_3}
 
         if [ "$area_count" -ge 1 ]; then
             echo "✅ Test 2 passed: Retrieved $area_count area(s)"

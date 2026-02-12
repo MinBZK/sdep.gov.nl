@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Test script for area submission endpoint of the SDEP API
+# Test script for activity submission endpoint of the SDEP API
 # Expects BACKEND_BASE_URL environment variable to be set
 # Optionally accepts BEARER_TOKEN environment variable for authenticated requests
 # Optionally accepts API_VERSION environment variable (defaults to v0)
-# Tests POST /ca/areas endpoint with shapefile data
+# Tests POST /str/activities endpoint with valid activities
 
 set -e
 
@@ -16,8 +16,8 @@ fi
 # Default API version to v0 if not set
 API_VERSION=${API_VERSION:-v0}
 
-# CA endpoint requires authorized client
-# Load token from ./tmp/.bearer_token_ca file
+# STR endpoint requires authorized client
+# Load token from ./tmp/.bearer_token file
 if [ -f ./tmp/.bearer_token ]; then
     BEARER_TOKEN=$(cat ./tmp/.bearer_token)
     echo "🔑 Loaded BEARER_TOKEN from ./tmp/.bearer_token"
@@ -25,7 +25,7 @@ else
     echo "⚠️  No ./tmp/.bearer_token file found"
 fi
 
-echo "🔍 Testing CA area endpoint at: ${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas"
+echo "🔍 Testing STR activity endpoints at: ${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities"
 
 # Check if BEARER_TOKEN is set
 if [ -n "$BEARER_TOKEN" ]; then
@@ -40,37 +40,54 @@ TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
 
-# Check if test shapefile exists
-SHAPEFILE_PATH="test-data/shapefiles/Amsterdam-dummy.zip"
-if [ ! -f "$SHAPEFILE_PATH" ]; then
-    echo "❌ Error: Test shapefile not found at $SHAPEFILE_PATH"
+# Setup: Create fixture areas so tests work on empty DB
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+echo "📦 Creating fixture areas for activity tests..."
+FIXTURE_IDS=$("$SCRIPT_DIR/lib/create_fixture_areas.sh" 3 "sdep-test-str-act-areas" 2>&1 | tee /dev/stderr | grep "^sdep-test-")
+AREA_ID_1=$(echo "$FIXTURE_IDS" | sed -n '1p')
+AREA_ID_2=$(echo "$FIXTURE_IDS" | sed -n '2p')
+AREA_ID_3=$(echo "$FIXTURE_IDS" | sed -n '3p')
+
+if [ -z "$AREA_ID_1" ] || [ -z "$AREA_ID_2" ] || [ -z "$AREA_ID_3" ]; then
+    echo "❌ Error: Failed to create fixture areas"
     exit 1
 fi
-
-echo "📂 Using test shapefile: $SHAPEFILE_PATH"
+echo "✅ Using fixture area IDs: $AREA_ID_1, $AREA_ID_2, $AREA_ID_3"
 echo
 
-# Encode file to base64
-FILEDATA_BASE64=$(base64 -w 0 "$SHAPEFILE_PATH")
-
-# Test 1: POST single area
-echo "Test 1: POST single area (amsterdam-single-area-1)"
+# Test 1: POST single activity (amsterdam-myhouse-1)
+echo "Test 1: POST single activity (amsterdam-myhouse-1)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
-# Generate unique area ID
+# Generate dynamic timestamps to avoid duplicate key errors
 TIMESTAMP=$(date +%s)
-AREA_ID_SINGLE="amsterdam-single-area-${TIMESTAMP}"
+START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+END_TIME=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%M:%SZ")
 
-# Prepare JSON payload with single area
+# Prepare JSON payload
 read -r -d '' PAYLOAD <<EOF || true
 {
-  "metadata": {},
-  "areas": [
+  "metadata": {
+  },
+  "activities": [
     {
-      "competentAuthorityAreaId": "$AREA_ID_SINGLE",
-      "filename": "Amsterdam-area-single.zip",
-      "filedata": "$FILEDATA_BASE64"
+      "activityId": "sdep-test-activity-single-$TIMESTAMP",
+      "url": "http://sdep-test.example.com/amsterdam-myhouse-1",
+      "registrationNumber": "REG0002",
+      "address": {
+        "street": "Prinsengracht",
+        "number": 265,
+        "postalCode": "1016HV",
+        "city": "Amsterdam"
+      },
+      "temporal": {
+        "startDatetime": "$START_TIME",
+        "endDatetime": "$END_TIME"
+      },
+      "areaId": "$AREA_ID_1",
+      "countryOfGuests": ["NLD", "DEU", "BEL"],
+      "numberOfGuests": 4
     }
   ]
 }
@@ -82,13 +99,13 @@ if [ -n "$BEARER_TOKEN" ]; then
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
         -d "$PAYLOAD" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 else
     response=$(curl -s -w "\n%{http_code}" \
         -X POST \
         -H "Content-Type: application/json" \
         -d "$PAYLOAD" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 fi
 
 http_code=$(echo "$response" | tail -n1)
@@ -103,7 +120,7 @@ if [ "$http_code" -eq 201 ]; then
     if echo "$body" | grep -q '"totalProcessed":1' && \
        echo "$body" | grep -q '"succeeded":1' && \
        echo "$body" | grep -q '"failed":0'; then
-        echo "✅ Test 1 passed: Area successfully submitted"
+        echo "✅ Test 1 passed: Activity successfully submitted"
         PASSED_TESTS=$((PASSED_TESTS + 1))
     else
         echo "❌ Test 1 failed: Expected success message in response"
@@ -119,32 +136,61 @@ fi
 
 echo
 
-# Test 2: POST multiple areas (rotterdam-area-1, denhaag-area-1)
-echo "Test 2: POST multiple areas (rotterdam-area-1, denhaag-area-1)"
+# Test 2: POST multiple activities (rotterdam-myhouse-1, denhaag-myhouse-1)
+echo "Test 2: POST multiple activities (rotterdam-myhouse-1, denhaag-myhouse-1)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
-    # Generate unique competent authority area IDs
+    # Generate dynamic timestamps for multiple activities
     TIMESTAMP=$(date +%s)
-    AREA_ID_1="rotterdam-multi-area-${TIMESTAMP}-1"
-    AREA_ID_2="denhaag-multi-area-${TIMESTAMP}-2"
+    START_TIME_1=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_1=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%M:%SZ")
+    START_TIME_2=$(date -u -d "+2 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_2=$(date -u -d "+3 hours" +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Prepare JSON payload with 2 areas similar to test data
+    # Prepare JSON payload with 2 activities similar to test data
     read -r -d '' PAYLOAD_MULTI <<EOF || true
 {
-  "metadata": {},
-  "areas": [
+  "metadata": {
+  },
+  "activities": [
     {
-      "competentAuthorityAreaId": "$AREA_ID_1",
-      "filename": "Rotterdam-area-1.zip",
-      "filedata": "$FILEDATA_BASE64"
+      "activityId": "sdep-test-activity-multi-${TIMESTAMP}-1",
+      "url": "http://sdep-test.example.com/rotterdam-myhouse-1",
+      "registrationNumber": "REG0004",
+      "address": {
+        "street": "Witte de Withstraat",
+        "number": 32,
+        "postalCode": "3012BL",
+        "city": "Rotterdam"
+      },
+      "temporal": {
+        "startDatetime": "$START_TIME_1",
+        "endDatetime": "$END_TIME_1"
+      },
+      "areaId": "$AREA_ID_2",
+      "countryOfGuests": ["NLD", "GBR"],
+      "numberOfGuests": 2
     },
     {
-      "competentAuthorityAreaId": "$AREA_ID_2",
-      "filename": "DenHaag-area-2.zip",
-      "filedata": "$FILEDATA_BASE64"
+      "activityId": "sdep-test-activity-multi-${TIMESTAMP}-2",
+      "url": "http://sdep-test.example.com/denhaag-myhouse-1",
+      "registrationNumber": "REG0005",
+      "address": {
+        "street": "Noordeinde",
+        "number": 70,
+        "postalCode": "2514GK",
+        "city": "Den Haag"
+      },
+      "temporal": {
+        "startDatetime": "$START_TIME_2",
+        "endDatetime": "$END_TIME_2"
+      },
+      "areaId": "$AREA_ID_3",
+      "countryOfGuests": ["NLD", "FRA", "DEU"],
+      "numberOfGuests": 6
     }
   ]
 }
@@ -155,7 +201,7 @@ EOF
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
         -d "$PAYLOAD_MULTI" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
@@ -169,7 +215,7 @@ EOF
         if echo "$body" | grep -q '"totalProcessed":2' && \
            echo "$body" | grep -q '"succeeded":2' && \
            echo "$body" | grep -q '"failed":0'; then
-            echo "✅ Test 2 passed: Multiple areas successfully submitted"
+            echo "✅ Test 2 passed: Multiple activities successfully submitted"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
             echo "❌ Test 2 failed: Expected message about 2 records"
@@ -185,25 +231,43 @@ fi
 
 echo
 
-# Test 3: POST with optional competentAuthorityAreaId field
-echo "Test 3: POST with optional competentAuthorityAreaId field"
+# Test 3: POST with optional activityId field
+echo "Test 3: POST with optional activityId field"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
-    # Generate unique ID using epoch timestamp to ensure test idempotence
-    UNIQUE_ID=$(date +%s%N | cut -b1-13)
+    # Generate dynamic timestamps with offset to avoid collisions with Test 1 and 2
+    START_TIME_3=$(date -u -d "+4 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_3=$(date -u -d "+5 hours" +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Prepare payload with custom competentAuthorityAreaId
+    # Generate unique URL using epoch timestamp to ensure test idempotence
+    UNIQUE_ID=$(date +%s%N | cut -b1-12)
+
+    # Prepare payload with activityId
     read -r -d '' PAYLOAD_WITH_ID <<EOF || true
 {
-  "metadata": {},
-  "areas": [
+  "metadata": {
+  },
+  "activities": [
     {
-      "competentAuthorityAreaId": "custom-area-id-$UNIQUE_ID",
-      "filename": "Amsterdam-with-id-$UNIQUE_ID.zip",
-      "filedata": "$FILEDATA_BASE64"
+      "activityId": "sdep-test-activity-custom-$UNIQUE_ID",
+      "url": "http://sdep-test.example.com/amsterdam-with-id-$UNIQUE_ID",
+      "registrationNumber": "REGID001",
+      "address": {
+        "street": "Prinsengracht",
+        "number": 267,
+        "postalCode": "1016HV",
+        "city": "Amsterdam"
+      },
+      "temporal": {
+        "startDatetime": "$START_TIME_3",
+        "endDatetime": "$END_TIME_3"
+      },
+      "areaId": "$AREA_ID_1",
+      "countryOfGuests": ["NLD"],
+      "numberOfGuests": 2
     }
   ]
 }
@@ -214,7 +278,7 @@ EOF
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
         -d "$PAYLOAD_WITH_ID" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
@@ -228,7 +292,7 @@ EOF
         if echo "$body" | grep -q '"totalProcessed":1' && \
            echo "$body" | grep -q '"succeeded":1' && \
            echo "$body" | grep -q '"failed":0'; then
-            echo "✅ Test 3 passed: Area with custom competentAuthorityAreaId successfully submitted"
+            echo "✅ Test 3 passed: Activity with custom activityId successfully submitted"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
             echo "❌ Test 3 failed: Expected success response format"
@@ -251,14 +315,31 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
-    # Prepare invalid payload (missing 'filedata' field)
+    # Generate dynamic timestamps with offset to avoid collisions
+    START_TIME_4=$(date -u -d "+6 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_4=$(date -u -d "+7 hours" +"%Y-%m-%dT%H:%M:%SZ")
+
+    # Prepare invalid payload (missing 'registrationNumber' required field)
     read -r -d '' PAYLOAD_INVALID <<EOF || true
 {
-  "metadata": {},
-  "areas": [
+  "metadata": {
+  },
+  "activities": [
     {
-      "competentAuthorityAreaId": "invalid-area-9999",
-      "filename": "Invalid-area.zip"
+      "url": "http://sdep-test.example.com/amsterdam-invalid",
+      "address": {
+        "street": "Prinsengracht",
+        "number": 999,
+        "postalCode": "1016HV",
+        "city": "Amsterdam"
+      },
+      "temporal": {
+        "startDatetime": "$START_TIME_4",
+        "endDatetime": "$END_TIME_4"
+      },
+      "areaId": "$AREA_ID_1",
+      "countryOfGuests": ["NLD"],
+      "numberOfGuests": 2
     }
   ]
 }
@@ -269,7 +350,7 @@ EOF
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
         -d "$PAYLOAD_INVALID" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
@@ -307,21 +388,49 @@ TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
+    # Generate dynamic timestamps
+    START_TIME_5=$(date -u -d "+8 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_5=$(date -u -d "+9 hours" +"%Y-%m-%dT%H:%M:%SZ")
     UNIQUE_ID=$(date +%s%N | cut -b1-13)
 
-    # Prepare payload with 2 areas: 1 valid, 1 invalid (missing filedata)
+    # Prepare payload with 2 activities: 1 valid, 1 invalid area
     read -r -d '' PAYLOAD_PARTIAL <<EOF || true
 {
   "metadata": {},
-  "areas": [
+  "activities": [
     {
-      "competentAuthorityAreaId": "partial-valid-$UNIQUE_ID",
-      "filename": "Valid-area.zip",
-      "filedata": "$FILEDATA_BASE64"
+      "activityId": "sdep-test-activity-partial-valid-$UNIQUE_ID",
+      "url": "http://sdep-test.example.com/partial-valid-$UNIQUE_ID",
+      "registrationNumber": "REGPART001",
+      "address": {
+        "street": "Valid Street",
+        "number": 100,
+        "postalCode": "1000AA",
+        "city": "Amsterdam"
+      },
+      "temporal": {
+        "startDatetime": "$START_TIME_5",
+        "endDatetime": "$END_TIME_5"
+      },
+      "areaId": "$AREA_ID_1",
+      "numberOfGuests": 2
     },
     {
-      "competentAuthorityAreaId": "partial-invalid-$UNIQUE_ID",
-      "filename": "Invalid-area.zip"
+      "activityId": "sdep-test-activity-partial-invalid-$UNIQUE_ID",
+      "url": "http://sdep-test.example.com/partial-invalid-area-$UNIQUE_ID",
+      "registrationNumber": "REGPART002",
+      "address": {
+        "street": "Invalid Area Street",
+        "number": 200,
+        "postalCode": "2000BB",
+        "city": "Nowhere"
+      },
+      "temporal": {
+        "startDatetime": "$START_TIME_5",
+        "endDatetime": "$END_TIME_5"
+      },
+      "areaId": "00000000-0000-0000-0000-000000000000",
+      "numberOfGuests": 3
     }
   ]
 }
@@ -332,7 +441,7 @@ EOF
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
         -d "$PAYLOAD_PARTIAL" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
@@ -374,9 +483,9 @@ echo "  Failed: $FAILED_TESTS ❌"
 echo "═══════════════════════════════════════"
 
 if [ $FAILED_TESTS -eq 0 ]; then
-    echo "✅ All area endpoint tests passed!"
+    echo "✅ All activity endpoint tests passed!"
     exit 0
 else
-    echo "❌ Some area endpoint tests failed!"
+    echo "❌ Some activity endpoint tests failed!"
     exit 1
 fi

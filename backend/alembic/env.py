@@ -6,7 +6,7 @@ from app.db.config import Base
 
 # Import all models to ensure they are registered with SQLAlchemy
 from app.models import *  # noqa: F403
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import URL, create_engine, pool
 
 config = context.config
 
@@ -15,10 +15,15 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Override the database URL from settings
-config.set_main_option(
-    "sqlalchemy.url",
-    f"postgresql://{settings.POSTGRES_DB_USER}:{settings.POSTGRES_DB_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB_NAME}",
+# Build database URL using SQLAlchemy's URL.create() for proper handling
+# of special characters in passwords (/, =, @, etc.)
+database_url = URL.create(
+    "postgresql",
+    database=settings.POSTGRES_DB_NAME,
+    host=settings.POSTGRES_HOST,
+    password=settings.POSTGRES_DB_PASSWORD,
+    port=settings.POSTGRES_PORT,
+    username=settings.POSTGRES_DB_USER,
 )
 
 # Define naming conventions for automatic constraint/index naming
@@ -35,13 +40,11 @@ target_metadata.naming_convention = naming_convention
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=database_url.render_as_string(hide_password=False),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        # Naming conventions for automatic constraint/index naming
         naming_convention=naming_convention,
     )
 
@@ -50,9 +53,8 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),  # type: ignore
-        prefix="sqlalchemy.",
+    connectable = create_engine(
+        database_url,
         poolclass=pool.NullPool,
     )
 
@@ -60,7 +62,6 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            # Naming conventions for automatic constraint/index naming
             naming_convention=naming_convention,
         )
 

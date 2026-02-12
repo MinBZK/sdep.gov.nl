@@ -22,8 +22,8 @@ if [ -z "${KC_ADMIN_REALM_ADMIN_PASSWORD:-}" ]; then
     exit 1
 fi
 
-if [ -z "${KC_APP_REALM_ADMIN_USERNAME:-}" ]; then
-    echo "❌ Error: KC_APP_REALM_ADMIN_USERNAME is not set"
+if [ -z "${KC_APP_REALM_ADMIN_ID:-}" ]; then
+    echo "❌ Error: KC_APP_REALM_ADMIN_ID is not set"
     exit 1
 fi
 
@@ -38,7 +38,7 @@ if [ -z "${KC_APP_REALM_ADMIN_DESC:-}" ]; then
 fi
 
 # Client configuration from environment variables
-CLIENT_ID="${KC_APP_REALM_ADMIN_USERNAME}"
+CLIENT_ID="${KC_APP_REALM_ADMIN_ID}"
 CLIENT_NAME="${KC_APP_REALM_ADMIN_NAME}"
 CLIENT_DESC="${KC_APP_REALM_ADMIN_DESC}"
 

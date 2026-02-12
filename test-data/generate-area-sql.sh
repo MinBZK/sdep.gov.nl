@@ -38,34 +38,34 @@ encode_file_to_hex() {
 # Define area
 # Format: "competent_authority_area_id|filename|zipfile|competent_authority_id|comment"
 declare -a AREAS=(
-    "amsterdam-area-0363|Amsterdam-dummy.zip|Amsterdam-dummy.zip|sdep-ca-0363|Amsterdam area"
-    "rotterdam-area-0599|Rotterdam.zip|Rotterdam.zip|sdep-ca-0599|Rotterdam area"
-    "denhaag-area-0518|Den-Haag.zip|Den-Haag-dummy.zip|sdep-ca-0518|Den Haag area"
-    "amstelveen-area-0362|Amstelveen.zip|Amstelveen-dummy.zip|sdep-ca-0362|Amstelveen area"
-    "bergen-area-0373|Bergen.zip|Bergen-dummy.zip|sdep-ca-0373|Bergen (Noord-Holland) area"
-    "delft-area-0503|Delft.zip|Delft.zip|sdep-ca-0503|Delft area"
-    "diemen-area-0384|Diemen.zip|Diemen.zip|sdep-ca-0384|Diemen area"
-    "gouda-area-0513|Gouda.zip|Gouda.zip|sdep-ca-0513|Gouda area"
-    "groningen-area-0014|Groningen.zip|Groningen.zip|sdep-ca-0014|Groningen area"
-    "haarlem-area-0392|Haarlem.zip|Haarlem.zip|sdep-ca-0392|Haarlem area"
-    "katwijk-area-0537|Katwijk.zip|Katwijk.zip|sdep-ca-0537|Katwijk area"
-    "landsmeer-area-0415|Landsmeer.zip|Landsmeer.zip|sdep-ca-0415|Landsmeer area"
-    "leiden-area-0546|Leiden.zip|Leiden.zip|sdep-ca-0546|Leiden area"
-    "maastricht-area-0935|Maastricht.zip|Maastricht.zip|sdep-ca-0935|Maastricht area"
-    "middelburg-area-0687|Middelburg.zip|Middelburg.zip|sdep-ca-0687|Middelburg area"
-    "noordwijk-area-0575|Noordwijk.zip|Noordwijk.zip|sdep-ca-0575|Noordwijk area"
-    "pijnackernootdorp-area-1926|Pijnacker-Nootdorp-dummy.zip|Pijnacker-Nootdorp-dummy.zip|sdep-ca-1926|Pijnacker-Nootdorp area"
-    "renkum-area-0274|Renkum.zip|Renkum.zip|sdep-ca-0274|Renkum area"
-    "sluis-area-1714|Sluis.zip|Sluis.zip|sdep-ca-1714|Sluis area"
-    "schouwenduiveland-area-1676|Schouwen-Duiveland.zip|Schouwen-Duiveland.zip|sdep-ca-1676|Schouwen-Duiveland area"
-    "texel-area-0448|Texel.zip|Texel.zip|sdep-ca-0448|Texel area"
-    "utrecht-area-0344|Utrecht.zip|Utrecht.zip|sdep-ca-0344|Utrecht area"
-    "vlissingen-area-0718|Vlissingen.zip|Vlissingen.zip|sdep-ca-0718|Vlissingen area"
-    "voorschoten-area-0626|Voorschoten-dummy.zip|Voorschoten-dummy.zip|sdep-ca-0626|Voorschoten area"
-    "waterland-area-0852|Waterland.zip|Waterland.zip|sdep-ca-0852|Waterland area"
-    "zaanstad-area-0479|Zaanstad.zip|Zaanstad.zip|sdep-ca-0479|Zaanstad area"
-    "zandvoort-area-0473|Zandvoort.zip|Zandvoort.zip|sdep-ca-0473|Zandvoort area"
-    "zwolle-area-0193|Zwolle.zip|Zwolle.zip|sdep-ca-0193|Zwolle area"
+    "amsterdam-area0363|Amsterdam-dummy.zip|Amsterdam-dummy.zip|sdep-ca0363|Amsterdam area"
+    "rotterdam-area0599|Rotterdam.zip|Rotterdam.zip|sdep-ca0599|Rotterdam area"
+    "denhaag-area0518|Den-Haag.zip|Den-Haag-dummy.zip|sdep-ca0518|Den Haag area"
+    "amstelveen-area0362|Amstelveen.zip|Amstelveen-dummy.zip|sdep-ca0362|Amstelveen area"
+    "bergen-area0373|Bergen.zip|Bergen-dummy.zip|sdep-ca0373|Bergen (Noord-Holland) area"
+    "delft-area0503|Delft.zip|Delft.zip|sdep-ca0503|Delft area"
+    "diemen-area0384|Diemen.zip|Diemen.zip|sdep-ca0384|Diemen area"
+    "gouda-area0513|Gouda.zip|Gouda.zip|sdep-ca0513|Gouda area"
+    "groningen-area0014|Groningen.zip|Groningen.zip|sdep-ca0014|Groningen area"
+    "haarlem-area0392|Haarlem.zip|Haarlem.zip|sdep-ca0392|Haarlem area"
+    "katwijk-area0537|Katwijk.zip|Katwijk.zip|sdep-ca0537|Katwijk area"
+    "landsmeer-area0415|Landsmeer.zip|Landsmeer.zip|sdep-ca0415|Landsmeer area"
+    "leiden-area0546|Leiden.zip|Leiden.zip|sdep-ca0546|Leiden area"
+    "maastricht-area0935|Maastricht.zip|Maastricht.zip|sdep-ca0935|Maastricht area"
+    "middelburg-area0687|Middelburg.zip|Middelburg.zip|sdep-ca0687|Middelburg area"
+    "noordwijk-area0575|Noordwijk.zip|Noordwijk.zip|sdep-ca0575|Noordwijk area"
+    "pijnackernootdorp-area1926|Pijnacker-Nootdorp-dummy.zip|Pijnacker-Nootdorp-dummy.zip|sdep-ca1926|Pijnacker-Nootdorp area"
+    "renkum-area0274|Renkum.zip|Renkum.zip|sdep-ca0274|Renkum area"
+    "sluis-area1714|Sluis.zip|Sluis.zip|sdep-ca1714|Sluis area"
+    "schouwenduiveland-area1676|Schouwen-Duiveland.zip|Schouwen-Duiveland.zip|sdep-ca1676|Schouwen-Duiveland area"
+    "texel-area0448|Texel.zip|Texel.zip|sdep-ca0448|Texel area"
+    "utrecht-area0344|Utrecht.zip|Utrecht.zip|sdep-ca0344|Utrecht area"
+    "vlissingen-area0718|Vlissingen.zip|Vlissingen.zip|sdep-ca0718|Vlissingen area"
+    "voorschoten-area0626|Voorschoten-dummy.zip|Voorschoten-dummy.zip|sdep-ca0626|Voorschoten area"
+    "waterland-area0852|Waterland.zip|Waterland.zip|sdep-ca0852|Waterland area"
+    "zaanstad-area0479|Zaanstad.zip|Zaanstad.zip|sdep-ca0479|Zaanstad area"
+    "zandvoort-area0473|Zandvoort.zip|Zandvoort.zip|sdep-ca0473|Zandvoort area"
+    "zwolle-area0193|Zwolle.zip|Zwolle.zip|sdep-ca0193|Zwolle area"
 )
 
 # Start writing the SQL file
@@ -118,7 +118,7 @@ VALUES (
   '${filename}',
   ${hex_bytea},
   '2025-01-01 00:00:00+00'::timestamptz
-);
+) ON CONFLICT (area_id, created_at) DO NOTHING;
 
 EOF
 done

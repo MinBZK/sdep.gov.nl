@@ -311,7 +311,7 @@ class TestAreaService:
         # Arrange
         areas_list = [
             {
-                "competent_authority_area_id": "list-area-001",
+                "competent_authority_area_id": "list-area001",
                 "filename": "ListArea001.zip",
                 "filedata": b"data1",
                 "competent_authority_id_str": "0363",
@@ -354,7 +354,7 @@ class TestAreaService:
         # Arrange
         areas_list = [
             {
-                "competent_authority_area_id": "new-ca-area-001",
+                "competent_authority_area_id": "new-ca-area001",
                 "filename": "NewCA001.zip",
                 "filedata": b"data1",
                 "competent_authority_id_str": "8888",

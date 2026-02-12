@@ -19,7 +19,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init-keycloak.sql:/docker-entrypoint-initdb.d/init-keycloak.sql
-      - ./postgres/init-sdep.sql:/docker-entrypoint-initdb.d/init-sdep.sql
+      - ./postgres/init-app.sql:/docker-entrypoint-initdb.d/init-app.sql
       - ./test-data:/test-data:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPER_USER} -d ${POSTGRES_DB_NAME}"]
@@ -34,6 +34,7 @@ services:
       - "${KC_PORT}:8080"
     environment:
       # https://www.keycloak.org/server/configuration#_creating_the_initial_admin_user
+      # KC_BOOTSTRAP_ADMIN_USERNAME is a fixed Keycloak variable name, do not rename
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_REALM_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_REALM_ADMIN_PASSWORD}
       # https://www.keycloak.org/server/containers

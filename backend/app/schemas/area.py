@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime
-
 from typing import Annotated
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+)
 
 
 def empty_string_to_none(v: str | None) -> str | None:
@@ -211,7 +217,7 @@ class AreaResponse(BaseModel):
         max_length=64,
         pattern=r"^[a-z0-9-]+$",
         description="Competent authority functional ID who submitted the area (lowercase alphanumeric with hyphens, max 64 chars)",
-        examples=["sdep-ca-0363"],
+        examples=["sdep-ca0363"],
     )  # Attribute
     competent_authority_name: str | None = Field(
         None,

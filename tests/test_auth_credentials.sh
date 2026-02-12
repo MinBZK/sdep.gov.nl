@@ -89,24 +89,12 @@ test_credentials() {
 
 # Test STR client credentials
 test_str_client_credentials() {
-    if [ -z "$STR_CLIENT_ID" ] || [ -z "$STR_CLIENT_SECRET" ]; then
-        echo "❌ Error: STR_CLIENT_ID and STR_CLIENT_SECRET not set"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-        return 1
-    fi
-
-    test_credentials "$STR_CLIENT_ID" "$STR_CLIENT_SECRET" "STR"
+    test_credentials "sdep-test-str01" "sdep-test-str01" "STR"
 }
 
 # Test CA client credentials
 test_ca_client_credentials() {
-    if [ -z "$CA_CLIENT_ID" ] || [ -z "$CA_CLIENT_SECRET" ]; then
-        echo "❌ Error: CA_CLIENT_ID and CA_CLIENT_SECRET not set"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-        return 1
-    fi
-
-    test_credentials "$CA_CLIENT_ID" "$CA_CLIENT_SECRET" "CA"
+    test_credentials "sdep-test-ca01" "sdep-test-ca01" "CA"
 }
 
 # Always test both credentials

@@ -198,14 +198,14 @@ This allows clients to see all validation issues at once instead of fixing one e
 Default test clients are defined in `keycloak/clients.yaml`:
 
 **Competent Authority (CA)**
-- **Client ID:** `sdep-ca-0363`
-- **Client Secret:** `sdep-ca-0363`
+- **Client ID:** `sdep-ca0363`
+- **Client Secret:** `sdep-ca0363`
 - **Roles:** `sdep_ca`, `sdep_write`, `sdep_read`
 - **Can access:** CA endpoints for area 0363 (Amsterdam)
 
 **STR Platform**
-- **Client ID:** `sdep-str-01`
-- **Client Secret:** `sdep-str-01`
+- **Client ID:** `sdep-test-str01`
+- **Client Secret:** `sdep-test-str01`
 - **Roles:** `sdep_str`, `sdep_write`, `sdep_read`
 - **Can access:** STR platform endpoints
 

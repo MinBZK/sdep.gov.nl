@@ -12,13 +12,13 @@ if [ -z "${KC_APP_REALM:-}" ]; then
     exit 1
 fi
 
-if [ -z "${KC_APP_REALM_ADMIN_USERNAME:-}" ]; then
-    echo "❌ Error: KC_APP_REALM_ADMIN_USERNAME is not set"
+if [ -z "${KC_APP_REALM_ADMIN_ID:-}" ]; then
+    echo "❌ Error: KC_APP_REALM_ADMIN_ID is not set"
     exit 1
 fi
 
-if [ -z "${KC_APP_REALM_ADMIN_PASSWORD:-}" ]; then
-    echo "❌ Error: KC_APP_REALM_ADMIN_PASSWORD is not set"
+if [ -z "${KC_APP_REALM_ADMIN_SECRET:-}" ]; then
+    echo "❌ Error: KC_APP_REALM_ADMIN_SECRET is not set"
     exit 1
 fi
 
@@ -37,8 +37,8 @@ echo "🔐 Authenticating with realm admin service account..."
 
 TOKEN_RESPONSE=$(curl -s -X POST "${KC_BASE_URL}/realms/${KC_APP_REALM}/protocol/openid-connect/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "client_id=${KC_APP_REALM_ADMIN_USERNAME}" \
-    -d "client_secret=${KC_APP_REALM_ADMIN_PASSWORD}" \
+    -d "client_id=${KC_APP_REALM_ADMIN_ID}" \
+    -d "client_secret=${KC_APP_REALM_ADMIN_SECRET}" \
     -d "grant_type=client_credentials")
 
 TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)

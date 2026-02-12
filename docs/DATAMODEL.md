@@ -1,4 +1,3 @@
-
 <h1>Data Model</h1>
 
 This UML datamodel represents the SDEP implementation (**internal view**).
@@ -26,7 +25,7 @@ API-clients should ONLY look at the external view.
 
 ## Classes and associations
 
-![](./Datamodel.svg)
+![](./DATAMODEL.svg)
 
 ### Competent Authority
 
@@ -41,10 +40,6 @@ API-clients should ONLY look at the external view.
 | **areas**                  | reference | optional, references Area                                                                                                                         |
 
 **Class Constraints:** UNIQUE (competentAuthorityId, createdAt)
-
-**API Operations:**
-- POST `/ca/areas` - Submit regulated areas (bulk, 1-1000 records)
-- GET `/ca/activities` - Retrieve submitted activities for their areas
 
 ---
 
@@ -61,10 +56,6 @@ API-clients should ONLY look at the external view.
 | **activities**   | reference | optional, references Activity                                                                                |
 
 **Class Constraints:** UNIQUE (platformId, createdAt)
-
-**API Operations:**
-- GET `/str/areas` - Retrieve regulated areas
-- POST `/str/activities` - Submit activities that fall inside regulated areas (bulk, 1-1000 records)
 
 ---
 

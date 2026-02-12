@@ -1,5 +1,5 @@
 .PHONY: install \
-        .check-postgres upgrade downgrade revision show-history show-current show-postgres show-postgres-full \
+        .check-postgres upgrade downgrade revision show-history show-current \
         clean-stale up down \
         test-crud test-services test-api test-security test test-coverage \
         format lint typecheck check \
@@ -7,10 +7,10 @@
 
 .DEFAULT_GOAL := help
 
-# Load common variables
+# Environment config
 include ../.env
 
-# Define specific variables
+# Application config
 APP_NAME := sdep-backend
 
 ##@ Dependency management
@@ -26,6 +26,7 @@ install: ## Install dependencies
 	@echo "Checking if PostgreSQL container 'sdep-postgres' is running..."
 	@if ! docker ps --format "table {{.Names}}" | grep -q "^sdep-postgres$$"; then \
 		echo "❌ PostgreSQL container 'sdep-postgres' is not running."; \
+		echo "❌ (Re)start postgres by running: make -C ../ postgres-up"; \
 		exit 1; \
 	fi
 	@echo "✅ PostgreSQL container 'sdep-postgres' is running."
@@ -54,35 +55,7 @@ show-history: .check-postgres ## Show history
 	@echo "Showing migration history..."
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic history
 
-show-postgres: .check-postgres ## Smoke test
-	@echo "Showing database migration status and tables..."
-	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "\\dt"
-	@echo ""
-	@echo "Showing structure of each table..."
-	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -t -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" | \
-	while read -r table; do \
-		if [ -n "$$table" ]; then \
-			echo ""; \
-			echo "=== Table: $$table ==="; \
-			docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='$$table' ORDER BY ordinal_position"; \
-		fi; \
-	done
-
-show-postgres-full: .check-postgres ## Smoke test (full)
-	@echo "Showing database migration status and tables..."
-	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "\\dt"
-	@echo ""
-	@echo "Showing structure of each table..."
-	@docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -t -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" | \
-	while read -r table; do \
-		if [ -n "$$table" ]; then \
-			echo ""; \
-			echo "=== Table: $$table ==="; \
-			docker exec sdep-postgres psql -U $(POSTGRES_DB_USER) -d $(POSTGRES_DB_NAME) -c "\\d+ $$table"; \
-		fi; \
-	done
-
-##@ Backend
+##@ Dev
 
 check: ## Format, lint, type check
 	@echo "🧪 Checking backend quality..."
@@ -191,4 +164,6 @@ clean: ## Clean up generated files
 
 help: ## Show help
 	@echo "🤖 Make"
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "Available commands:"
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  \033[36m%-40s\033[0m  %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
