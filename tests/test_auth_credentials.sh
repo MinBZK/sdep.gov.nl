@@ -87,20 +87,10 @@ test_credentials() {
     fi
 }
 
-# Test STR client credentials
-test_str_client_credentials() {
-    test_credentials "sdep-test-str01" "sdep-test-str01" "STR"
-}
-
-# Test CA client credentials
-test_ca_client_credentials() {
-    test_credentials "sdep-test-ca01" "sdep-test-ca01" "CA"
-}
-
 # Always test both credentials
-test_str_client_credentials
+test_credentials "${STR_CLIENT_ID}" "${STR_CLIENT_SECRET}" "STR"
 echo
-test_ca_client_credentials
+test_credentials "${CA_CLIENT_ID}" "${CA_CLIENT_SECRET}" "CA"
 
 # Summary
 echo

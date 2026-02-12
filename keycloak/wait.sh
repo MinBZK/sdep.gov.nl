@@ -48,8 +48,16 @@ until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
 done
 
 if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-    echo ""
-    echo "❌ Failed to authenticate with Keycloak after $MAX_RETRIES retries"
+    echo "" >&2
+    echo "❌ Failed to authenticate with Keycloak after $MAX_RETRIES retries" >&2
+    echo "" >&2
+    echo "Configuration used:" >&2
+    echo "  KC_BASE_URL: ${KC_BASE_URL}" >&2
+    echo "  KC_ADMIN_REALM_ADMIN_USERNAME: ${KC_ADMIN_REALM_ADMIN_USERNAME}" >&2
+    echo "  KC_ADMIN_REALM_ADMIN_PASSWORD: (${#KC_ADMIN_REALM_ADMIN_PASSWORD} characters)" >&2
+    echo "" >&2
+    echo "💡 Suggestion: KC_ADMIN_REALM_ADMIN_USERNAME and KC_ADMIN_REALM_ADMIN_PASSWORD should be" >&2
+    echo "   the username and password of a Keycloak admin user in the master realm." >&2
     exit 1
 fi
 

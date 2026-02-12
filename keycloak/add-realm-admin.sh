@@ -1,39 +1,45 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Initialize counters
+CREATED_COUNT=0
+UNMODIFIED_COUNT=0
+CREATED_ITEMS=""
+UNMODIFIED_ITEMS=""
+
 # Check required variables
 if [ -z "${KC_BASE_URL:-}" ]; then
-    echo "❌ Error: KC_BASE_URL is not set"
+    echo "❌ Error: KC_BASE_URL is not set" >&2
     exit 1
 fi
 
 if [ -z "${KC_APP_REALM:-}" ]; then
-    echo "❌ Error: REALM is not set"
+    echo "❌ Error: REALM is not set" >&2
     exit 1
 fi
 
 if [ -z "${KC_ADMIN_REALM_ADMIN_USERNAME:-}" ]; then
-    echo "❌ Error: KC_ADMIN_REALM_ADMIN_USERNAME is not set"
+    echo "❌ Error: KC_ADMIN_REALM_ADMIN_USERNAME is not set" >&2
     exit 1
 fi
 
 if [ -z "${KC_ADMIN_REALM_ADMIN_PASSWORD:-}" ]; then
-    echo "❌ Error: KC_ADMIN_REALM_ADMIN_PASSWORD is not set"
+    echo "❌ Error: KC_ADMIN_REALM_ADMIN_PASSWORD is not set" >&2
     exit 1
 fi
 
 if [ -z "${KC_APP_REALM_ADMIN_ID:-}" ]; then
-    echo "❌ Error: KC_APP_REALM_ADMIN_ID is not set"
+    echo "❌ Error: KC_APP_REALM_ADMIN_ID is not set" >&2
     exit 1
 fi
 
 if [ -z "${KC_APP_REALM_ADMIN_NAME:-}" ]; then
-    echo "❌ Error: KC_APP_REALM_ADMIN_NAME is not set"
+    echo "❌ Error: KC_APP_REALM_ADMIN_NAME is not set" >&2
     exit 1
 fi
 
 if [ -z "${KC_APP_REALM_ADMIN_DESC:-}" ]; then
-    echo "❌ Error: KC_APP_REALM_ADMIN_DESC is not set"
+    echo "❌ Error: KC_APP_REALM_ADMIN_DESC is not set" >&2
     exit 1
 fi
 
@@ -55,8 +61,17 @@ TOKEN_RESPONSE=$(curl -s -X POST "${KC_BASE_URL}/realms/master/protocol/openid-c
 TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
 
 if [ -z "$TOKEN" ]; then
-    echo "❌ Failed to authenticate with Keycloak admin"
-    echo "Response: $TOKEN_RESPONSE"
+    echo "❌ Failed to authenticate with Keycloak admin" >&2
+    echo "Response: $TOKEN_RESPONSE" >&2
+    echo "" >&2
+    echo "Configuration used:" >&2
+    echo "  KC_BASE_URL: ${KC_BASE_URL}" >&2
+    echo "  KC_APP_REALM: ${KC_APP_REALM}" >&2
+    echo "  KC_ADMIN_REALM_ADMIN_USERNAME: ${KC_ADMIN_REALM_ADMIN_USERNAME}" >&2
+    echo "  KC_ADMIN_REALM_ADMIN_PASSWORD: (${#KC_ADMIN_REALM_ADMIN_PASSWORD} characters)" >&2
+    echo "" >&2
+    echo "💡 Suggestion: KC_ADMIN_REALM_ADMIN_USERNAME and KC_ADMIN_REALM_ADMIN_PASSWORD should be" >&2
+    echo "   the username and password of a Keycloak admin user in the master realm." >&2
     exit 1
 fi
 
@@ -68,6 +83,8 @@ CLIENT_CHECK=$(curl -s -H "Authorization: Bearer $TOKEN" \
 
 if [ "$(echo "$CLIENT_CHECK" | jq 'length')" -gt 0 ]; then
     echo "✅ Client $CLIENT_ID already exists"
+    UNMODIFIED_COUNT=$((UNMODIFIED_COUNT + 1))
+    UNMODIFIED_ITEMS="$CLIENT_ID"
     CLIENT_UUID=$(echo "$CLIENT_CHECK" | jq -r '.[0].id')
 
     # Get existing secret
@@ -108,12 +125,14 @@ else
 
     if [ "$HTTP_CODE" = "201" ]; then
         echo "✅ Client $CLIENT_ID created successfully"
+        CREATED_COUNT=$((CREATED_COUNT + 1))
+        CREATED_ITEMS="$CLIENT_ID"
         CLIENT_CHECK=$(curl -s -H "Authorization: Bearer $TOKEN" \
             "${KC_BASE_URL}/admin/realms/${KC_APP_REALM}/clients?clientId=$CLIENT_ID")
         CLIENT_UUID=$(echo "$CLIENT_CHECK" | jq -r '.[0].id')
     else
-        echo "❌ Failed to create client $CLIENT_ID"
-        echo "Response: $CREATE_RESPONSE"
+        echo "❌ Failed to create client $CLIENT_ID" >&2
+        echo "Response: $CREATE_RESPONSE" >&2
         exit 1
     fi
 fi
@@ -141,17 +160,17 @@ MANAGE_CLIENTS_ROLE=$(echo "$AVAILABLE_ROLES" | jq '.[] | select(.name == "manag
 MANAGE_USERS_ROLE=$(echo "$AVAILABLE_ROLES" | jq '.[] | select(.name == "manage-users")')
 
 if [ -z "$MANAGE_REALM_ROLE" ] || [ "$MANAGE_REALM_ROLE" = "null" ]; then
-    echo "❌ Error: manage-realm role not found"
+    echo "❌ Error: manage-realm role not found" >&2
     exit 1
 fi
 
 if [ -z "$MANAGE_CLIENTS_ROLE" ] || [ "$MANAGE_CLIENTS_ROLE" = "null" ]; then
-    echo "❌ Error: manage-clients role not found"
+    echo "❌ Error: manage-clients role not found" >&2
     exit 1
 fi
 
 if [ -z "$MANAGE_USERS_ROLE" ] || [ "$MANAGE_USERS_ROLE" = "null" ]; then
-    echo "❌ Error: manage-users role not found"
+    echo "❌ Error: manage-users role not found" >&2
     exit 1
 fi
 
@@ -183,12 +202,25 @@ else
     if [ "$HTTP_CODE" = "204" ] || [ "$HTTP_CODE" = "200" ]; then
         echo "✅ Roles assigned successfully: manage-realm, manage-clients, manage-users"
     else
-        echo "❌ Failed to assign roles"
-        echo "Response: $ASSIGN_RESPONSE"
+        echo "❌ Failed to assign roles" >&2
+        echo "Response: $ASSIGN_RESPONSE" >&2
         exit 1
     fi
 fi
 
+echo ""
+echo "📊 Summary:"
+if [ $CREATED_COUNT -gt 0 ]; then
+    echo "  Created: $CREATED_COUNT client(s) - $CREATED_ITEMS"
+else
+    echo "  Created: 0 client(s)"
+fi
+if [ $UNMODIFIED_COUNT -gt 0 ]; then
+    echo "  Unmodified: $UNMODIFIED_COUNT client(s) - $UNMODIFIED_ITEMS"
+else
+    echo "  Unmodified: 0 client(s)"
+fi
+echo ""
 echo "✅ CI/CD admin service account setup completed"
 echo ""
 echo "Client ID: $CLIENT_ID"

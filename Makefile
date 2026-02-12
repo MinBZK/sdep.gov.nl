@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 .PHONY: help up down restart status test test-quiet logs postgres-up postgres-down keycloak-up keycloak-down backend-up backend-down \
         postgres-clean postgres-load .build .is-up .clean-stale .drop-database .migrate-database .generate-area-sql \
-        .keycloak-wait .keycloak-realm .keycloak-admin .keycloak-roles .keycloak-clients \
+        .keycloak-wait .keycloak-realm .keycloak-admin .keycloak-roles .keycloak-machine-clients .get-client-credentials \
         .clean-testrun test-security test-str test-ca \
         postgres-login postgres-status postgres-full \
         backend-logs postgres-logs keycloak-logs
@@ -38,26 +38,37 @@ SHELL := /bin/bash
 .keycloak-wait: ## Wait until keycloak allows to authenticate
 	@echo "🚀 Waiting for keycloak ready..."
 	@./keycloak/wait.sh
-	@set -a && source .env && source keycloak/.env && set +a && echo "✅ $$KC_BASE_URL"
+	@set -a && source .env && set +a && echo "✅ $$KC_BASE_URL"
 
 .keycloak-realm: .keycloak-wait ## Create realm
-	@set -a && source .env && source keycloak/.env && set +a && ./keycloak/add-realm.sh
+	@set -a && source .env && set +a && ./keycloak/add-realm.sh
 
 .keycloak-admin: .keycloak-realm ## Create (CI/CD) admin account in realm
 	@mkdir -p ./tmp
-	@set -a && source .env && source keycloak/.env && set +a && \
+	@set -a && source .env && set +a && \
 	KC_APP_REALM_ADMIN_SECRET=$$(bash keycloak/add-realm-admin.sh | grep "Client Secret:" | cut -d' ' -f3) && \
 	echo "$$KC_APP_REALM_ADMIN_SECRET" > ./tmp/KC_APP_REALM_ADMIN_SECRET.txt
 
 .keycloak-roles: .keycloak-admin ## Create roles in realm (keycloak/roles.yaml)
-	@set -a && source .env && source keycloak/.env && set +a && \
+	@set -a && source .env && set +a && \
 	export KC_APP_REALM_ADMIN_SECRET=$$(cat ./tmp/KC_APP_REALM_ADMIN_SECRET.txt) && \
 	./keycloak/add-realm-roles.sh
 
-.keycloak-clients: .keycloak-roles ## Create clients in realm (keycloak/clients.yaml)
-	@set -a && source .env && source keycloak/.env && set +a && \
+.keycloak-machine-clients: .keycloak-roles ## Create machine clients in realm (keycloak/machine-clients.yaml)
+	@set -a && source .env && set +a && \
 	export KC_APP_REALM_ADMIN_SECRET=$$(cat ./tmp/KC_APP_REALM_ADMIN_SECRET.txt) && \
-	./keycloak/add-realm-clients.sh
+	./keycloak/add-realm-machine-clients.sh
+
+.get-client-credentials: ## Retrieve client credentials from Keycloak
+	@set -a && source .env && set +a && \
+	export KC_APP_REALM_ADMIN_SECRET=$$(cat ./tmp/KC_APP_REALM_ADMIN_SECRET.txt) && \
+	source ./keycloak/get-client-secret.sh && \
+	KC_APP_REALM_CLIENT_ID=sdep-test-ca01 && get_client_secret && CA_CLIENT_ID=$$KC_APP_REALM_CLIENT_ID && CA_CLIENT_SECRET=$$KC_APP_REALM_CLIENT_SECRET && \
+	KC_APP_REALM_CLIENT_ID=sdep-test-str01 && get_client_secret && STR_CLIENT_ID=$$KC_APP_REALM_CLIENT_ID && STR_CLIENT_SECRET=$$KC_APP_REALM_CLIENT_SECRET && \
+	echo "export CA_CLIENT_ID=$$CA_CLIENT_ID" > ./tmp/.credentials && \
+	echo "export CA_CLIENT_SECRET=$$CA_CLIENT_SECRET" >> ./tmp/.credentials && \
+	echo "export STR_CLIENT_ID=$$STR_CLIENT_ID" >> ./tmp/.credentials && \
+	echo "export STR_CLIENT_SECRET=$$STR_CLIENT_SECRET" >> ./tmp/.credentials
 
 .is-up: ## Check if services are running
 	@echo "🔍 Checking if services are up..." && \
@@ -171,7 +182,7 @@ keycloak-up: postgres-up ## Start keycloak
 	@echo "🚀 Configuring keycloak..."
 	@$(MAKE) --no-print-directory .keycloak-realm || echo Realm already added
 	@$(MAKE) --no-print-directory .keycloak-roles || echo Roles already added
-	@$(MAKE) --no-print-directory .keycloak-clients || echo Clients already added
+	@$(MAKE) --no-print-directory .keycloak-machine-clients || echo Machine clients already added
 	@echo "✅ Keycloak configured!"
 
 keycloak-down: ## Stop and remove keycloak (including volumes)
@@ -212,7 +223,7 @@ up: .build .clean-stale ## Start
 	@echo "🚀 Configuring keycloak..."
 	@$(MAKE) --no-print-directory .keycloak-realm
 	@$(MAKE) --no-print-directory .keycloak-roles
-	@$(MAKE) --no-print-directory .keycloak-clients
+	@$(MAKE) --no-print-directory .keycloak-machine-clients
 	@echo "✅ Keycloak configured!"
 
 	@echo "🚀 Initializing database..."
@@ -253,8 +264,8 @@ logs: ## Show logs
 	docker exec -i sdep-postgres psql -U $$POSTGRES_SUPER_USER -d $$POSTGRES_DB_NAME \
 		-v ON_ERROR_STOP=1 < postgres/clean-testrun.sql
 
-test-security: .is-up ## Test security (headers, unauthorized, credentials)
-	@set -a && source ./.env && set +a && set -o pipefail && \
+test-security: .is-up .get-client-credentials ## Test security (headers, unauthorized, credentials)
+	@set -a && source ./.env && source ./tmp/.credentials && set +a && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🔒 Testing security..." && \
@@ -270,14 +281,14 @@ test-security: .is-up ## Test security (headers, unauthorized, credentials)
 	./tests/test_auth_credentials.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ Security tested"
 
-test-ca: .is-up ## Test CA endpoints
-	@set -a && source ./.env && set +a && set -o pipefail && \
+test-ca: .is-up .get-client-credentials ## Test CA endpoints
+	@set -a && source ./.env && source ./tmp/.credentials && set +a && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🏛️  Testing CA endpoints..." && \
 	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
-	if CLIENT_ID=sdep-test-ca01 CLIENT_SECRET=sdep-test-ca01 ./tests/test_auth_client.sh; then \
+	if CLIENT_ID=$$CA_CLIENT_ID CLIENT_SECRET=$$CA_CLIENT_SECRET ./tests/test_auth_client.sh; then \
 		echo "✅ CA client authorized"; \
 	else \
 		echo "❌ CA client authorization failed"; \
@@ -288,14 +299,14 @@ test-ca: .is-up ## Test CA endpoints
 	./tests/test_ca_activities.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ CA endpoints tested"
 
-test-str: .is-up ## Test STR endpoints
-	@set -a && source ./.env && set +a && set -o pipefail && \
+test-str: .is-up .get-client-credentials ## Test STR endpoints
+	@set -a && source ./.env && source ./tmp/.credentials && set +a && set -o pipefail && \
 	OUTPUT_FILE=$$(mktemp) && \
 	trap "rm -f $$OUTPUT_FILE" EXIT && \
 	echo "🏘️  Testing STR endpoints..." && \
 	echo "BACKEND_BASE_URL: $$BACKEND_BASE_URL" && \
 	echo "" && \
-	if CLIENT_ID=sdep-test-str01 CLIENT_SECRET=sdep-test-str01 ./tests/test_auth_client.sh; then \
+	if CLIENT_ID=$$STR_CLIENT_ID CLIENT_SECRET=$$STR_CLIENT_SECRET ./tests/test_auth_client.sh; then \
 		echo "✅ STR client authorized"; \
 	else \
 		echo "❌ STR client authorization failed"; \
@@ -306,8 +317,8 @@ test-str: .is-up ## Test STR endpoints
 	./tests/test_str_activities.sh 2>&1 | tee $$OUTPUT_FILE && \
 	echo "✅ STR endpoints tested"
 
-test-verbose: .is-up ## Test all (verbose)
-	@set -a && source ./.env && set +a && set -o pipefail && \
+test-verbose: .is-up .get-client-credentials ## Test all (verbose)
+	@set -a && source ./.env && source ./tmp/.credentials && set +a && set -o pipefail && \
 	RESULTS_FILE=$$(mktemp) && \
 	FAILED_TESTS_FILE=$$(mktemp) && \
 	OUTPUT_FILE=$$(mktemp) && \
