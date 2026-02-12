@@ -4,20 +4,36 @@ This directory contains shell scripts for integration testing the SDEP (Single D
 
 ## Running Tests
 
-See [../Makefile](../Makefile).
+See [../Makefile](../Makefile). Available targets:
 
-## Authentication & authorization tests
+| Target               | Description                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| `make test`          | Run all tests (quiet, summary only)                                    |
+| `make test-verbose`  | Run all tests with full output and PRE/POST row count isolation checks |
+| `make test-security` | Run security tests only (headers, unauthorized, credentials)           |
+| `make test-str`      | Run STR platform endpoint tests only                                   |
+| `make test-ca`       | Run CA endpoint tests only                                             |
 
-### `auth_client.sh`
+## Test Scripts
+
+### Authentication & authorization tests
+
+#### `test_auth_client.sh`
 **Purpose:** Utility script to authenticate and save bearer token
 
 **What it does:**
 - Performs OAuth2 client credentials flow
-- Requests access token from `/api/v0/auth/token`
+- Requests access token from `/api/{API_VERSION}/auth/token`
 - Saves token to `./tmp/.bearer_token` for use by other scripts
 - Used as a prerequisite for authenticated endpoint tests
 
-### `auth_credentials.sh`
+**Required environment variables:**
+- `BACKEND_BASE_URL` - API base URL
+- `CLIENT_ID` - OAuth2 client ID
+- `CLIENT_SECRET` - OAuth2 client secret
+- `API_VERSION` (optional, defaults to `v0`)
+
+#### `test_auth_credentials.sh`
 **Purpose:** Test OAuth2 token acquisition for both STR and CA clients
 
 **What it tests:**
@@ -26,31 +42,34 @@ See [../Makefile](../Makefile).
 - JWT token acquisition and decoding
 - Token payload inspection
 
-### `auth_headers.sh`
+**Required environment variables:**
+- `BACKEND_BASE_URL`
+- `STR_CLIENT_ID`, `STR_CLIENT_SECRET`
+- `CA_CLIENT_ID`, `CA_CLIENT_SECRET`
+
+#### `test_auth_headers.sh`
 **Purpose:** Verify security headers compliance across multiple endpoints
 
 **Endpoints tested:**
 - `/` - Root endpoint
 - `/api/health` - Health check
-- `/api/v0/ping` - Ping endpoint
-- `/api/v0/openapi.json` - OpenAPI specification
+- `/api/{API_VERSION}/ping` - Ping endpoint
+- `/api/{API_VERSION}/openapi.json` - OpenAPI specification
 
 **What it tests:**
-- XSS protection headers
-- Content Security Policy (CSP)
-- OWASP security header compliance
-- Output encoding verification
-- Prevents clickjacking attacks
-- Secure cookie settings
+- OWASP security headers (Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy, Cross-Origin-Resource-Policy, Cross-Origin-Embedder-Policy)
+- CSP policy directives (default-src, script-src, frame-ancestors, object-src, unsafe-eval absence)
+- Cache control on sensitive endpoints (no-store, Pragma no-cache)
+- HSTS delegation check (should be handled by reverse proxy, not application)
 
-### `auth_unauthorized.sh`
+#### `test_auth_unauthorized.sh`
 **Purpose:** Verify all secured endpoints properly reject unauthenticated requests
 
 **Endpoints tested:**
 - `GET /api/v0/ping`
 - `GET /api/v0/str/areas`
 - `GET /api/v0/str/areas/count`
-- `GET /api/v0/str/areas/{areaId}`
+- `GET /api/v0/str/areas/amsterdam-area0363`
 - `POST /api/v0/str/activities`
 - `GET /api/v0/ca/activities`
 - `GET /api/v0/ca/activities/count`
@@ -62,68 +81,55 @@ See [../Makefile](../Makefile).
 
 ---
 
-## Healthcheck tests
+### Healthcheck tests
 
-### `health_ping.sh`
+#### `test_health_ping.sh`
 **Purpose:** Basic API availability test
 
 **What it tests:**
-- API server is running and responding
-- Ping endpoint accessibility
-- Response time and format
-- Authenticated and unauthenticated access
+- Ping endpoint responds with HTTP 200 and `{"status":"OK"}`
+- Supports both authenticated (with `BEARER_TOKEN`) and unauthenticated requests
+- Automatically loads token from `./tmp/.bearer_token` if `BEARER_TOKEN` is not set
 
 ---
 
-## Competent Authority (CA) tests
+### Competent Authority (CA) tests
 
-### `ca_areas.sh`
+#### `test_ca_areas.sh`
 **Purpose:** Test area submission for competent authorities
 
-**What it tests:**
-- `POST /ca/areas` - Submit area definitions with shapefile data
-- **Validation error handling** (Layer 1: Pydantic, Layer 2: Business Logic)
-- Partial success/failure scenarios (some areas succeed, others fail)
-- Detailed error responses with field-level validation
-- Bulk area creation (1-100 areas per request)
-- Duplicate detection
-- Required field validation (filename, filedata)
+**Tests:**
+- **Test 1:** POST single area with shapefile data
+- **Test 2:** POST multiple areas (2 areas in one request)
+- **Test 3:** POST with custom areaId field
+- **Test 4:** POST with validation error (missing required `filedata` field) - expects 422
+- **Test 5:** POST with partial success (1 valid + 1 invalid area) - expects 200
 
-**Authentication:** Requires CA client credentials with `sdep_ca` and `sdep_write` roles
+**Endpoint:** `POST /api/{API_VERSION}/ca/areas`
 
-**Payload:** Area definitions with base64-encoded shapefile data
+**Authentication:** Requires CA client credentials (token loaded from `./tmp/.bearer_token`)
 
-**Key Features Tested:**
-- ✅ Valid area submission
-- ✅ Invalid filedata (missing, corrupted)
-- ✅ Missing required fields
-- ✅ Empty area lists
-- ✅ Duplicate area detection
-- ✅ Combined Pydantic + business logic validation errors
-
-**Validation Behavior:**
-- ✅ Pydantic validation errors collected (Layer 1)
-- ✅ Business logic validation continues (Layer 2)
-- ✅ All errors returned together with detailed field paths
-- ✅ Partial success supported (some areas succeed, others fail)
+**Payload:** Area definitions with base64-encoded shapefile data (uses `test-data/shapefiles/Amsterdam-dummy.zip`)
 
 **HTTP Status Codes:**
 - `201 Created` - All areas succeeded
 - `200 OK` - Partial success (some succeeded, some failed)
-- `422 Unprocessable Entity` - All areas failed
+- `422 Unprocessable Entity` - All areas failed validation
 
-### `ca_activities.sh`
+**Response format:** `{ totalProcessed, succeeded, failed, failures[] }`
+
+#### `test_ca_activities.sh`
 **Purpose:** Comprehensive testing of activity query endpoints for competent authorities
 
-**What it tests:**
+**Tests:**
 - **Test 1:** Count activities (`GET /ca/activities/count`)
 - **Test 2:** Get all activities
 - **Test 3:** Pagination (offset=0, limit=1)
 - **Test 4:** Verify response structure (activityId, activityName, platformId, platformName, url, registrationNumber, address, temporal, areaId)
 - **Test 5:** GET specific activity by URL filter
 - **Test 6:** GET activities filtered by areaId
-- **Test 7:** GET with non-existent areaId (should return empty or 404)
-- **Test 8:** Verify pagination consistency (offset and limit)
+- **Test 7:** GET with non-existent areaId (should return empty list or 404)
+- **Test 8:** Verify pagination consistency (offset and limit produce different results)
 
 **Endpoints:**
 - `GET /ca/activities/count`
@@ -134,17 +140,19 @@ See [../Makefile](../Makefile).
 
 ---
 
-## Short-Term Rental (STR) Platform tests
+### Short-Term Rental (STR) Platform tests
 
-### `str_areas.sh`
+#### `test_str_areas.sh`
 **Purpose:** Comprehensive testing of area lookup endpoints for STR platforms
 
-**What it tests:**
-- **Test 1:** Count areas (`GET /str/areas/count`) - expects minimal 28 areas
+**Setup:** Creates 5 fixture areas via `lib/create_fixture_areas.sh` before running tests.
+
+**Tests:**
+- **Test 1:** Count areas (`GET /str/areas/count`) - expects at least 5 (fixture count)
 - **Test 2:** GET all areas and extract area IDs for subsequent tests
-- **Test 3:** GET areas with pagination (offset=0, limit=1)
+- **Test 3:** GET areas with pagination (offset=0, limit=1) - expects exactly 1 result
 - **Test 4:** Verify response structure (areaId, competentAuthorityId, competentAuthorityName, filename, createdAt)
-- **Test 5:** GET specific area by areaId (returns shapefile as `application/octet-stream`)
+- **Test 5:** GET specific area by areaId (returns shapefile as `application/octet-stream` with `Content-Disposition: attachment`)
 - **Test 6:** GET another area by areaId
 - **Test 7:** GET non-existent area (should return 404)
 - **Test 8:** Verify Content-Disposition header contains filename
@@ -159,35 +167,46 @@ See [../Makefile](../Makefile).
 - List endpoints: `application/json`
 - Download endpoint: `application/octet-stream` with `Content-Disposition: attachment`
 
-### `str_activities.sh`
+#### `test_str_activities.sh`
 **Purpose:** Test activity submission for STR platforms
 
-**What it tests:**
-- `POST /str/activities` - Submit rental activities
-- **Validation error handling** (Layer 1: Pydantic, Layer 2: Business Logic)
-- Partial success/failure scenarios (some activities succeed, others fail)
-- Detailed error responses with field-level validation
-- Bulk activity creation (1-100 activities per request)
-- Duplicate detection
-- Required field validation (address, temporal, registration)
+**Setup:** Creates 3 fixture areas via `lib/create_fixture_areas.sh` before running tests.
 
-**Key Features Tested:**
-- ✅ Valid activity submission
-- ✅ Invalid postal codes (too long, contains spaces, special characters)
-- ✅ Invalid temporal data (end before start, year before 2025)
-- ✅ Invalid field types (string where int expected, etc.)
-- ✅ Missing required fields
-- ✅ Empty activity lists
-- ✅ Duplicate activity detection
-- ✅ Combined Pydantic + business logic validation errors
+**Tests:**
+- **Test 1:** POST single activity with full payload (address, temporal, registrationNumber, areaId, countryOfGuests, numberOfGuests)
+- **Test 2:** POST multiple activities (2 activities in one request)
+- **Test 3:** POST with custom activityId field
+- **Test 4:** POST with validation error (missing required `registrationNumber` field) - expects 422
+- **Test 5:** POST with partial success (1 valid activity + 1 with non-existent areaId) - expects 200
 
-**Validation Behavior:**
-- ✅ Pydantic validation errors collected (Layer 1)
-- ✅ Business logic validation continues (Layer 2)
-- ✅ All errors returned together with detailed field paths
-- ✅ Partial success supported (some activities succeed, others fail)
+**Endpoint:** `POST /api/{API_VERSION}/str/activities`
 
-This allows clients to see all validation issues at once instead of fixing one error at a time.
+**Authentication:** Requires STR client credentials (token loaded from `./tmp/.bearer_token`)
+
+**HTTP Status Codes:**
+- `201 Created` - All activities succeeded
+- `200 OK` - Partial success (some succeeded, some failed)
+- `422 Unprocessable Entity` - All activities failed validation
+
+**Response format:** `{ totalProcessed, succeeded, failed, failures[] }`
+
+---
+
+### Helper scripts
+
+#### `lib/create_fixture_areas.sh`
+**Purpose:** Create fixture areas for test isolation
+
+**Usage:** `create_fixture_areas.sh [count] [prefix]`
+
+**What it does:**
+- Authenticates using CA client credentials (`CA_CLIENT_ID`, `CA_CLIENT_SECRET`)
+- Creates `count` areas (default: 3) with `prefix`-prefixed IDs via `POST /ca/areas`
+- Uses `test-data/shapefiles/Amsterdam-dummy.zip` as shapefile data
+- Outputs created area IDs to stdout (one per line), errors to stderr
+- Does not modify `./tmp/.bearer_token` (uses a local token variable)
+
+**Used by:** `test_str_areas.sh`, `test_str_activities.sh`
 
 ---
 
@@ -195,17 +214,15 @@ This allows clients to see all validation issues at once instead of fixing one e
 
 ### Credentials
 
-Default test clients are defined in `keycloak/clients.yaml`:
+Default test clients are configured in Keycloak. The Makefile retrieves secrets dynamically via `get_client_secret`:
 
 **Competent Authority (CA)**
-- **Client ID:** `sdep-ca0363`
-- **Client Secret:** `sdep-ca0363`
+- **Client ID:** `sdep-test-ca01`
 - **Roles:** `sdep_ca`, `sdep_write`, `sdep_read`
-- **Can access:** CA endpoints for area 0363 (Amsterdam)
+- **Can access:** CA endpoints
 
 **STR Platform**
 - **Client ID:** `sdep-test-str01`
-- **Client Secret:** `sdep-test-str01`
 - **Roles:** `sdep_str`, `sdep_write`, `sdep_read`
 - **Can access:** STR platform endpoints
 
@@ -213,9 +230,9 @@ Default test clients are defined in `keycloak/clients.yaml`:
 
 ### Bearer tokens
 
-- Tokens are saved to `./tmp/.bearer_token` by `auth-client.sh`
+- Tokens are saved to `./tmp/.bearer_token` by `test_auth_client.sh`
 - Other scripts automatically load tokens from this file
-- Token location is configurable via scripts
+- Token location is configurable via `TOKEN_FILE` environment variable
 
 ---
 
@@ -224,26 +241,3 @@ Default test clients are defined in `keycloak/clients.yaml`:
 All test scripts follow standard Unix exit codes:
 - `0` - All tests passed
 - `1` - Test failed or error occurred
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**"BACKEND_BASE_URL environment variable is not set"**
-- Solution: `export BACKEND_BASE_URL="http://localhost:8000"`
-
-**"401 Unauthorized"**
-- Check if token is expired
-- Re-run `auth-client.sh` to get a fresh token
-- Verify client credentials are correct
-
-**"403 Forbidden"**
-- Client lacks required roles
-- Verify client has appropriate permissions in Keycloak
-
-**Connection refused**
-- Ensure backend server is running: `make up`
-- Check `BACKEND_BASE_URL` points to correct host/port
-- Restart everything: `make restart`
