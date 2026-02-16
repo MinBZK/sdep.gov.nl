@@ -278,6 +278,8 @@ POST /ca/areas (multipart/form-data: file + optional areaId, areaName)
 
 ### Competent Authority (CA) - Requires `sdep_ca` role
 - `POST /api/v0/ca/areas` - Submit a single area (multipart/form-data: file + optional areaId, areaName)
+- `GET /api/v0/ca/areas` - List own areas (pagination: offset, limit)
+- `GET /api/v0/ca/areas/count` - Count own areas
 - `GET /api/v0/ca/activities` - Query rental activities (pagination: offset, limit)
 - `GET /api/v0/ca/activities/count` - Count activities
 
@@ -286,6 +288,8 @@ POST /ca/areas (multipart/form-data: file + optional areaId, areaName)
 - `GET /api/v0/str/areas/count` - Count areas
 - `GET /api/v0/str/areas/{areaId}` - Download shapefile for area
 - `POST /api/v0/str/activities` - Submit a single activity (JSON body)
+- `GET /api/v0/str/activities` - List own activities (pagination: offset, limit)
+- `GET /api/v0/str/activities/count` - Count own activities
 
 ### Health
 - `GET /api/health` - Health check (unauthenticated)
