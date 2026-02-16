@@ -30,12 +30,12 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 | **API&nbsp;08** | Syntax validation                                      | Example: `postal code`                                                                                         |
 | **API&nbsp;09** | Semantical validation                                  | Example: `begin timestamp < end timestamp`                                                                     |
 | **API&nbsp;10** | Integrity validation                                   | Example: can only submit activities for existing areas                                                         |
-| **API&nbsp;11** | Single record POST                                     | To avoid transaction performance issues and to keep the endpoints simple (as opposes to bulk updates)          |
-| **API&nbsp;12** | Logical ordening => readability                        | For POST, request and response follow the same ordening, extra data in response is moved to the end            |
+| **API&nbsp;11** | Single record POST                                     | To avoid transaction performance issues and to keep the endpoints simple (as opposed to bulk updates)          |
+| **API&nbsp;12** | Logical ordering => readability                        | For POST, request and response follow the same ordering, extra data in response is moved to the end            |
 | **API&nbsp;13** | Essentiality                                           | Example: in POST activities, only `areaId` and `competentAuthorityId`, but no `competentAuthorityName`         |
 | **API&nbsp;14** | Essentiality/security                                  | Example: in POST activities request, no need to include `platformId`                                           |
 | **API&nbsp;15** | Consistent HTTP response codes                         | 200, 201, 400, 401, 403, 409, 422                                                                              |
-| **API&nbsp;16** | When activitiees are submitted, first get actual areas | Because these may have changed over time                                                                       |
+| **API&nbsp;16** | When activities are submitted, first get actual areas | Because these may have changed over time                                                                       |
 
 ## Security
 
