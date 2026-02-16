@@ -287,10 +287,77 @@ class TestAreaCRUD:
         # Assert
         assert result is None
 
-    async def test_unique_constraint_area_id_created_at(
+    async def test_exists_any_by_area_id_true_for_ended(
         self, async_session: AsyncSession
     ):
-        """Test unique constraint on (area_id, created_at)."""
+        """Test exists_any_by_area_id returns True for an area with ended_at set."""
+        # Arrange
+        ca = await CompetentAuthorityFactory.create_async(async_session)
+        await AreaFactory.create_async(
+            async_session,
+            area_id="ended-area-id",
+            competent_authority_id=ca.id,
+            filename="test.zip",
+            filedata=b"test_data",
+        )
+        await area.mark_as_ended(async_session, "ended-area-id", ca.id)
+
+        # Act
+        result = await area.exists_any_by_area_id(async_session, "ended-area-id")
+
+        # Assert
+        assert result is True
+
+    async def test_exists_any_by_area_id_false_for_nonexistent(
+        self, async_session: AsyncSession
+    ):
+        """Test exists_any_by_area_id returns False for non-existent area_id."""
+        # Act
+        result = await area.exists_any_by_area_id(
+            async_session, "00000000-0000-0000-0000-000000000000"
+        )
+
+        # Assert
+        assert result is False
+
+    async def test_count_by_competent_authority_id_str(
+        self, async_session: AsyncSession
+    ):
+        """Test counting areas by competent authority functional ID."""
+        # Arrange
+        ca = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0518",
+            competent_authority_name="Gemeente Den Haag",
+        )
+        for i in range(3):
+            await AreaFactory.create_async(
+                async_session,
+                competent_authority_id=ca.id,
+                filename=f"area{i}.zip",
+                filedata=b"test_data",
+            )
+
+        # Act
+        total = await area.count_by_competent_authority_id_str(async_session, "0518")
+
+        # Assert
+        assert total == 3
+
+    async def test_count_by_competent_authority_id_str_not_found(
+        self, async_session: AsyncSession
+    ):
+        """Test counting areas by non-existent competent authority functional ID."""
+        # Act
+        total = await area.count_by_competent_authority_id_str(async_session, "9999")
+
+        # Assert
+        assert total == 0
+
+    async def test_unique_constraint_area_id_competent_authority_id_created_at(
+        self, async_session: AsyncSession
+    ):
+        """Test unique constraint on (area_id, competent_authority_id, created_at)."""
         import asyncio
         import uuid
 

@@ -82,8 +82,9 @@ class Activity(Base):
     __table_args__ = (
         UniqueConstraint(
             "activity_id",
+            "platform_id",
             "created_at",
-            name="uq_activity_activity_id_created_at",
+            name="uq_activity_activity_id_platform_id_created_at",
         ),
         CheckConstraint(
             "number_of_guests IS NULL OR (number_of_guests >= 1 AND number_of_guests <= 1024)",
@@ -97,7 +98,7 @@ class Activity(Base):
     )
 
     # Primary key (technical ID, database-internal)
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
 
     # Attributes
 
@@ -156,6 +157,9 @@ class Activity(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), nullable=False
     )  # Always present, stored in UTC
+    ended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )  # Optional, stored in UTC
 
     # Composites
     address: Mapped[Address] = composite(

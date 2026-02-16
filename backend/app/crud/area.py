@@ -1,9 +1,10 @@
 """CRUD operations for Area model."""
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area import Area
+from app.models.competent_authority import CompetentAuthority
 
 
 async def create(
@@ -29,7 +30,7 @@ async def create(
         Created Area instance
 
     Note:
-        The combination of (area_id, created_at) is unique to enable versioning.
+        The combination of (area_id, competent_authority_id, created_at) is unique to enable versioning.
     """
     area = Area(
         area_id=area_id,
@@ -82,15 +83,15 @@ async def exists(session: AsyncSession, area_id: int) -> bool:
 
 async def count(session: AsyncSession) -> int:
     """
-    Count all unique areas (latest versions only).
+    Count all current areas (ended_at IS NULL).
 
     Args:
         session: Async database session
 
     Returns:
-        Total number of unique areas (distinct area_id)
+        Total number of current areas
     """
-    stmt = select(func.count(func.distinct(Area.area_id))).select_from(Area)
+    stmt = select(func.count()).select_from(Area).where(Area.ended_at.is_(None))
     result = await session.execute(stmt)
     return result.scalar_one()
 
@@ -99,7 +100,7 @@ async def get_all(
     session: AsyncSession, offset: int = 0, limit: int | None = None
 ) -> list[Area]:
     """
-    Get areas with pagination (latest versions only).
+    Get current areas with pagination (ended_at IS NULL).
 
     Args:
         session: Async database session
@@ -107,12 +108,12 @@ async def get_all(
         limit: Maximum number of records to return (default: no limit)
 
     Returns:
-        List of Area instances (latest version per area_id)
+        List of current Area instances
     """
     stmt = (
         select(Area)
-        .distinct(Area.area_id)
-        .order_by(Area.area_id, Area.created_at.desc())
+        .where(Area.ended_at.is_(None))
+        .order_by(Area.created_at.desc())
         .offset(offset)
     )
     if limit is not None:
@@ -140,20 +141,18 @@ async def get_by_id(session: AsyncSession, area_id: int) -> Area | None:
 
 async def get_by_area_id(session: AsyncSession, area_id: str) -> Area | None:
     """
-    Get an area by functional ID (latest version).
+    Get current area by functional ID (ended_at IS NULL).
 
     Args:
         session: Async database session
         area_id: Area functional ID (UUID string)
 
     Returns:
-        Latest Area instance for the given area_id, or None if not found
+        Current Area instance for the given area_id, or None if not found
     """
-    stmt = (
-        select(Area)
-        .where(Area.area_id == area_id)
-        .order_by(Area.created_at.desc())
-        .limit(1)
+    stmt = select(Area).where(
+        Area.area_id == area_id,
+        Area.ended_at.is_(None),
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -189,6 +188,41 @@ async def get_by_competent_authority_id(
     return list(result.scalars().all())
 
 
+async def get_by_competent_authority_id_str(
+    session: AsyncSession,
+    competent_authority_id_str: str,
+    offset: int = 0,
+    limit: int | None = None,
+) -> list[Area]:
+    """
+    Get current areas by competent authority functional ID (ended_at IS NULL).
+
+    Args:
+        session: Async database session
+        competent_authority_id_str: Competent authority functional ID string (e.g., "0363")
+        offset: Number of records to skip (default: 0)
+        limit: Maximum number of records to return (default: no limit)
+
+    Returns:
+        List of current Area instances for the given competent authority
+    """
+    stmt = (
+        select(Area)
+        .join(CompetentAuthority, Area.competent_authority_id == CompetentAuthority.id)
+        .where(
+            CompetentAuthority.competent_authority_id == competent_authority_id_str,
+            Area.ended_at.is_(None),
+        )
+        .order_by(Area.created_at.desc())
+        .offset(offset)
+    )
+    if limit is not None:
+        stmt = stmt.limit(limit)
+
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def get_by_filename(
     session: AsyncSession, filename: str, offset: int = 0, limit: int | None = None
 ) -> list[Area]:
@@ -210,3 +244,75 @@ async def get_by_filename(
 
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def count_by_competent_authority_id_str(
+    session: AsyncSession,
+    competent_authority_id_str: str,
+) -> int:
+    """
+    Count current areas by competent authority functional ID (ended_at IS NULL).
+
+    Args:
+        session: Async database session
+        competent_authority_id_str: Competent authority functional ID string (e.g., "0363")
+
+    Returns:
+        Total number of current areas for the given competent authority
+    """
+    stmt = (
+        select(func.count())
+        .select_from(Area)
+        .join(CompetentAuthority, Area.competent_authority_id == CompetentAuthority.id)
+        .where(
+            CompetentAuthority.competent_authority_id == competent_authority_id_str,
+            Area.ended_at.is_(None),
+        )
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one()
+
+
+async def exists_any_by_area_id(
+    session: AsyncSession,
+    area_id: str,
+) -> bool:
+    """
+    Check if any version of an area exists by functional ID (regardless of ended_at).
+
+    Args:
+        session: Async database session
+        area_id: Area functional ID
+
+    Returns:
+        True if any version exists, False otherwise
+    """
+    stmt = select(func.count()).select_from(Area).where(Area.area_id == area_id)
+    result = await session.execute(stmt)
+    return result.scalar_one() > 0
+
+
+async def mark_as_ended(
+    session: AsyncSession,
+    area_id: str,
+    competent_authority_id: int,
+) -> None:
+    """
+    Mark the current version of an area as ended (set ended_at = now()).
+
+    Args:
+        session: Async database session
+        area_id: Area functional ID
+        competent_authority_id: Competent authority technical ID (foreign key)
+    """
+    stmt = (
+        update(Area)
+        .where(
+            Area.area_id == area_id,
+            Area.competent_authority_id == competent_authority_id,
+            Area.ended_at.is_(None),
+        )
+        .values(ended_at=func.now())
+    )
+    await session.execute(stmt)
+    await session.flush()

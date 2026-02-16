@@ -1,6 +1,6 @@
 """CRUD operations for CompetentAuthority model."""
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.competent_authority import CompetentAuthority
@@ -87,7 +87,7 @@ async def get_all(
     session: AsyncSession, offset: int = 0, limit: int | None = None
 ) -> list[CompetentAuthority]:
     """
-    Get competent authorities with pagination (latest versions only).
+    Get current competent authorities with pagination (ended_at IS NULL).
 
     Args:
         session: Async database session
@@ -95,15 +95,12 @@ async def get_all(
         limit: Maximum number of records to return (default: no limit)
 
     Returns:
-        List of CompetentAuthority instances (latest version per competent_authority_id)
+        List of current CompetentAuthority instances
     """
     stmt = (
         select(CompetentAuthority)
-        .distinct(CompetentAuthority.competent_authority_id)
-        .order_by(
-            CompetentAuthority.competent_authority_id,
-            CompetentAuthority.created_at.desc(),
-        )
+        .where(CompetentAuthority.ended_at.is_(None))
+        .order_by(CompetentAuthority.created_at.desc())
         .offset(offset)
     )
     if limit is not None:
@@ -134,20 +131,18 @@ async def get_by_competent_authority_id(
     competent_authority_id: str,
 ) -> CompetentAuthority | None:
     """
-    Get a competent authority by competent_authority_id (latest version).
+    Get current competent authority by competent_authority_id (ended_at IS NULL).
 
     Args:
         session: Async database session
         competent_authority_id: Competent authority identifier
 
     Returns:
-        Latest CompetentAuthority instance for the given competent_authority_id, or None if not found
+        Current CompetentAuthority instance for the given competent_authority_id, or None if not found
     """
-    stmt = (
-        select(CompetentAuthority)
-        .where(CompetentAuthority.competent_authority_id == competent_authority_id)
-        .order_by(CompetentAuthority.created_at.desc())
-        .limit(1)
+    stmt = select(CompetentAuthority).where(
+        CompetentAuthority.competent_authority_id == competent_authority_id,
+        CompetentAuthority.ended_at.is_(None),
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -160,7 +155,7 @@ async def get_by_competent_authority_name(
     limit: int | None = None,
 ) -> list[CompetentAuthority]:
     """
-    Get competent authorities by competent_authority_name with pagination (latest versions only).
+    Get current competent authorities by competent_authority_name with pagination (ended_at IS NULL).
 
     Args:
         session: Async database session
@@ -169,16 +164,15 @@ async def get_by_competent_authority_name(
         limit: Maximum number of records to return (default: no limit)
 
     Returns:
-        List of CompetentAuthority instances (latest version per competent_authority_id) matching the competent_authority_name
+        List of current CompetentAuthority instances matching the competent_authority_name
     """
     stmt = (
         select(CompetentAuthority)
-        .where(CompetentAuthority.competent_authority_name == competent_authority_name)
-        .distinct(CompetentAuthority.competent_authority_id)
-        .order_by(
-            CompetentAuthority.competent_authority_id,
-            CompetentAuthority.created_at.desc(),
+        .where(
+            CompetentAuthority.competent_authority_name == competent_authority_name,
+            CompetentAuthority.ended_at.is_(None),
         )
+        .order_by(CompetentAuthority.created_at.desc())
         .offset(offset)
     )
     if limit is not None:
@@ -186,3 +180,49 @@ async def get_by_competent_authority_name(
 
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def exists_any_by_competent_authority_id(
+    session: AsyncSession,
+    competent_authority_id: str,
+) -> bool:
+    """
+    Check if any version of a competent authority exists by functional ID (regardless of ended_at).
+
+    Args:
+        session: Async database session
+        competent_authority_id: Competent authority functional ID
+
+    Returns:
+        True if any version exists, False otherwise
+    """
+    stmt = (
+        select(func.count())
+        .select_from(CompetentAuthority)
+        .where(CompetentAuthority.competent_authority_id == competent_authority_id)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one() > 0
+
+
+async def mark_as_ended(
+    session: AsyncSession,
+    competent_authority_id: str,
+) -> None:
+    """
+    Mark the current version of a competent authority as ended (set ended_at = now()).
+
+    Args:
+        session: Async database session
+        competent_authority_id: Competent authority functional ID
+    """
+    stmt = (
+        update(CompetentAuthority)
+        .where(
+            CompetentAuthority.competent_authority_id == competent_authority_id,
+            CompetentAuthority.ended_at.is_(None),
+        )
+        .values(ended_at=func.now())
+    )
+    await session.execute(stmt)
+    await session.flush()

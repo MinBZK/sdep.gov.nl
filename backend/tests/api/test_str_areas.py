@@ -765,3 +765,27 @@ class TestStrAreaAPI:
         assert response.status_code == status.HTTP_200_OK
         assert response.content == b"data2"
         assert response.headers["content-type"] == "application/octet-stream"
+
+    async def test_get_areas_response_does_not_contain_ended_at(
+        self, async_session: AsyncSession, setup_overrides, competent_authority
+    ):
+        """Test that GET /str/areas response does NOT contain endedAt (internal only)."""
+        await AreaFactory.create_async(
+            async_session,
+            competent_authority_id=competent_authority.id,
+            filename="test.zip",
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/str/areas", headers={"Authorization": "Bearer test_token"}
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["areas"]) == 1
+        area = data["areas"][0]
+        assert "endedAt" not in area
+        assert "ended_at" not in area

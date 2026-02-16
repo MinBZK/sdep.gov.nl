@@ -118,7 +118,7 @@ VALUES (
   '${filename}',
   ${hex_bytea},
   '2025-01-01 00:00:00+00'::timestamptz
-) ON CONFLICT (area_id, created_at) DO NOTHING;
+) ON CONFLICT (area_id, competent_authority_id, created_at) DO NOTHING;
 
 EOF
 done

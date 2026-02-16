@@ -18,23 +18,23 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 ## API
 
-| #               | Decision                                               | Motivation/example                                                                                             |
-| :-------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
-| **API&nbsp;01** | Support OpenAPI 3.1.0                                  | Swagger 2.0 is legacy - https://swagger.io/specification/                                                      |
-| **API&nbsp;02** | All endpoints are self-explanatory/well-documented     |                                                                                                                |
-| **API&nbsp;03** | Use nouns instead of verbs                             | Best practice - https://logius-standaarden.github.io/API-Design-Rules/                                         |
-| **API&nbsp;04** | Use plurals for resources that affect collections      | Best practice - https://logius-standaarden.github.io/API-Design-Rules/                                         |
-| **API&nbsp;05** | Consistent datamodel [*]                               | Avoid code duplication, only have `Activity`, `Area`, add attribute to indicate "non-reporting records" for CA |
-| **API&nbsp;06** | Consistent endpoints                                   | Have POST/GET "mirrors" - `POST /ca/areas`, `GET /ca/activities` vs. `GET /str/areas`,` POST /str/activities`  |
-| **API&nbsp;07** | Consistent pagination                                  | Have `offset` and `limit` for all endpoints with (potential) many records                                      |
-| **API&nbsp;08** | Syntax validation                                      | Example: `postal code`                                                                                         |
-| **API&nbsp;09** | Semantical validation                                  | Example: `begin timestamp < end timestamp`                                                                     |
-| **API&nbsp;10** | Integrity validation                                   | Example: can only submit activities for existing areas                                                         |
-| **API&nbsp;11** | Single record POST                                     | To avoid transaction performance issues and to keep the endpoints simple (as opposed to bulk updates)          |
-| **API&nbsp;12** | Logical ordering => readability                        | For POST, request and response follow the same ordering, extra data in response is moved to the end            |
-| **API&nbsp;13** | Essentiality                                           | Example: in POST activities, only `areaId` and `competentAuthorityId`, but no `competentAuthorityName`         |
-| **API&nbsp;14** | Essentiality/security                                  | Example: in POST activities request, no need to include `platformId`                                           |
-| **API&nbsp;15** | Consistent HTTP response codes                         | 200, 201, 400, 401, 403, 409, 422                                                                              |
+| #               | Decision                                              | Motivation/example                                                                                             |
+| :-------------- | :---------------------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
+| **API&nbsp;01** | Support OpenAPI 3.1.0                                 | Swagger 2.0 is legacy - https://swagger.io/specification/                                                      |
+| **API&nbsp;02** | All endpoints are self-explanatory/well-documented    |                                                                                                                |
+| **API&nbsp;03** | Use nouns instead of verbs                            | Best practice - https://logius-standaarden.github.io/API-Design-Rules/                                         |
+| **API&nbsp;04** | Use plurals for resources that affect collections     | Best practice - https://logius-standaarden.github.io/API-Design-Rules/                                         |
+| **API&nbsp;05** | Consistent datamodel [*]                              | Avoid code duplication, only have `Activity`, `Area`, add attribute to indicate "non-reporting records" for CA |
+| **API&nbsp;06** | Consistent endpoints                                  | Have POST/GET "mirrors" - `POST /ca/areas`, `GET /ca/activities` vs. `GET /str/areas`,` POST /str/activities`  |
+| **API&nbsp;07** | Consistent pagination                                 | Have `offset` and `limit` for all endpoints with (potential) many records                                      |
+| **API&nbsp;08** | Syntax validation                                     | Example: `postal code`                                                                                         |
+| **API&nbsp;09** | Semantical validation                                 | Example: `begin timestamp < end timestamp`                                                                     |
+| **API&nbsp;10** | Integrity validation                                  | Example: can only submit activities for existing areas                                                         |
+| **API&nbsp;11** | Single record POST                                    | To avoid transaction performance issues and to keep the endpoints simple (as opposed to bulk updates)          |
+| **API&nbsp;12** | Logical ordering => readability                       | For POST, request and response follow the same ordering, extra data in response is moved to the end            |
+| **API&nbsp;13** | Essentiality                                          | Example: in POST activities, only `areaId` and `competentAuthorityId`, but no `competentAuthorityName`         |
+| **API&nbsp;14** | Essentiality/security                                 | Example: in POST activities request, no need to include `platformId`                                           |
+| **API&nbsp;15** | Consistent HTTP response codes                        | 200, 201, 400, 401, 403, 409, 422                                                                              |
 | **API&nbsp;16** | When activities are submitted, first get actual areas | Because these may have changed over time                                                                       |
 
 ## Security
@@ -42,4 +42,4 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 | #               | Decision                                                       | Motivation/example                                                                                                           |
 | :-------------- | :------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
 | **SEC&nbsp;01** | oAuth2 with JWT [*]                                            | Is the standard for trusted machine-to-machine (M2M) interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4 |
-| **SEC&nbsp;02** | Smaller platforms can delegate API-invocation to third-parties | Platform arranges data submission with their party; the party becomes registered in SDEP                                                                                                                             |
+| **SEC&nbsp;02** | Smaller platforms can delegate API-invocation to third-parties | Platform arranges data submission with their party; the party becomes registered in SDEP                                     |

@@ -12,7 +12,7 @@ Pattern:
 - CRUD layer: Data access (flush only, no commits)
 """
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.platform import Platform
@@ -55,20 +55,18 @@ async def get_by_platform_id(
     session: AsyncSession, platform_id: str
 ) -> Platform | None:
     """
-    Get a platform by platform_id string (latest version).
+    Get current platform by platform_id string (ended_at IS NULL).
 
     Args:
         session: Async database session
         platform_id: Platform ID string (e.g., "platform01")
 
     Returns:
-        Latest Platform instance for the given platform_id, or None if not found
+        Current Platform instance for the given platform_id, or None if not found
     """
-    stmt = (
-        select(Platform)
-        .where(Platform.platform_id == platform_id)
-        .order_by(Platform.created_at.desc())
-        .limit(1)
+    stmt = select(Platform).where(
+        Platform.platform_id == platform_id,
+        Platform.ended_at.is_(None),
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -91,18 +89,18 @@ async def get_by_id(session: AsyncSession, platform_id: int) -> Platform | None:
 
 async def get_all(session: AsyncSession) -> list[Platform]:
     """
-    Get all platforms (latest versions only).
+    Get all current platforms (ended_at IS NULL).
 
     Args:
         session: Async database session
 
     Returns:
-        List of all Platform instances (latest version per platform_id)
+        List of current Platform instances
     """
     stmt = (
         select(Platform)
-        .distinct(Platform.platform_id)
-        .order_by(Platform.platform_id, Platform.created_at.desc())
+        .where(Platform.ended_at.is_(None))
+        .order_by(Platform.created_at.desc())
     )
     result = await session.execute(stmt)
     return list(result.scalars().all())
@@ -157,3 +155,49 @@ async def count(session: AsyncSession) -> int:
     stmt = select(func.count()).select_from(Platform)
     result = await session.execute(stmt)
     return result.scalar_one()
+
+
+async def exists_any_by_platform_id(
+    session: AsyncSession,
+    platform_id: str,
+) -> bool:
+    """
+    Check if any version of a platform exists by functional ID (regardless of ended_at).
+
+    Args:
+        session: Async database session
+        platform_id: Platform functional ID
+
+    Returns:
+        True if any version exists, False otherwise
+    """
+    stmt = (
+        select(func.count())
+        .select_from(Platform)
+        .where(Platform.platform_id == platform_id)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one() > 0
+
+
+async def mark_as_ended(
+    session: AsyncSession,
+    platform_id: str,
+) -> None:
+    """
+    Mark the current version of a platform as ended (set ended_at = now()).
+
+    Args:
+        session: Async database session
+        platform_id: Platform functional ID
+    """
+    stmt = (
+        update(Platform)
+        .where(
+            Platform.platform_id == platform_id,
+            Platform.ended_at.is_(None),
+        )
+        .values(ended_at=func.now())
+    )
+    await session.execute(stmt)
+    await session.flush()

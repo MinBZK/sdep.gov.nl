@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from app.api.v0.main import app_v0
 from app.crud import activity as activity_crud
-from app.db.config import get_async_db
+from app.db.config import get_async_db, get_async_db_read_only
 from app.security import verify_bearer_token
 from fastapi import status
 from httpx import ASGITransport, AsyncClient
@@ -38,6 +38,7 @@ class TestSTRActivitiesAPI:
             yield async_session
 
         app_v0.dependency_overrides[get_async_db] = override_get_db
+        app_v0.dependency_overrides[get_async_db_read_only] = override_get_db
 
         yield
 
@@ -51,6 +52,7 @@ class TestSTRActivitiesAPI:
             yield async_session
 
         app_v0.dependency_overrides[get_async_db] = override_get_db
+        app_v0.dependency_overrides[get_async_db_read_only] = override_get_db
 
         yield
 
@@ -827,3 +829,373 @@ class TestSTRActivitiesAPI:
         assert response.status_code == 201
         data = response.json()
         assert data["countryOfGuests"] == ["NLD", "USA", "DEU", "GBR"]
+
+    async def test_post_activity_response_does_not_contain_ended_at(
+        self, async_session: AsyncSession, setup_overrides, test_areas
+    ):
+        """Test that POST /str/activities response does NOT contain endedAt (internal only)."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": test_areas["0363"].area_id,
+                    "url": "http://example.com/test-no-ended-at",
+                    "registrationNumber": "REG123",
+                    "address": {
+                        "street": "Street",
+                        "number": 1,
+                        "postalCode": "1000AA",
+                        "city": "City",
+                    },
+                    "temporal": {
+                        "startDatetime": "2025-06-01T14:00:00Z",
+                        "endDatetime": "2025-06-07T11:00:00Z",
+                    },
+                },
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert "endedAt" not in data
+        assert "ended_at" not in data
+
+    async def test_post_activity_versioning_returns_latest(
+        self, async_session: AsyncSession, setup_overrides, test_areas
+    ):
+        """Test that submitting same activityId twice returns latest version on POST."""
+        import asyncio
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            # Submit v1
+            response1 = await client.post(
+                "/str/activities",
+                json={
+                    "activityId": "versioned-activity",
+                    "areaId": test_areas["0363"].area_id,
+                    "url": "http://example.com/versioned-v1",
+                    "registrationNumber": "REG-V1",
+                    "address": {
+                        "street": "Street",
+                        "number": 1,
+                        "postalCode": "1000AA",
+                        "city": "City",
+                    },
+                    "temporal": {
+                        "startDatetime": "2025-06-01T14:00:00Z",
+                        "endDatetime": "2025-06-07T11:00:00Z",
+                    },
+                },
+                headers={"Authorization": "Bearer test_token"},
+            )
+            assert response1.status_code == status.HTTP_201_CREATED
+
+            # Wait to ensure different timestamp (SQLite second precision)
+            await asyncio.sleep(1.0)
+
+            # Submit v2 with same activityId
+            response2 = await client.post(
+                "/str/activities",
+                json={
+                    "activityId": "versioned-activity",
+                    "areaId": test_areas["0363"].area_id,
+                    "url": "http://example.com/versioned-v2",
+                    "registrationNumber": "REG-V2",
+                    "address": {
+                        "street": "Street",
+                        "number": 2,
+                        "postalCode": "2000BB",
+                        "city": "City",
+                    },
+                    "temporal": {
+                        "startDatetime": "2025-07-01T14:00:00Z",
+                        "endDatetime": "2025-07-07T11:00:00Z",
+                    },
+                },
+                headers={"Authorization": "Bearer test_token"},
+            )
+            assert response2.status_code == status.HTTP_201_CREATED
+            data = response2.json()
+            assert data["activityId"] == "versioned-activity"
+            assert data["url"] == "http://example.com/versioned-v2"
+
+    # Tests for GET /str/activities
+
+    async def test_get_own_activities_empty(
+        self, async_session: AsyncSession, setup_overrides
+    ):
+        """Test GET /str/activities returns empty list when no activities exist."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/str/activities",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "activities" in data
+        assert data["activities"] == []
+
+    async def test_get_own_activities_returns_own_activities(
+        self, async_session: AsyncSession, setup_overrides, test_areas
+    ):
+        """Test GET /str/activities returns activities only for the authenticated STR."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            # Create an activity for this STR
+            await client.post(
+                "/str/activities",
+                json={
+                    "activityId": "my-activity",
+                    "areaId": test_areas["0363"].area_id,
+                    "url": "http://example.com/my-listing",
+                    "registrationNumber": "REG-OWN",
+                    "address": {
+                        "street": "My Street",
+                        "number": 1,
+                        "postalCode": "1000AA",
+                        "city": "My City",
+                    },
+                    "temporal": {
+                        "startDatetime": "2025-06-01T14:00:00Z",
+                        "endDatetime": "2025-06-07T11:00:00Z",
+                    },
+                },
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+            # Get own activities
+            response = await client.get(
+                "/str/activities",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["activities"]) == 1
+        assert data["activities"][0]["activityId"] == "my-activity"
+        # Should NOT contain platformId/Name (STR knows who it is)
+        assert "platformId" not in data["activities"][0]
+        assert "platformName" not in data["activities"][0]
+        # Should NOT contain endedAt
+        assert "endedAt" not in data["activities"][0]
+
+    async def test_get_own_activities_does_not_return_other_str_activities(
+        self, async_session: AsyncSession, setup_overrides, test_areas
+    ):
+        """Test that GET /str/activities does NOT return activities from other STRs."""
+        from tests.fixtures.factories import (
+            ActivityFactory,
+            AreaFactory,
+            CompetentAuthorityFactory,
+            PlatformFactory,
+        )
+
+        # Create activity for another STR directly
+        ca = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="other-ca",
+            competent_authority_name="Other CA",
+        )
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id=ca.id,
+            filename="other.zip",
+            filedata=b"data",
+        )
+        other_platform = await PlatformFactory.create_async(
+            async_session,
+            platform_id="other-str",
+            platform_name="Other STR Platform",
+        )
+        await ActivityFactory.create_async(
+            async_session,
+            url="http://example.com/other-str-listing",
+            area_id=area.id,
+            registration_number="REG-OTHER",
+            platform_id=other_platform.id,
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/str/activities",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["activities"] == []  # STR "str01" has no activities
+
+    async def test_get_own_activities_forbidden_missing_read_role(
+        self, async_session: AsyncSession
+    ):
+        """Test GET /str/activities with missing sdep_read role."""
+
+        def mock_token_without_read_role():
+            return {
+                "sub": "test_user",
+                "client_id": "str01",
+                "client_name": "STR Platform 01",
+                "realm_access": {
+                    "roles": ["sdep_str", "sdep_write"]
+                },  # Missing sdep_read
+            }
+
+        app_v0.dependency_overrides[verify_bearer_token] = mock_token_without_read_role
+
+        async def override_get_db():
+            yield async_session
+
+        app_v0.dependency_overrides[get_async_db] = override_get_db
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/str/activities",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+        app_v0.dependency_overrides.clear()
+
+    # Tests for GET /str/activities/count
+
+    async def test_count_own_activities_empty(
+        self, async_session: AsyncSession, setup_overrides
+    ):
+        """Test GET /str/activities/count returns 0 when no activities exist."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/str/activities/count",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["count"] == 0
+
+    async def test_count_own_activities_returns_correct_count(
+        self, async_session: AsyncSession, setup_overrides, test_areas
+    ):
+        """Test GET /str/activities/count returns correct count after creating activities."""
+        import asyncio
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            # Create two activities for this STR
+            await client.post(
+                "/str/activities",
+                json={
+                    "activityId": "count-activity-1",
+                    "areaId": test_areas["0363"].area_id,
+                    "url": "http://example.com/count-1",
+                    "registrationNumber": "REGCNT1",
+                    "address": {
+                        "street": "Street",
+                        "number": 1,
+                        "postalCode": "1000AA",
+                        "city": "City",
+                    },
+                    "temporal": {
+                        "startDatetime": "2025-06-01T14:00:00Z",
+                        "endDatetime": "2025-06-07T11:00:00Z",
+                    },
+                },
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+            # Wait to ensure different timestamp (SQLite second precision)
+            await asyncio.sleep(1.0)
+
+            await client.post(
+                "/str/activities",
+                json={
+                    "activityId": "count-activity-2",
+                    "areaId": test_areas["0344"].area_id,
+                    "url": "http://example.com/count-2",
+                    "registrationNumber": "REGCNT2",
+                    "address": {
+                        "street": "Street",
+                        "number": 2,
+                        "postalCode": "2000BB",
+                        "city": "City",
+                    },
+                    "temporal": {
+                        "startDatetime": "2025-06-01T14:00:00Z",
+                        "endDatetime": "2025-06-07T11:00:00Z",
+                    },
+                },
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+            # Count own activities
+            response = await client.get(
+                "/str/activities/count",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["count"] == 2
+
+    async def test_count_own_activities_does_not_count_other_str_activities(
+        self, async_session: AsyncSession, setup_overrides, test_areas
+    ):
+        """Test that GET /str/activities/count does NOT count activities from other STRs."""
+        from tests.fixtures.factories import (
+            ActivityFactory,
+            AreaFactory,
+            CompetentAuthorityFactory,
+            PlatformFactory,
+        )
+
+        # Create activity for another STR directly
+        ca = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="other-ca-count",
+            competent_authority_name="Other CA",
+        )
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id=ca.id,
+            filename="other.zip",
+            filedata=b"data",
+        )
+        other_platform = await PlatformFactory.create_async(
+            async_session,
+            platform_id="other-str-count",
+            platform_name="Other STR Platform",
+        )
+        await ActivityFactory.create_async(
+            async_session,
+            url="http://example.com/other-str-count",
+            area_id=area.id,
+            registration_number="REG-OTHER-CNT",
+            platform_id=other_platform.id,
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/str/activities/count",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["count"] == 0  # STR "str01" has no activities

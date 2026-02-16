@@ -40,8 +40,9 @@ class Area(Base):
     __table_args__ = (
         UniqueConstraint(
             "area_id",
+            "competent_authority_id",
             "created_at",
-            name="uq_area_area_id_created_at",
+            name="uq_area_area_id_competent_authority_id_created_at",
         ),
         CheckConstraint(
             "length(filedata) <= 1048576",
@@ -50,7 +51,7 @@ class Area(Base):
     )
 
     # Primary key (technical ID, database-internal)
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
 
     # Attributes
 
@@ -81,6 +82,9 @@ class Area(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), nullable=False
     )  # Always present, stored in UTC
+    ended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )  # Optional, stored in UTC
 
     # References
     competent_authority: Mapped[CompetentAuthority] = relationship(

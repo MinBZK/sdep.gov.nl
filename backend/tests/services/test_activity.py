@@ -3,7 +3,7 @@
 from datetime import datetime
 
 import pytest
-from app.exceptions.business import BusinessLogicError
+from app.exceptions.business import BusinessLogicError, InvalidOperationError
 from app.services import activity as activity_service
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -159,10 +159,12 @@ class TestActivityService:
         assert platform is not None
         assert platform.platform_name == "New Platform"
 
-    async def test_create_activity_reuses_existing_platform(
+    async def test_create_activity_versions_existing_platform(
         self, async_session: AsyncSession
     ):
-        """Test that existing platform is reused if it exists"""
+        """Test that existing platform is versioned (old ended, new created)"""
+        import asyncio
+
         # Arrange
         area = await AreaFactory.create_async(async_session)
         await async_session.refresh(area, ["competent_authority"])
@@ -172,6 +174,10 @@ class TestActivityService:
             platform_id="existing_platform",
             platform_name="Existing Platform",
         )
+
+        # Wait to ensure different timestamp (SQLite second precision)
+        await asyncio.sleep(1.0)
+
         activity_data = {
             "url": "http://example.com/listing-1",
             "address_street": "Damstraat",
@@ -199,8 +205,11 @@ class TestActivityService:
         from sqlalchemy import select
 
         platforms = await async_session.execute(select(Platform))
-        platform_count = len(platforms.scalars().all())
-        assert platform_count == 1
+        all_platforms = platforms.scalars().all()
+        assert len(all_platforms) == 2  # Two versions (old ended, new current)
+
+        current_platforms = [p for p in all_platforms if p.ended_at is None]
+        assert len(current_platforms) == 1
 
     async def test_create_activity_nonexistent_area_raises_error(
         self, async_session: AsyncSession
@@ -609,3 +618,220 @@ class TestActivityService:
         assert len(result) == 1
         assert result[0]["platform_id"] == "platform99"
         assert result[0]["platform_name"] == "Super Platform"
+
+    async def test_create_activity_versioning_marks_previous_as_ended(
+        self, async_session: AsyncSession
+    ):
+        """Test creating activity with same activityId marks previous version as ended"""
+        # Arrange
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        activity_data_v1 = {
+            "activity_id": "versioned-activity",
+            "activity_name": "Version 1",
+            "url": "http://example.com/listing-v1",
+            "address_street": "Damstraat",
+            "address_number": "1",
+            "address_letter": None,
+            "address_addition": None,
+            "address_postal_code": "1012JS",
+            "address_city": "Amsterdam",
+            "registration_number": "REG001",
+            "area_id": area.area_id,
+            "number_of_guests": 4,
+            "country_of_guests": ["NLD"],
+            "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
+            "temporal_end_date_time": datetime(2025, 6, 8, 12, 0, 0),
+            "platform_id_str": "platform01",
+            "platform_name": "Test Platform",
+        }
+
+        await activity_service.create_activity(async_session, activity_data_v1)
+
+        # Wait to ensure different timestamp (SQLite second precision)
+        import asyncio
+
+        await asyncio.sleep(1.0)
+
+        # Act - create second version with same activityId
+        activity_data_v2 = {
+            **activity_data_v1,
+            "activity_name": "Version 2",
+            "url": "http://example.com/listing-v2",
+        }
+        await activity_service.create_activity(async_session, activity_data_v2)
+
+        # Assert - only latest version returned
+        result = await activity_service.get_activity_list(async_session, "0363")
+        versioned = [a for a in result if a["activity_id"] == "versioned-activity"]
+        assert len(versioned) == 1
+        assert versioned[0]["url"] == "http://example.com/listing-v2"
+
+    async def test_create_activity_rejects_deactivated_platform(
+        self, async_session: AsyncSession
+    ):
+        """Test that creating activity with a deactivated platform raises InvalidOperationError"""
+        # Arrange - create activity (creates platform), then manually end the platform
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        activity_data = {
+            "activity_id": None,
+            "activity_name": None,
+            "url": "http://example.com/listing-1",
+            "address_street": "Damstraat",
+            "address_number": "1",
+            "address_letter": None,
+            "address_addition": None,
+            "address_postal_code": "1012JS",
+            "address_city": "Amsterdam",
+            "registration_number": "REG001",
+            "area_id": area.area_id,
+            "number_of_guests": 4,
+            "country_of_guests": ["NLD"],
+            "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
+            "temporal_end_date_time": datetime(2025, 6, 8, 12, 0, 0),
+            "platform_id_str": "deactivated-platform",
+            "platform_name": "Test Platform",
+        }
+        await activity_service.create_activity(async_session, activity_data)
+
+        from app.crud import platform as platform_crud
+
+        await platform_crud.mark_as_ended(async_session, "deactivated-platform")
+
+        # Act & Assert
+        with pytest.raises(
+            InvalidOperationError,
+            match=r"Platform 'deactivated-platform' has been deactivated",
+        ):
+            await activity_service.create_activity(async_session, {**activity_data})
+
+    async def test_create_activity_rejects_deactivated_activity_id(
+        self, async_session: AsyncSession
+    ):
+        """Test that creating activity with a deactivated activity_id raises InvalidOperationError"""
+        # Arrange - create activity, then manually end it
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        activity_data = {
+            "activity_id": "deactivated-activity",
+            "activity_name": None,
+            "url": "http://example.com/listing-1",
+            "address_street": "Damstraat",
+            "address_number": "1",
+            "address_letter": None,
+            "address_addition": None,
+            "address_postal_code": "1012JS",
+            "address_city": "Amsterdam",
+            "registration_number": "REG001",
+            "area_id": area.area_id,
+            "number_of_guests": 4,
+            "country_of_guests": ["NLD"],
+            "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
+            "temporal_end_date_time": datetime(2025, 6, 8, 12, 0, 0),
+            "platform_id_str": "platform01",
+            "platform_name": "Test Platform",
+        }
+        await activity_service.create_activity(async_session, activity_data)
+
+        from app.crud import activity as activity_crud
+
+        existing = await activity_crud.get_by_activity_id(
+            async_session, "deactivated-activity"
+        )
+        assert existing is not None
+        await activity_crud.mark_as_ended(
+            async_session, "deactivated-activity", existing.platform_id
+        )
+
+        # Act & Assert - use a different platform to avoid the platform guard
+        with pytest.raises(
+            InvalidOperationError,
+            match=r"Activity 'deactivated-activity' has been deactivated",
+        ):
+            await activity_service.create_activity(
+                async_session,
+                {
+                    **activity_data,
+                    "platform_id_str": "platform02",
+                    "platform_name": "Other",
+                },
+            )
+
+    async def test_get_activities_by_platform(self, async_session: AsyncSession):
+        """Test getting activities scoped to a platform"""
+        # Arrange
+        area = await AreaFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+
+        # Create activity for platform01
+        activity_data_p1 = {
+            "activity_id": "p1-activity",
+            "activity_name": None,
+            "url": "http://example.com/p1-listing",
+            "address_street": "Damstraat",
+            "address_number": "1",
+            "address_letter": None,
+            "address_addition": None,
+            "address_postal_code": "1012JS",
+            "address_city": "Amsterdam",
+            "registration_number": "REG001",
+            "area_id": area.area_id,
+            "number_of_guests": 2,
+            "country_of_guests": ["NLD"],
+            "temporal_start_date_time": datetime(2025, 6, 1, 12, 0, 0),
+            "temporal_end_date_time": datetime(2025, 6, 8, 12, 0, 0),
+            "platform_id_str": "platform01",
+            "platform_name": "Platform One",
+        }
+        await activity_service.create_activity(async_session, activity_data_p1)
+
+        # Create activity for platform02
+        activity_data_p2 = {
+            "activity_id": "p2-activity",
+            "activity_name": None,
+            "url": "http://example.com/p2-listing",
+            "address_street": "Keizersgracht",
+            "address_number": "5",
+            "address_letter": None,
+            "address_addition": None,
+            "address_postal_code": "1015AA",
+            "address_city": "Amsterdam",
+            "registration_number": "REG002",
+            "area_id": area.area_id,
+            "number_of_guests": 3,
+            "country_of_guests": ["DEU"],
+            "temporal_start_date_time": datetime(2025, 7, 1, 12, 0, 0),
+            "temporal_end_date_time": datetime(2025, 7, 8, 12, 0, 0),
+            "platform_id_str": "platform02",
+            "platform_name": "Platform Two",
+        }
+        await activity_service.create_activity(async_session, activity_data_p2)
+
+        # Act
+        p1_activities = await activity_service.get_activities_by_platform(
+            async_session, "platform01"
+        )
+        p2_activities = await activity_service.get_activities_by_platform(
+            async_session, "platform02"
+        )
+
+        # Assert
+        assert len(p1_activities) == 1
+        assert p1_activities[0]["activity_id"] == "p1-activity"
+        assert "platform_id" not in p1_activities[0]  # Not in own response
+
+        assert len(p2_activities) == 1
+        assert p2_activities[0]["activity_id"] == "p2-activity"

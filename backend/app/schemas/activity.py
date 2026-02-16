@@ -441,6 +441,77 @@ class ActivityListResponse(BaseModel):
     activities: list[ActivityResponse] = Field(..., description="List of activities")
 
 
+class ActivityOwnResponse(BaseModel):
+    """Activity response schema for STR's own activities (omits platformId/Name)."""
+
+    model_config = ConfigDict(
+        title="activity.ActivityOwnResponse",
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
+    activity_id: str = Field(
+        ...,
+        alias="activityId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Activity functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
+    )
+    activity_name: str | None = Field(
+        None,
+        alias="activityName",
+        max_length=64,
+        description="Activity name (optional, max 64 chars)",
+    )
+    area_id: str = Field(
+        ...,
+        alias="areaId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Area functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
+    )
+    url: str | None = Field(None, description="URL of the advertisement (optional)")
+    address: AddressResponse = Field(..., description="Address composite")
+    registration_number: str = Field(
+        ...,
+        alias="registrationNumber",
+        description="Registration number for the address",
+    )
+    number_of_guests: int | None = Field(
+        None, alias="numberOfGuests", description="Number of guests (optional)"
+    )
+    country_of_guests: list[str] | None = Field(
+        None,
+        alias="countryOfGuests",
+        description="Array of country codes of guests (optional)",
+    )
+    temporal: TemporalResponse = Field(..., description="Temporal composite")
+    created_at: datetime = Field(
+        ..., alias="createdAt", description="Creation timestamp"
+    )
+
+    @model_serializer(mode="wrap")
+    def _serialize_model(self, serializer, info):
+        """Exclude activityName from response when it's None."""
+        data = serializer(self)
+        if data.get("activityName") is None:
+            data.pop("activityName", None)
+        return data
+
+
+class ActivityOwnListResponse(BaseModel):
+    """List of own activities response schema (for STR)."""
+
+    model_config = ConfigDict(title="activity.ActivityOwnListResponse")
+
+    activities: list[ActivityOwnResponse] = Field(
+        ..., description="List of activities for the current platform"
+    )
+
+
 class ActivityCountResponse(BaseModel):
     """Count of activities response schema."""
 

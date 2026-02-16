@@ -28,8 +28,13 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.config import get_async_db
-from app.schemas.area import AreaResponse
+from app.db.config import get_async_db, get_async_db_read_only
+from app.schemas.area import (
+    AreaOwnResponse,
+    AreaResponse,
+    AreasCountResponse,
+    AreasOwnListResponse,
+)
 from app.schemas.auth import UnauthorizedError
 from app.security import verify_bearer_token
 from app.services import area as area_service
@@ -195,3 +200,167 @@ async def post_area(
         status_code=status.HTTP_201_CREATED,
         content=response.model_dump(by_alias=True, mode="json"),
     )
+
+
+@router.get(
+    "/ca/areas",
+    summary="Get areas for the current authenticated competent authority",
+    description="""Get all areas submitted by the current authenticated competent authority.
+
+**Scoping:**
+- Only returns areas belonging to the authenticated CA (based on JWT client_id)
+
+**Pagination:**
+- `offset`: Number of records to skip (default: 0)
+- `limit`: Maximum number of records to return (default: no limit)
+
+**Response Codes:**
+- **200 OK:** Areas retrieved successfully
+- **401 Unauthorized:** Invalid or missing authentication token
+- **403 Forbidden:** Missing required authorization roles
+""",
+    operation_id="getOwnAreas",
+    response_model=AreasOwnListResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        "200": {
+            "description": "Areas retrieved successfully",
+            "model": AreasOwnListResponse,
+        },
+        "401": {
+            "model": UnauthorizedError,
+            "description": "Unauthorized - Invalid or missing token",
+        },
+        "403": {
+            "description": "Forbidden - Missing required authorization roles",
+        },
+    },
+)
+async def get_own_areas(
+    session: AsyncSession = Depends(get_async_db),
+    token_payload: dict[str, Any] = Depends(verify_bearer_token),
+    offset: int = 0,
+    limit: int | None = None,
+) -> Response:
+    """
+    Get areas for the current authenticated competent authority.
+
+    Authorization:
+    - Requires valid bearer token with "sdep_ca" and "sdep_read" roles
+    - Competent authority ID extracted from token's "client_id" claim
+    """
+
+    # Authorization check: Verify user has "sdep_ca" and "sdep_read" roles
+    realm_access = token_payload.get("realm_access", {})
+    roles = realm_access.get("roles", [])
+
+    if "sdep_ca" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_ca' role required",
+        )
+
+    if "sdep_read" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_read' role required",
+        )
+
+    # Extract competent authority ID from token
+    competent_authority_id = token_payload.get("client_id")
+    if not competent_authority_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token: missing 'client_id' claim",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Get areas for this CA
+    area_dicts = await area_service.get_areas_by_competent_authority(
+        session,
+        competent_authority_id_str=competent_authority_id,
+        offset=offset,
+        limit=limit,
+    )
+
+    # Build response
+    areas = [
+        AreaOwnResponse(
+            areaId=area_dict["areaId"],
+            areaName=area_dict["areaName"],
+            filename=area_dict["filename"],
+            createdAt=area_dict["createdAt"],
+        )
+        for area_dict in area_dicts
+    ]
+
+    response = AreasOwnListResponse(areas=areas)
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=response.model_dump(by_alias=True, mode="json"),
+    )
+
+
+@router.get(
+    "/ca/areas/count",
+    response_model=AreasCountResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get areas count for the current authenticated competent authority.",
+    description="Get areas count for the current authenticated competent authority.",
+    operation_id="countOwnAreas",
+    responses={
+        "401": {
+            "model": UnauthorizedError,
+            "description": "Unauthorized - Invalid or missing token",
+        },
+        "403": {
+            "description": "Forbidden - Missing required authorization roles",
+        },
+    },
+)
+async def count_own_areas(
+    session: AsyncSession = Depends(get_async_db_read_only),
+    token_payload: dict[str, Any] = Depends(verify_bearer_token),
+) -> AreasCountResponse:
+    """
+    Count areas for the current authenticated competent authority.
+
+    Authorization:
+    - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
+    - Competent authority ID is extracted from token's "client_id" claim
+
+    Returns:
+    - count: Total number of areas for the given competent authority
+    """
+    # Authorization check: Verify user has "sdep_ca" and "sdep_read" roles
+    realm_access = token_payload.get("realm_access", {})
+    roles = realm_access.get("roles", [])
+
+    if "sdep_ca" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_ca' role required",
+        )
+
+    if "sdep_read" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_read' role required",
+        )
+
+    # Extract competent authority ID from token's client_id claim
+    competent_authority_id = token_payload.get("client_id")
+    if not competent_authority_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token: missing 'client_id' claim",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Call business service with competent authority ID from token
+    total_count = await area_service.count_areas_by_competent_authority(
+        session, competent_authority_id
+    )
+
+    return AreasCountResponse(count=total_count)

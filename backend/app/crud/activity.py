@@ -2,13 +2,14 @@
 
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.activity import Activity
 from app.models.area import Area
 from app.models.competent_authority import CompetentAuthority
+from app.models.platform import Platform
 
 
 async def create(
@@ -172,20 +173,18 @@ async def get_by_activity_id(
     session: AsyncSession, activity_id: str
 ) -> Activity | None:
     """
-    Get an activity by functional ID (latest version).
+    Get current activity by functional ID (ended_at IS NULL).
 
     Args:
         session: Async database session
         activity_id: Activity functional ID
 
     Returns:
-        Latest Activity instance for the given activity_id, or None if not found
+        Current Activity instance for the given activity_id, or None if not found
     """
-    stmt = (
-        select(Activity)
-        .where(Activity.activity_id == activity_id)
-        .order_by(Activity.created_at.desc())
-        .limit(1)
+    stmt = select(Activity).where(
+        Activity.activity_id == activity_id,
+        Activity.ended_at.is_(None),
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -267,6 +266,46 @@ async def get_by_platform_id(
     return list(result.scalars().all())
 
 
+async def get_by_platform_id_str(
+    session: AsyncSession,
+    platform_id_str: str,
+    offset: int = 0,
+    limit: int | None = None,
+) -> list[Activity]:
+    """
+    Get current activities by platform functional ID (ended_at IS NULL).
+
+    Eagerly loads Area and CompetentAuthority relationships.
+
+    Args:
+        session: Async database session
+        platform_id_str: Platform functional ID string (e.g., "platform01")
+        offset: Number of records to skip (default: 0)
+        limit: Maximum number of records to return (default: no limit)
+
+    Returns:
+        List of current Activity instances for the given platform
+    """
+    stmt = (
+        select(Activity)
+        .options(
+            selectinload(Activity.area).selectinload(Area.competent_authority),
+        )
+        .join(Platform, Activity.platform_id == Platform.id)
+        .where(
+            Platform.platform_id == platform_id_str,
+            Activity.ended_at.is_(None),
+        )
+        .order_by(Activity.created_at.desc())
+        .offset(offset)
+    )
+    if limit is not None:
+        stmt = stmt.limit(limit)
+
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def get_by_area_id(
     session: AsyncSession, area_id: int, offset: int = 0, limit: int | None = None
 ) -> list[Activity]:
@@ -297,7 +336,7 @@ async def get_by_competent_authority_id(
     limit: int | None = None,
 ) -> list[Activity]:
     """
-    Get activities by competent authority ID with pagination (latest versions only).
+    Get current activities by competent authority ID with pagination (ended_at IS NULL).
 
     Uses a JOIN query through Area to get all Activity for a given competent authority.
     Eagerly loads the Platform relationship to avoid lazy loading issues.
@@ -309,19 +348,21 @@ async def get_by_competent_authority_id(
         limit: Maximum number of records to return (default: no limit)
 
     Returns:
-        List of Activity instances (latest version per activity_id) for the given competent authority
+        List of current Activity instances for the given competent authority
     """
     stmt = (
         select(Activity)
         .options(
-            selectinload(Activity.platform),  # Eagerly load platform relationship
+            selectinload(Activity.platform),
             selectinload(Activity.area).selectinload(Area.competent_authority),
         )
         .join(Area, Activity.area_id == Area.id)
         .join(CompetentAuthority, Area.competent_authority_id == CompetentAuthority.id)
-        .where(CompetentAuthority.competent_authority_id == competent_authority_id)
-        .distinct(Activity.activity_id)
-        .order_by(Activity.activity_id, Activity.created_at.desc())
+        .where(
+            CompetentAuthority.competent_authority_id == competent_authority_id,
+            Activity.ended_at.is_(None),
+        )
+        .order_by(Activity.created_at.desc())
         .offset(offset)
     )
     if limit is not None:
@@ -336,23 +377,102 @@ async def count_by_competent_authority_id(
     competent_authority_id: str,
 ) -> int:
     """
-    Count unique activities by competent authority ID (latest versions only).
+    Count current activities by competent authority ID (ended_at IS NULL).
 
-    Uses a JOIN query through Area to count unique Activity for a given competent authority.
+    Uses a JOIN query through Area to count Activity for a given competent authority.
 
     Args:
         session: Async database session
         competent_authority_id: Competent authority ID string (e.g., "0363")
 
     Returns:
-        Total number of unique activities (distinct activity_id) for the given competent authority
+        Total number of current activities for the given competent authority
     """
     stmt = (
-        select(func.count(func.distinct(Activity.activity_id)))
+        select(func.count())
         .select_from(Activity)
         .join(Area, Activity.area_id == Area.id)
         .join(CompetentAuthority, Area.competent_authority_id == CompetentAuthority.id)
-        .where(CompetentAuthority.competent_authority_id == competent_authority_id)
+        .where(
+            CompetentAuthority.competent_authority_id == competent_authority_id,
+            Activity.ended_at.is_(None),
+        )
     )
     result = await session.execute(stmt)
     return result.scalar_one()
+
+
+async def count_by_platform_id_str(
+    session: AsyncSession,
+    platform_id_str: str,
+) -> int:
+    """
+    Count current activities by platform functional ID (ended_at IS NULL).
+
+    Args:
+        session: Async database session
+        platform_id_str: Platform functional ID string (e.g., "platform01")
+
+    Returns:
+        Total number of current activities for the given platform
+    """
+    stmt = (
+        select(func.count())
+        .select_from(Activity)
+        .join(Platform, Activity.platform_id == Platform.id)
+        .where(
+            Platform.platform_id == platform_id_str,
+            Activity.ended_at.is_(None),
+        )
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one()
+
+
+async def exists_any_by_activity_id(
+    session: AsyncSession,
+    activity_id: str,
+) -> bool:
+    """
+    Check if any version of an activity exists by functional ID (regardless of ended_at).
+
+    Args:
+        session: Async database session
+        activity_id: Activity functional ID
+
+    Returns:
+        True if any version exists, False otherwise
+    """
+    stmt = (
+        select(func.count())
+        .select_from(Activity)
+        .where(Activity.activity_id == activity_id)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one() > 0
+
+
+async def mark_as_ended(
+    session: AsyncSession,
+    activity_id: str,
+    platform_id: int,
+) -> None:
+    """
+    Mark the current version of an activity as ended (set ended_at = now()).
+
+    Args:
+        session: Async database session
+        activity_id: Activity functional ID
+        platform_id: Platform technical ID (foreign key)
+    """
+    stmt = (
+        update(Activity)
+        .where(
+            Activity.activity_id == activity_id,
+            Activity.platform_id == platform_id,
+            Activity.ended_at.is_(None),
+        )
+        .values(ended_at=func.now())
+    )
+    await session.execute(stmt)
+    await session.flush()

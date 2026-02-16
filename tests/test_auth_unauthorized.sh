@@ -52,13 +52,17 @@ echo
 # API v0 secured endpoints
 echo "Testing API v0 endpoints..."
 test_endpoint "GET" "/api/v0/ping" "Ping endpoint (requires authentication)"
-test_endpoint "GET" "/api/v0/str/areas" "Areas retrieval"
-test_endpoint "GET" "/api/v0/str/areas/count" "Areas count"
-test_endpoint "GET" "/api/v0/str/areas/amsterdam-area0363" "Area retrieval by ID"
+test_endpoint "GET" "/api/v0/str/areas" "STR areas retrieval"
+test_endpoint "GET" "/api/v0/str/areas/count" "STR areas count"
+test_endpoint "GET" "/api/v0/str/areas/amsterdam-area0363" "STR area retrieval by ID"
 test_endpoint "POST" "/api/v0/str/activities" "STR activity submission"
+test_endpoint "GET" "/api/v0/str/activities" "STR own activities retrieval"
+test_endpoint "GET" "/api/v0/str/activities/count" "STR own activities count"
+test_endpoint "POST" "/api/v0/ca/areas" "CA area submission"
+test_endpoint "GET" "/api/v0/ca/areas" "CA own areas retrieval"
+test_endpoint "GET" "/api/v0/ca/areas/count" "CA own areas count"
 test_endpoint "GET" "/api/v0/ca/activities" "CA activity retrieval"
 test_endpoint "GET" "/api/v0/ca/activities/count" "CA activity count"
-test_endpoint "POST" "/api/v0/ca/areas" "CA areas submission (multiple)"
 
 # Summary
 echo

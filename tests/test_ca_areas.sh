@@ -185,6 +185,162 @@ fi
 
 echo
 
+# Test 4: GET own areas
+echo "Test 4: GET own areas"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+if [ -n "$BEARER_TOKEN" ]; then
+    response=$(curl -s -w "\n%{http_code}" \
+        -X GET \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "Response: $body"
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 200 ]; then
+        if echo "$body" | grep -q '"areas"'; then
+            echo "✅ Test 4 passed: GET /ca/areas returned areas list"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        else
+            echo "❌ Test 4 failed: Expected areas key in response"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 4 failed: Expected 200 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 4 (requires authentication)"
+fi
+
+echo
+
+# Test 5: GET own areas count
+echo "Test 5: GET own areas count"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+if [ -n "$BEARER_TOKEN" ]; then
+    response=$(curl -s -w "\n%{http_code}" \
+        -X GET \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas/count")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "Response: $body"
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 200 ]; then
+        if echo "$body" | grep -q '"count"'; then
+            echo "✅ Test 5 passed: GET /ca/areas/count returned count"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        else
+            echo "❌ Test 5 failed: Expected count key in response"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 5 failed: Expected 200 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 5 (requires authentication)"
+fi
+
+echo
+
+# Test 6: GET own areas does not contain endedAt
+echo "Test 6: GET own areas does not contain endedAt"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+if [ -n "$BEARER_TOKEN" ]; then
+    response=$(curl -s -w "\n%{http_code}" \
+        -X GET \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 200 ]; then
+        if echo "$body" | grep -q '"endedAt"'; then
+            echo "❌ Test 6 failed: Response contains endedAt (should be internal only)"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        else
+            echo "✅ Test 6 passed: Response does not contain endedAt"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 6 failed: Expected 200 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 6 (requires authentication)"
+fi
+
+echo
+
+# Test 7: Versioning - submit same areaId twice, verify only latest returned
+echo "Test 7: Versioning - submit same areaId twice"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+if [ -n "$BEARER_TOKEN" ]; then
+    VERSIONED_ID="sdep-test-area-versioned-$(date +%s)"
+
+    # Submit v1
+    curl -s -o /dev/null -w "" \
+        -X POST \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        -F "file=@${SHAPEFILE_PATH}" \
+        -F "areaId=${VERSIONED_ID}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas"
+
+    # Submit v2 with same areaId
+    response=$(curl -s -w "\n%{http_code}" \
+        -X POST \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        -F "file=@${SHAPEFILE_PATH}" \
+        -F "areaId=${VERSIONED_ID}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "Response: $body"
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 201 ]; then
+        if echo "$body" | grep -q "\"areaId\":\"${VERSIONED_ID}\""; then
+            echo "✅ Test 7 passed: Versioned area submission returned latest"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        else
+            echo "❌ Test 7 failed: Expected areaId to match versioned ID"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 7 failed: Expected 201 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 7 (requires authentication)"
+fi
+
+echo
+
 # Summary
 echo "═══════════════════════════════════════"
 echo "Test Summary:"

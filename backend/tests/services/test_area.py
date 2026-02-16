@@ -1,6 +1,7 @@
 """Tests for Area business service"""
 
 import pytest
+from app.exceptions.business import InvalidOperationError
 from app.services import area
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -367,10 +368,12 @@ class TestAreaService:
         assert ca is not None
         assert ca.competent_authority_name == "Test Authority"
 
-    async def test_create_area_reuses_existing_competent_authority(
+    async def test_create_area_versions_competent_authority(
         self, async_session: AsyncSession
     ):
-        """Test that existing competent authority is reused"""
+        """Test that existing competent authority is versioned (old ended, new created)"""
+        import asyncio
+
         # Arrange - create first area (creates CA)
         await area.create_area(
             session=async_session,
@@ -382,7 +385,10 @@ class TestAreaService:
             competent_authority_name="Gemeente Amsterdam",
         )
 
-        # Act - create second area (should reuse CA)
+        # Wait to ensure different timestamp (SQLite second precision)
+        await asyncio.sleep(1.0)
+
+        # Act - create second area (should version CA: mark old as ended, create new)
         await area.create_area(
             session=async_session,
             area_id="area-2",
@@ -398,8 +404,154 @@ class TestAreaService:
         from sqlalchemy import select
 
         cas = await async_session.execute(select(CompetentAuthority))
-        ca_count = len(cas.scalars().all())
-        assert ca_count == 1  # Only one CA should exist
+        all_cas = cas.scalars().all()
+        assert len(all_cas) == 2  # Two CA versions (old ended, new current)
+
+        # Only one current CA (ended_at IS NULL)
+        current_cas = [ca for ca in all_cas if ca.ended_at is None]
+        assert len(current_cas) == 1
 
         area_count = await area.count_areas(async_session)
-        assert area_count == 2  # But two areas
+        assert area_count == 2  # Two areas
+
+    async def test_create_area_versioning_marks_previous_as_ended(
+        self, async_session: AsyncSession
+    ):
+        """Test creating area with same areaId marks previous version as ended"""
+        import asyncio
+
+        # Arrange - create first version
+        await area.create_area(
+            session=async_session,
+            area_id="versioned-area",
+            area_name="Version 1",
+            filename="Area_v1.zip",
+            filedata=b"data_v1",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+
+        # Wait to ensure different timestamp (SQLite second precision)
+        await asyncio.sleep(1.0)
+
+        # Act - create second version with same areaId
+        await area.create_area(
+            session=async_session,
+            area_id="versioned-area",
+            area_name="Version 2",
+            filename="Area_v2.zip",
+            filedata=b"data_v2",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+
+        # Assert - only latest version returned
+        areas_list = await area.get_areas(async_session)
+        versioned = [a for a in areas_list if a["areaId"] == "versioned-area"]
+        assert len(versioned) == 1
+        assert versioned[0]["filename"] == "Area_v2.zip"
+
+    async def test_create_area_rejects_deactivated_competent_authority(
+        self, async_session: AsyncSession
+    ):
+        """Test that creating area with a deactivated CA raises InvalidOperationError"""
+        # Arrange - create area (creates CA), then manually end the CA
+        await area.create_area(
+            session=async_session,
+            area_id=None,
+            area_name=None,
+            filename="Area1.zip",
+            filedata=b"data1",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+
+        from app.crud import competent_authority as ca_crud
+
+        await ca_crud.mark_as_ended(async_session, "0363")
+
+        # Act & Assert
+        with pytest.raises(
+            InvalidOperationError,
+            match=r"CompetentAuthority '0363' has been deactivated",
+        ):
+            await area.create_area(
+                session=async_session,
+                area_id=None,
+                area_name=None,
+                filename="Area2.zip",
+                filedata=b"data2",
+                competent_authority_id_str="0363",
+                competent_authority_name="Gemeente Amsterdam",
+            )
+
+    async def test_create_area_rejects_deactivated_area_id(
+        self, async_session: AsyncSession
+    ):
+        """Test that creating area with a deactivated area_id raises InvalidOperationError"""
+        # Arrange - create area, then manually end it
+        await area.create_area(
+            session=async_session,
+            area_id="deactivated-area",
+            area_name=None,
+            filename="Area1.zip",
+            filedata=b"data1",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+
+        from app.crud import area as area_crud
+
+        existing = await area_crud.get_by_area_id(async_session, "deactivated-area")
+        assert existing is not None
+        await area_crud.mark_as_ended(
+            async_session, "deactivated-area", existing.competent_authority_id
+        )
+
+        # Act & Assert
+        with pytest.raises(
+            InvalidOperationError, match=r"Area 'deactivated-area' has been deactivated"
+        ):
+            await area.create_area(
+                session=async_session,
+                area_id="deactivated-area",
+                area_name=None,
+                filename="Area2.zip",
+                filedata=b"data2",
+                competent_authority_id_str="9999",
+                competent_authority_name="New Authority",
+            )
+
+    async def test_get_areas_by_competent_authority(self, async_session: AsyncSession):
+        """Test getting areas scoped to a competent authority"""
+        # Arrange - create areas for two different CAs
+        await area.create_area(
+            session=async_session,
+            area_id="ca1-area-1",
+            area_name=None,
+            filename="CA1_Area1.zip",
+            filedata=b"data1",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        await area.create_area(
+            session=async_session,
+            area_id="ca2-area-1",
+            area_name=None,
+            filename="CA2_Area1.zip",
+            filedata=b"data2",
+            competent_authority_id_str="0599",
+            competent_authority_name="Gemeente Rotterdam",
+        )
+
+        # Act
+        ca1_areas = await area.get_areas_by_competent_authority(async_session, "0363")
+        ca2_areas = await area.get_areas_by_competent_authority(async_session, "0599")
+
+        # Assert
+        assert len(ca1_areas) == 1
+        assert ca1_areas[0]["areaId"] == "ca1-area-1"
+        assert "competentAuthorityId" not in ca1_areas[0]  # Not in own response
+
+        assert len(ca2_areas) == 1
+        assert ca2_areas[0]["areaId"] == "ca2-area-1"

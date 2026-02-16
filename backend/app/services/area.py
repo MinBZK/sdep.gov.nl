@@ -26,6 +26,7 @@ from sqlalchemy.orm import selectinload
 
 from app.crud import area as area_crud
 from app.crud import competent_authority as competent_authority_crud
+from app.exceptions.business import InvalidOperationError
 from app.models.area import Area
 
 
@@ -49,7 +50,13 @@ async def get_areas(
         - createdAt: Timestamp when the area was created
     """
     # Use eager loading to fetch competent_authority relationship
-    stmt = select(Area).options(selectinload(Area.competent_authority)).offset(offset)
+    stmt = (
+        select(Area)
+        .options(selectinload(Area.competent_authority))
+        .where(Area.ended_at.is_(None))
+        .order_by(Area.created_at.desc())
+        .offset(offset)
+    )
     if limit is not None:
         stmt = stmt.limit(limit)
 
@@ -82,6 +89,24 @@ async def count_areas(session: AsyncSession) -> int:
         Total number of areas
     """
     return await area_crud.count(session)
+
+
+async def count_areas_by_competent_authority(
+    session: AsyncSession, competent_authority_id_str: str
+) -> int:
+    """
+    Count areas for a specific competent authority (own areas).
+
+    Args:
+        session: Async database session
+        competent_authority_id_str: Competent authority functional ID
+
+    Returns:
+        Total number of current areas for the given competent authority
+    """
+    return await area_crud.count_by_competent_authority_id_str(
+        session, competent_authority_id_str
+    )
 
 
 async def get_area_by_id(session: AsyncSession, area_id: str) -> dict | None:
@@ -122,6 +147,8 @@ async def create_area(
     Create a single area.
 
     Looks up or creates the CompetentAuthority, then creates the Area.
+    If a current version exists with the same functional ID (and same CA),
+    marks it as ended before creating the new version.
 
     Args:
         session: Async database session
@@ -141,11 +168,37 @@ async def create_area(
     )
 
     if competent_authority is None:
+        if await competent_authority_crud.exists_any_by_competent_authority_id(
+            session, competent_authority_id_str
+        ):
+            raise InvalidOperationError(
+                f"CompetentAuthority '{competent_authority_id_str}' has been deactivated"
+            )
         competent_authority = await competent_authority_crud.create(
             session=session,
             competent_authority_id=competent_authority_id_str,
             competent_authority_name=competent_authority_name,
         )
+    else:
+        # CA exists - mark existing CA as ended and create new version
+        await competent_authority_crud.mark_as_ended(
+            session, competent_authority_id_str
+        )
+        competent_authority = await competent_authority_crud.create(
+            session=session,
+            competent_authority_id=competent_authority_id_str,
+            competent_authority_name=competent_authority_name,
+        )
+
+    # Mark existing current area as ended if same functional ID exists
+    if area_id is not None:
+        existing_area = await area_crud.get_by_area_id(session, area_id)
+        if existing_area is not None:
+            await area_crud.mark_as_ended(
+                session, area_id, existing_area.competent_authority_id
+            )
+        elif await area_crud.exists_any_by_area_id(session, area_id):
+            raise InvalidOperationError(f"Area '{area_id}' has been deactivated")
 
     # Save area (CRUD only flushes)
     area_obj = await area_crud.create(
@@ -158,3 +211,36 @@ async def create_area(
     )
 
     return area_obj
+
+
+async def get_areas_by_competent_authority(
+    session: AsyncSession,
+    competent_authority_id_str: str,
+    offset: int = 0,
+    limit: int | None = None,
+) -> list[dict]:
+    """
+    Get areas for a specific competent authority (own areas).
+
+    Args:
+        session: Async database session
+        competent_authority_id_str: Competent authority functional ID
+        offset: Number of records to skip (default: 0)
+        limit: Maximum number of records to return (default: no limit)
+
+    Returns:
+        List of area dictionaries (without competentAuthorityId/Name)
+    """
+    areas = await area_crud.get_by_competent_authority_id_str(
+        session, competent_authority_id_str, offset=offset, limit=limit
+    )
+
+    return [
+        {
+            "areaId": area.area_id,
+            "areaName": area.area_name,
+            "filename": area.filename,
+            "createdAt": area.created_at,
+        }
+        for area in areas
+    ]

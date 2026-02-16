@@ -1,5 +1,5 @@
 .PHONY: install \
-        .check-postgres upgrade downgrade revision show-history show-current \
+        upgrade upgrade-sql downgrade revision show-history show-current \
         clean-stale up down \
         test-crud test-services test-api test-security test test-coverage \
         format lint typecheck check \
@@ -22,24 +22,18 @@ install: ## Install dependencies
 
 ##@ Alembic
 
-.check-postgres: ## Check if postgres container is running
-	@echo "Checking if PostgreSQL container 'sdep-postgres' is running..."
-	@if ! docker ps --format "table {{.Names}}" | grep -q "^sdep-postgres$$"; then \
-		echo "❌ PostgreSQL container 'sdep-postgres' is not running."; \
-		echo "❌ (Re)start postgres by running: make -C ../ postgres-up"; \
-		exit 1; \
-	fi
-	@echo "✅ PostgreSQL container 'sdep-postgres' is running."
-
-upgrade: .check-postgres ## Upgrade
+upgrade: ## Upgrade database to latest revision
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && \
 	uv run alembic upgrade head
 
-downgrade: .check-postgres ## Downgrade
+upgrade-sql: ## Show upgrade SQL (offline, no database needed)
+	@uv run alembic upgrade head --sql
+
+downgrade: ## Downgrade database by one revision
 	@echo "Downgrading database by one revision..."
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic downgrade -1
 
-revision: .check-postgres ## Create revision
+revision: ## Create revision (MSG='description')
 	@echo "Creating new migration revision..."
 	@if [ -z "$(MSG)" ]; then \
 		echo "Usage: make revision MSG='Description of changes'"; \
@@ -47,13 +41,12 @@ revision: .check-postgres ## Create revision
 	fi
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic revision --autogenerate -m "$(MSG)"
 
-show-current: .check-postgres ## Show current
+show-current: ## Show current database revision
 	@echo "Showing current database revision..."
 	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic current
 
-show-history: .check-postgres ## Show history
-	@echo "Showing migration history..."
-	@export SQLALCHEMY_URL="$(POSTGRES_URL)" && uv run alembic history
+show-history: ## Show migration history (offline, no database needed)
+	@uv run alembic history
 
 ##@ Dev
 

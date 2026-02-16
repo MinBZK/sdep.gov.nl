@@ -660,3 +660,22 @@ class TestCAActivitiesAPI:
         finally:
             # Clean up overrides
             app_v0.dependency_overrides.clear()
+
+    async def test_get_activities_response_does_not_contain_ended_at(
+        self, async_session: AsyncSession, setup_overrides, test_data
+    ):
+        """Test that GET /ca/activities response does NOT contain endedAt (internal only)."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/ca/activities?limit=1",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data["activities"]) == 1
+        activity = data["activities"][0]
+        assert "endedAt" not in activity
+        assert "ended_at" not in activity

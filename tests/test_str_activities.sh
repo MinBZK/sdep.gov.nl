@@ -322,6 +322,207 @@ fi
 
 echo
 
+# Test 5: GET own activities
+echo "Test 5: GET own activities"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+if [ -n "$BEARER_TOKEN" ]; then
+    response=$(curl -s -w "\n%{http_code}" \
+        -X GET \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "Response: $body"
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 200 ]; then
+        if echo "$body" | grep -q '"activities"'; then
+            echo "✅ Test 5 passed: GET /str/activities returned activities list"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        else
+            echo "❌ Test 5 failed: Expected activities key in response"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 5 failed: Expected 200 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 5 (requires authentication)"
+fi
+
+echo
+
+# Test 6: GET own activities count
+echo "Test 6: GET own activities count"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+if [ -n "$BEARER_TOKEN" ]; then
+    response=$(curl -s -w "\n%{http_code}" \
+        -X GET \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities/count")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "Response: $body"
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 200 ]; then
+        if echo "$body" | grep -q '"count"'; then
+            echo "✅ Test 6 passed: GET /str/activities/count returned count"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        else
+            echo "❌ Test 6 failed: Expected count key in response"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 6 failed: Expected 200 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 6 (requires authentication)"
+fi
+
+echo
+
+# Test 7: GET own activities does not contain endedAt
+echo "Test 7: GET own activities does not contain endedAt"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+if [ -n "$BEARER_TOKEN" ]; then
+    response=$(curl -s -w "\n%{http_code}" \
+        -X GET \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 200 ]; then
+        if echo "$body" | grep -q '"endedAt"'; then
+            echo "❌ Test 7 failed: Response contains endedAt (should be internal only)"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        else
+            echo "✅ Test 7 passed: Response does not contain endedAt"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 7 failed: Expected 200 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 7 (requires authentication)"
+fi
+
+echo
+
+# Test 8: Versioning - submit same activityId twice
+echo "Test 8: Versioning - submit same activityId twice"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+if [ -n "$BEARER_TOKEN" ]; then
+    VERSIONED_ID="sdep-test-activity-versioned-$(date +%s)"
+    START_TIME_V=$(date -u -d "+10 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_V=$(date -u -d "+11 hours" +"%Y-%m-%dT%H:%M:%SZ")
+
+    # Submit v1
+    read -r -d '' PAYLOAD_V1 <<EOF || true
+{
+  "activityId": "$VERSIONED_ID",
+  "url": "http://sdep-test.example.com/versioned-v1-$(date +%s%N | cut -b1-13)",
+  "registrationNumber": "REGV1",
+  "address": {
+    "street": "Versioned Street",
+    "number": 1,
+    "postalCode": "1000AA",
+    "city": "Amsterdam"
+  },
+  "temporal": {
+    "startDatetime": "$START_TIME_V",
+    "endDatetime": "$END_TIME_V"
+  },
+  "areaId": "$AREA_ID_1",
+  "numberOfGuests": 2
+}
+EOF
+
+    curl -s -o /dev/null -w "" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        -d "$PAYLOAD_V1" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities"
+
+    START_TIME_V2=$(date -u -d "+12 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_V2=$(date -u -d "+13 hours" +"%Y-%m-%dT%H:%M:%SZ")
+
+    # Submit v2 with same activityId
+    read -r -d '' PAYLOAD_V2 <<EOF || true
+{
+  "activityId": "$VERSIONED_ID",
+  "url": "http://sdep-test.example.com/versioned-v2-$(date +%s%N | cut -b1-13)",
+  "registrationNumber": "REGV2",
+  "address": {
+    "street": "Versioned Street",
+    "number": 2,
+    "postalCode": "2000BB",
+    "city": "Amsterdam"
+  },
+  "temporal": {
+    "startDatetime": "$START_TIME_V2",
+    "endDatetime": "$END_TIME_V2"
+  },
+  "areaId": "$AREA_ID_1",
+  "numberOfGuests": 3
+}
+EOF
+
+    response=$(curl -s -w "\n%{http_code}" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        -d "$PAYLOAD_V2" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "Response: $body"
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 201 ]; then
+        if echo "$body" | grep -q "\"activityId\":\"${VERSIONED_ID}\""; then
+            echo "✅ Test 8 passed: Versioned activity submission returned latest"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        else
+            echo "❌ Test 8 failed: Expected activityId to match versioned ID"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 8 failed: Expected 201 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 8 (requires authentication)"
+fi
+
+echo
+
 # Summary
 echo "═══════════════════════════════════════"
 echo "Test Summary:"

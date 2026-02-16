@@ -448,10 +448,72 @@ class TestActivityCRUD:
         # Assert
         assert result is None
 
-    async def test_unique_constraint_activity_id_created_at(
+    async def test_count_by_platform_id_str(self, async_session: AsyncSession):
+        """Test counting activities by platform functional ID."""
+        # Arrange
+        platform = await PlatformFactory.create_async(
+            async_session,
+            platform_id="test-platform",
+            platform_name="Test Platform",
+        )
+        for _ in range(3):
+            await ActivityFactory.create_async(async_session, platform_id=platform.id)
+
+        # Act
+        total = await activity.count_by_platform_id_str(async_session, "test-platform")
+
+        # Assert
+        assert total == 3
+
+    async def test_count_by_platform_id_str_not_found(
         self, async_session: AsyncSession
     ):
-        """Test unique constraint on (activity_id, created_at)."""
+        """Test counting activities by non-existent platform functional ID."""
+        # Act
+        total = await activity.count_by_platform_id_str(
+            async_session, "nonexistent-platform"
+        )
+
+        # Assert
+        assert total == 0
+
+    async def test_exists_any_by_activity_id_true_for_ended(
+        self, async_session: AsyncSession
+    ):
+        """Test exists_any_by_activity_id returns True for an activity with ended_at set."""
+        # Arrange
+        platform = await PlatformFactory.create_async(async_session)
+        await ActivityFactory.create_async(
+            async_session,
+            activity_id="ended-activity-id",
+            platform_id=platform.id,
+        )
+        await activity.mark_as_ended(async_session, "ended-activity-id", platform.id)
+
+        # Act
+        result = await activity.exists_any_by_activity_id(
+            async_session, "ended-activity-id"
+        )
+
+        # Assert
+        assert result is True
+
+    async def test_exists_any_by_activity_id_false_for_nonexistent(
+        self, async_session: AsyncSession
+    ):
+        """Test exists_any_by_activity_id returns False for non-existent activity_id."""
+        # Act
+        result = await activity.exists_any_by_activity_id(
+            async_session, "00000000-0000-0000-0000-000000000000"
+        )
+
+        # Assert
+        assert result is False
+
+    async def test_unique_constraint_activity_id_platform_id_created_at(
+        self, async_session: AsyncSession
+    ):
+        """Test unique constraint on (activity_id, platform_id, created_at)."""
         import asyncio
         import uuid
         from datetime import datetime

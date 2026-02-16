@@ -32,7 +32,7 @@ class Platform(Base):
     )
 
     # Primary key
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
 
     # Attributes
     platform_id: Mapped[str] = mapped_column(
@@ -46,7 +46,10 @@ class Platform(Base):
     # Audit attributes
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), nullable=False
-    )  # Always present
+    )  # Always present, stored in UTC
+    ended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )  # Optional, stored in UTC
 
     # Relationships
     activities: Mapped[list[Activity]] = relationship(

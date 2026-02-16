@@ -96,6 +96,63 @@ class AreasListResponse(BaseModel):
     )
 
 
+class AreaOwnResponse(BaseModel):
+    """Area response schema for CA's own areas (omits competentAuthorityId/Name)."""
+
+    model_config = ConfigDict(
+        title="area.AreaOwnResponse",
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    area_id: str = Field(
+        ...,
+        alias="areaId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Area functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
+        examples=["7c9e6679-7425-40de-944b-e07fc1f90ae7"],
+    )
+    area_name: str | None = Field(
+        None,
+        alias="areaName",
+        max_length=64,
+        description="Area name (optional, max 64 chars)",
+        examples=["Amsterdam Central"],
+    )
+    filename: str = Field(
+        ...,
+        max_length=64,
+        description="Area filename",
+        examples=["Amsterdam.zip"],
+    )
+    created_at: datetime = Field(
+        ...,
+        alias="createdAt",
+        description="Timestamp when the area was created",
+        examples=["2025-01-15T10:30:00Z"],
+    )
+
+    @model_serializer(mode="wrap")
+    def _serialize_model(self, serializer, info):
+        """Exclude areaName from response when it's None."""
+        data = serializer(self)
+        if data.get("areaName") is None:
+            data.pop("areaName", None)
+        return data
+
+
+class AreasOwnListResponse(BaseModel):
+    """List of own areas response schema (for CA)."""
+
+    model_config = ConfigDict(title="area.AreasOwnListResponse")
+
+    areas: list[AreaOwnResponse] = Field(
+        ...,
+        description="List of areas for the current competent authority",
+    )
+
+
 class AreasCountResponse(BaseModel):
     """Count of areas response schema."""
 
