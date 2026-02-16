@@ -4,7 +4,7 @@ SDEP Netherlands:
 
 - https://sdep.gov.nl/api/v0/docs
 
-**DISCLAIMER** - API endpoints are work in progress, and are still subject to change.
+**DISCLAIMER** - API endpoints are work in progress => yet subject to change (without versioning)
 
 Overview:
 
@@ -103,17 +103,13 @@ make test-verbose
 
 The tests cover the cases as described [here](./tests/README.md).
 
-Approach:
-
 - Tests are executed against the complete Dockerized stack
 - Test suites run sequentially: `test-security`, `test-str`, and `test-ca` - each exercising the live API via curl
-- Test data uses the `sdep-test-*` naming convention; it is automatically detected and removed after each test run (`postgres/clean-testrun.sql`)
+- Test data uses the `sdep-test-*` naming convention; this data is automatically detected and removed after each test run (`postgres/clean-testrun.sql`)
 - Test isolation is enforced by comparing table row counts before and after execution (PRE/POST); any discrepancy causes the build to fail
 - A consolidated summary report presents per-suite and overall totals (executed/passed/failed) and exits with a non-zero status if any test fails
 
-These tests can also be re-used/run against real deployments (TST, ACC, PRE, PRD).
-
-Contact SDEP NL for more info.
+The tests can also be re-used/run against real deployments (TST, ACC, PRE, PRD; contact SDEP NL for more info).
 
 ## Design
 

@@ -95,28 +95,6 @@ async def get_async_db_read_only() -> AsyncGenerator[AsyncSession]:
         # Automatic session cleanup
 
 
-async def get_async_db_manual_commit() -> AsyncGenerator[AsyncSession]:
-    """
-    Async dependency for operations requiring manual transaction control.
-
-    Use when you need:
-    - Multiple commits within one operation
-    - Complex transaction boundaries
-    - Custom rollback logic
-
-    System Crash Behavior:
-    - Caller MUST explicitly commit for changes to persist
-    - Without commit, ALL changes are lost if system crashes or connection drops
-    - Nested transactions (savepoints) do NOT survive uncommitted parent transactions
-    - PostgreSQL guarantees: uncommitted work is NEVER persisted, even if flushed
-    - Example: If 5 out of 7 activities processed (2 succeeded in savepoints, 3 failed)
-      and system crashes BEFORE commit → ALL 5 activities are rolled back
-    """
-    async with AsyncSessionLocal() as session:
-        yield session
-        # Manual transaction control - caller must handle commits
-
-
 # Helper for using async sessions outside of FastAPI dependencies
 def create_async_session() -> AbstractAsyncContextManager[AsyncSession]:
     """Create an async session for use outside of FastAPI dependencies."""

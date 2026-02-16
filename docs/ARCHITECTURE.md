@@ -14,11 +14,14 @@ This document provides an overview of the SDEP (Single Digital Entry Point) proj
   - [Service Layer (`app/services/`)](#service-layer-appservices)
   - [CRUD Layer (`app/crud/`)](#crud-layer-appcrud)
   - [Models Layer (`app/models/`)](#models-layer-appmodels)
+- [Request Flow](#request-flow)
 - [Key Endpoints](#key-endpoints)
   - [Authentication](#authentication)
   - [Competent Authority (CA) - Requires `sdep_ca` role](#competent-authority-ca-requires-sdep_ca-role)
   - [Short-Term Rental Platform (STR) - Requires `sdep_str` role](#short-term-rental-platform-str-requires-sdep_str-role)
   - [Health](#health)
+- [Transaction Management](#transaction-management)
+- [Exception Handling](#exception-handling)
 - [Development Workflow](#development-workflow)
 - [Testing Strategy](#testing-strategy)
   - [Unit Tests (`backend/tests/`)](#unit-tests-backendtests)
@@ -31,6 +34,7 @@ This document provides an overview of the SDEP (Single Digital Entry Point) proj
 ## Overview
 
 SDEP is a FastAPI-based REST API that enables:
+
 - Competent Authorities (CA) to register regulated areas with geospatial data
 - Short-Term Rental platforms (STR) to query regulated areas and submit rental activities
 - Competent Authorities (CA) to query rental activities
@@ -201,20 +205,19 @@ The backend follows a **layered architecture** pattern:
 - HTTP request/response handling
 - Route definitions and parameter validation
 - Authentication/authorization enforcement
-- Manual transaction boundaries (per HTTP request)
-- Commits transactions if at least one record succeeds
+- Transaction boundary via `get_async_db` dependency (auto-commit on success, rollback on exception)
 
 ### Schemas Layer (`app/schemas/`)
 - Pydantic models for request/response validation
 - Data serialization/deserialization
+- camelCase aliases for JSON API (e.g. `activityId`, `areaId`, `postalCode`)
 - Validation (Layer 1: type/format validation)
 
 ### Service Layer (`app/services/`)
 - Business logic implementation
-- Validation (Layer 2: business rules)
-- Uses nested transactions (savepoints) for independent record processing
-- Collects validation and processing errors
-- Returns partial success/failure responses
+- Validation (Layer 2: business rules, e.g. area exists, platform lookup/creation)
+- Raises `BusinessLogicError` for domain-level errors (e.g. area not found)
+- No transaction management (delegated to API layer)
 
 ### CRUD Layer (`app/crud/`)
 - Database operations (Create, Read, Update, Delete)
@@ -227,25 +230,93 @@ The backend follows a **layered architecture** pattern:
 - Database table definitions
 - Relationships and constraints
 
+## Request Flow
+
+```
+POST /str/activities (single JSON body)
+  │
+  ├── API Layer (str_activities.py)
+  │   ├── verify_bearer_token() → auth checks (roles, claims)
+  │   ├── ActivityRequest (Pydantic) → syntax validation
+  │   ├── activity.to_service_dict(platform_id, platform_name)
+  │   └── get_async_db → auto-commit/rollback transaction
+  │
+  ├── Service Layer (activity.py)
+  │   ├── create_activity(session, activity_data)
+  │   ├── Validate area exists → BusinessLogicError if not
+  │   ├── Lookup/create platform from JWT claims
+  │   └── Create activity via CRUD
+  │
+  ├── CRUD Layer (activity.py)
+  │   └── flush (not commit)
+  │
+  └── Response: 201 + ActivityResponse (camelCase JSON)
+
+POST /ca/areas (multipart/form-data: file + optional areaId, areaName)
+  │
+  ├── API Layer (ca_areas.py)
+  │   ├── verify_bearer_token() → auth checks (roles, claims)
+  │   ├── File validation (max 1 MiB)
+  │   ├── areaId/areaName validation (pattern, length)
+  │   └── get_async_db → auto-commit/rollback transaction
+  │
+  ├── Service Layer (area.py)
+  │   ├── create_area(session, area_id, area_name, filename, filedata, ca_id, ca_name)
+  │   ├── Lookup/create competent authority from JWT claims
+  │   └── Create area via CRUD
+  │
+  ├── CRUD Layer (area.py)
+  │   └── flush (not commit)
+  │
+  └── Response: 201 + AreaResponse (camelCase JSON)
+```
+
 ## Key Endpoints
 
 ### Authentication
 - `POST /api/v0/auth/token` - OAuth2 token endpoint
 
 ### Competent Authority (CA) - Requires `sdep_ca` role
-- `POST /api/v0/ca/areas` - Submit regulated areas (bulk, 1-1000 areas)
-- `GET /api/v0/ca/activities` - Query rental activities
+- `POST /api/v0/ca/areas` - Submit a single area (multipart/form-data: file + optional areaId, areaName)
+- `GET /api/v0/ca/activities` - Query rental activities (pagination: offset, limit)
 - `GET /api/v0/ca/activities/count` - Count activities
 
 ### Short-Term Rental Platform (STR) - Requires `sdep_str` role
-- `GET /api/v0/str/areas` - List regulated areas
+- `GET /api/v0/str/areas` - List regulated areas (pagination: offset, limit)
 - `GET /api/v0/str/areas/count` - Count areas
 - `GET /api/v0/str/areas/{areaId}` - Download shapefile for area
-- `POST /api/v0/str/activities` - Submit rental activities (bulk, 1-1000 activities)
+- `POST /api/v0/str/activities` - Submit a single activity (JSON body)
 
 ### Health
 - `GET /api/health` - Health check (unauthenticated)
 - `GET /api/v0/ping` - Ping endpoint (authenticated)
+
+## Transaction Management
+
+Two session factories handle different operation types:
+
+| Dependency               | Session Type                | Transaction                                   | Used by        |
+| ------------------------ | --------------------------- | --------------------------------------------- | -------------- |
+| `get_async_db`           | Write (autoflush=True)      | Auto-commit on success, rollback on exception | POST endpoints |
+| `get_async_db_read_only` | Read-only (autoflush=False) | No transaction overhead                       | GET endpoints  |
+
+POST endpoints use `get_async_db` which wraps the entire request in a single transaction. If any error occurs, the entire operation is rolled back. On success, the transaction is committed automatically.
+
+## Exception Handling
+
+All exceptions are handled by global exception handlers registered in `app/exceptions/handlers.py`:
+
+| Exception                | HTTP Status            | Description                                    |
+| ------------------------ | ---------------------- | ---------------------------------------------- |
+| `RequestValidationError` | 400 (GET) / 422 (POST) | Pydantic validation errors                     |
+| `AppValidationError`     | 422                    | Custom application validation errors           |
+| `BusinessLogicError`     | 422                    | Business rule violations (e.g. area not found) |
+| `DuplicateResourceError` | 409                    | Duplicate resource conflict                    |
+| `AuthenticationError`    | 401                    | Invalid or expired token                       |
+| `AuthorizationError`     | 403                    | Insufficient permissions                       |
+| `ResourceNotFoundError`  | 404                    | Resource not found                             |
+| `HTTPException`          | varies                 | Generic HTTP errors                            |
+| `Exception`              | 500                    | Catch-all (no stack trace exposed)             |
 
 ## Development Workflow
 
@@ -266,10 +337,9 @@ make
 ### Integration Tests (`tests/`)
 - Shell scripts using curl
 - Test OAuth2 flows
-- Test API endpoints
+- Test API endpoints with single-item POST payloads
 - Test security headers (OWASP compliance)
 - Test validation (Pydantic + business logic)
-- Test partial success/failure scenarios
 - **Run:** `make test`
 
 ### Test Coverage
@@ -295,3 +365,7 @@ See [tests/README.md](../tests/README.md) for detailed test documentation.
   - `sdep_str` - STR Platform access
   - `sdep_read` - Read operations
   - `sdep_write` - Write operations
+- **JWT Claims used:**
+  - `client_id` - Maps to platform/competent authority functional ID
+  - `client_name` - Maps to platform/competent authority name
+  - `realm_access.roles` - Role-based authorization

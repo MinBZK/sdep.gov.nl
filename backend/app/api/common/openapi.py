@@ -29,6 +29,7 @@ def replace_auto_generated_body_schemas(
     # Map of auto-generated schema names to their replacements
     replacements = {
         "Body_post_auth_token": "auth.TokenRequest",
+        "Body_postArea": "area.AreaRequest",
     }
 
     schemas = openapi_schema["components"]["schemas"]

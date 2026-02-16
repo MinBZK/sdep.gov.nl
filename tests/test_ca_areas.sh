@@ -4,7 +4,7 @@
 # Expects BACKEND_BASE_URL environment variable to be set
 # Optionally accepts BEARER_TOKEN environment variable for authenticated requests
 # Optionally accepts API_VERSION environment variable (defaults to v0)
-# Tests POST /ca/areas endpoint with shapefile data
+# Tests POST /ca/areas endpoint with file upload (multipart/form-data)
 
 set -e
 
@@ -51,44 +51,27 @@ fi
 echo "📂 Using test shapefile: $SHAPEFILE_PATH"
 echo
 
-# Encode file to base64
-FILEDATA_BASE64=$(base64 -w 0 "$SHAPEFILE_PATH")
-
-# Test 1: POST single area
-echo "Test 1: POST single area (amsterdam-single-area1)"
+# Test 1: POST single area with file upload
+echo "Test 1: POST single area with file upload"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Generate unique area ID
 TIMESTAMP=$(date +%s)
-AREA_ID_SINGLE="sdep-test-area-single-${TIMESTAMP}"
-
-# Prepare JSON payload with single area
-read -r -d '' PAYLOAD <<EOF || true
-{
-  "metadata": {},
-  "areas": [
-    {
-      "areaId": "$AREA_ID_SINGLE",
-      "filename": "Amsterdam-area-single.zip",
-      "filedata": "$FILEDATA_BASE64"
-    }
-  ]
-}
-EOF
+AREA_ID="sdep-test-area-single-${TIMESTAMP}"
 
 if [ -n "$BEARER_TOKEN" ]; then
     response=$(curl -s -w "\n%{http_code}" \
         -X POST \
-        -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        -d "$PAYLOAD" \
+        -F "file=@${SHAPEFILE_PATH}" \
+        -F "areaId=${AREA_ID}" \
         "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
 else
     response=$(curl -s -w "\n%{http_code}" \
         -X POST \
-        -H "Content-Type: application/json" \
-        -d "$PAYLOAD" \
+        -F "file=@${SHAPEFILE_PATH}" \
+        -F "areaId=${AREA_ID}" \
         "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
 fi
 
@@ -100,14 +83,14 @@ echo "HTTP Status: $http_code"
 echo
 
 if [ "$http_code" -eq 201 ]; then
-    # Check for new response format with totalProcessed, succeeded, failed
-    if echo "$body" | grep -q '"totalProcessed":1' && \
-       echo "$body" | grep -q '"succeeded":1' && \
-       echo "$body" | grep -q '"failed":0'; then
+    # Check for single-item response format with areaId and filename
+    if echo "$body" | grep -q '"areaId"' && \
+       echo "$body" | grep -q '"filename"' && \
+       echo "$body" | grep -q '"createdAt"'; then
         echo "✅ Test 1 passed: Area successfully submitted"
         PASSED_TESTS=$((PASSED_TESTS + 1))
     else
-        echo "❌ Test 1 failed: Expected success message in response"
+        echo "❌ Test 1 failed: Expected areaId, filename, createdAt in response"
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 elif [ "$http_code" -eq 401 ] && [ -z "$BEARER_TOKEN" ]; then
@@ -120,74 +103,8 @@ fi
 
 echo
 
-# Test 2: POST multiple areas (rotterdam-area1, denhaag-area1)
-echo "Test 2: POST multiple areas (rotterdam-area1, denhaag-area1)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-TOTAL_TESTS=$((TOTAL_TESTS + 1))
-
-# Only run if authenticated
-if [ -n "$BEARER_TOKEN" ]; then
-    # Generate unique competent authority area IDs
-    TIMESTAMP=$(date +%s)
-    AREA_ID_1="sdep-test-area-multi-${TIMESTAMP}-1"
-    AREA_ID_2="sdep-test-area-multi-${TIMESTAMP}-2"
-
-    # Prepare JSON payload with 2 areas similar to test data
-    read -r -d '' PAYLOAD_MULTI <<EOF || true
-{
-  "metadata": {},
-  "areas": [
-    {
-      "areaId": "$AREA_ID_1",
-      "filename": "Rotterdam-area1.zip",
-      "filedata": "$FILEDATA_BASE64"
-    },
-    {
-      "areaId": "$AREA_ID_2",
-      "filename": "DenHaag-area2.zip",
-      "filedata": "$FILEDATA_BASE64"
-    }
-  ]
-}
-EOF
-
-    response=$(curl -s -w "\n%{http_code}" \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        -d "$PAYLOAD_MULTI" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
-
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | sed '$d')
-
-    echo "Response: $body"
-    echo "HTTP Status: $http_code"
-    echo
-
-    if [ "$http_code" -eq 201 ]; then
-        # Check for new response format
-        if echo "$body" | grep -q '"totalProcessed":2' && \
-           echo "$body" | grep -q '"succeeded":2' && \
-           echo "$body" | grep -q '"failed":0'; then
-            echo "✅ Test 2 passed: Multiple areas successfully submitted"
-            PASSED_TESTS=$((PASSED_TESTS + 1))
-        else
-            echo "❌ Test 2 failed: Expected message about 2 records"
-            FAILED_TESTS=$((FAILED_TESTS + 1))
-        fi
-    else
-        echo "❌ Test 2 failed: Unexpected HTTP status $http_code"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-    fi
-else
-    echo "⏭️  Skipping Test 2 (requires authentication)"
-fi
-
-echo
-
-# Test 3: POST with optional areaId field
-echo "Test 3: POST with optional areaId field"
+# Test 2: POST with optional areaId field
+echo "Test 2: POST with custom areaId"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
@@ -196,25 +113,11 @@ if [ -n "$BEARER_TOKEN" ]; then
     # Generate unique ID using epoch timestamp to ensure test idempotence
     UNIQUE_ID=$(date +%s%N | cut -b1-13)
 
-    # Prepare payload with custom areaId
-    read -r -d '' PAYLOAD_WITH_ID <<EOF || true
-{
-  "metadata": {},
-  "areas": [
-    {
-      "areaId": "sdep-test-area-custom-$UNIQUE_ID",
-      "filename": "Amsterdam-with-id-$UNIQUE_ID.zip",
-      "filedata": "$FILEDATA_BASE64"
-    }
-  ]
-}
-EOF
-
     response=$(curl -s -w "\n%{http_code}" \
         -X POST \
-        -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        -d "$PAYLOAD_WITH_ID" \
+        -F "file=@${SHAPEFILE_PATH}" \
+        -F "areaId=sdep-test-area-custom-${UNIQUE_ID}" \
         "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
 
     http_code=$(echo "$response" | tail -n1)
@@ -225,14 +128,51 @@ EOF
     echo
 
     if [ "$http_code" -eq 201 ]; then
-        # Check for new response format
-        if echo "$body" | grep -q '"totalProcessed":1' && \
-           echo "$body" | grep -q '"succeeded":1' && \
-           echo "$body" | grep -q '"failed":0'; then
-            echo "✅ Test 3 passed: Area with custom areaId successfully submitted"
+        if echo "$body" | grep -q '"areaId"' && \
+           echo "$body" | grep -q '"createdAt"'; then
+            echo "✅ Test 2 passed: Area with custom areaId successfully submitted"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
-            echo "❌ Test 3 failed: Expected success response format"
+            echo "❌ Test 2 failed: Expected success response format"
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+        fi
+    else
+        echo "❌ Test 2 failed: Expected 201 but got $http_code"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+else
+    echo "⏭️  Skipping Test 2 (requires authentication)"
+fi
+
+echo
+
+# Test 3: POST without areaId (auto-generated UUID)
+echo "Test 3: POST without areaId (auto-generated UUID)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+
+# Only run if authenticated
+if [ -n "$BEARER_TOKEN" ]; then
+    response=$(curl -s -w "\n%{http_code}" \
+        -X POST \
+        -H "Authorization: Bearer ${BEARER_TOKEN}" \
+        -F "file=@${SHAPEFILE_PATH}" \
+        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
+
+    http_code=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    echo "Response: $body"
+    echo "HTTP Status: $http_code"
+    echo
+
+    if [ "$http_code" -eq 201 ]; then
+        if echo "$body" | grep -q '"areaId"' && \
+           echo "$body" | grep -q '"createdAt"'; then
+            echo "✅ Test 3 passed: Area with auto-generated UUID successfully submitted"
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+        else
+            echo "❌ Test 3 failed: Expected areaId in response"
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
     else
@@ -241,127 +181,6 @@ EOF
     fi
 else
     echo "⏭️  Skipping Test 3 (requires authentication)"
-fi
-
-echo
-
-# Test 4: POST with validation error (missing required field)
-echo "Test 4: POST with validation error (missing required field)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-TOTAL_TESTS=$((TOTAL_TESTS + 1))
-
-# Only run if authenticated
-if [ -n "$BEARER_TOKEN" ]; then
-    # Prepare invalid payload (missing 'filedata' field)
-    read -r -d '' PAYLOAD_INVALID <<EOF || true
-{
-  "metadata": {},
-  "areas": [
-    {
-      "areaId": "sdep-test-area-invalid-9999",
-      "filename": "Invalid-area.zip"
-    }
-  ]
-}
-EOF
-
-    response=$(curl -s -w "\n%{http_code}" \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        -d "$PAYLOAD_INVALID" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
-
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | sed '$d')
-
-    echo "Response: $body"
-    echo "HTTP Status: $http_code"
-    echo
-
-    if [ "$http_code" -eq 422 ]; then
-        # Check for new response format - all failed
-        if echo "$body" | grep -q '"totalProcessed":1' && \
-           echo "$body" | grep -q '"succeeded":0' && \
-           echo "$body" | grep -q '"failed":1' && \
-           echo "$body" | grep -q '"failures"'; then
-            echo "✅ Test 4 passed: Validation error correctly returned (422) all submitted entries got validation errors"
-            PASSED_TESTS=$((PASSED_TESTS + 1))
-        else
-            echo "❌ Test 4 failed: Expected 422 with proper failure response format"
-            FAILED_TESTS=$((FAILED_TESTS + 1))
-        fi
-    else
-        echo "❌ Test 4 failed: Expected 422 but got $http_code"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-    fi
-else
-    echo "⏭️  Skipping Test 4 (requires authentication)"
-fi
-
-echo
-
-# Test 5: POST with partial success (some succeed, some fail)
-echo "Test 5: POST with partial success (mix of valid and invalid)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-TOTAL_TESTS=$((TOTAL_TESTS + 1))
-
-# Only run if authenticated
-if [ -n "$BEARER_TOKEN" ]; then
-    UNIQUE_ID=$(date +%s%N | cut -b1-13)
-
-    # Prepare payload with 2 areas: 1 valid, 1 invalid (missing filedata)
-    read -r -d '' PAYLOAD_PARTIAL <<EOF || true
-{
-  "metadata": {},
-  "areas": [
-    {
-      "areaId": "sdep-test-area-partial-valid-$UNIQUE_ID",
-      "filename": "Valid-area.zip",
-      "filedata": "$FILEDATA_BASE64"
-    },
-    {
-      "areaId": "sdep-test-area-partial-invalid-$UNIQUE_ID",
-      "filename": "Invalid-area.zip"
-    }
-  ]
-}
-EOF
-
-    response=$(curl -s -w "\n%{http_code}" \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        -d "$PAYLOAD_PARTIAL" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/ca/areas")
-
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | sed '$d')
-
-    echo "Response: $body"
-    echo "HTTP Status: $http_code"
-    echo
-
-    # Expect 200 OK (partial success)
-    if [ "$http_code" -eq 200 ]; then
-        # Check for partial success: 1 succeeded, 1 failed
-        if echo "$body" | grep -q '"totalProcessed":2' && \
-           echo "$body" | grep -q '"succeeded":1' && \
-           echo "$body" | grep -q '"failed":1' && \
-           echo "$body" | grep -q '"failures"'; then
-            echo "✅ Test 5 passed: Partial success correctly returned (200) - 1 succeeded, 1 failed"
-            PASSED_TESTS=$((PASSED_TESTS + 1))
-        else
-            echo "❌ Test 5 failed: Expected partial success response format"
-            echo "   Expected: totalProcessed=2, succeeded=1, failed=1 with failures list"
-            FAILED_TESTS=$((FAILED_TESTS + 1))
-        fi
-    else
-        echo "❌ Test 5 failed: Expected 200 but got $http_code"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-    fi
-else
-    echo "⏭️  Skipping Test 5 (requires authentication)"
 fi
 
 echo

@@ -15,6 +15,17 @@ from pydantic import (
     model_serializer,
 )
 
+__all__ = [
+    "ActivityCountResponse",
+    "ActivityListResponse",
+    "ActivityRequest",
+    "ActivityResponse",
+    "AddressRequest",
+    "AddressResponse",
+    "TemporalRequest",
+    "TemporalResponse",
+]
+
 
 def validate_year_ge_2025(v: datetime) -> datetime:
     """Validate that datetime year is >= 2025."""
@@ -305,46 +316,6 @@ class ActivityRequest(BaseModel):
         }
 
 
-class ActivityListRequest(BaseModel):
-    """List of activities for bulk submission.
-
-    Validation Layer:
-    - Validates the entire list
-    - Each activity is validated individually
-    - Platform (from token) is normalized to each activity in to_service_list()
-    """
-
-    model_config = ConfigDict(title="activity.ActivityListRequest")
-
-    activities: list[ActivityRequest] = Field(
-        ...,
-        min_length=1,
-        max_length=1000,
-        description="List of activities to process (max 1000 per batch)",
-    )
-
-    def to_service_list(self, platform_id: str, platform_name: str) -> list[dict]:
-        """
-        Convert list of Pydantic models to list of dictionaries for service layer.
-
-        Normalizes platform (from JWT token) from batch level to each activity.
-        This happens at the API layer to keep service layer focused on business logic.
-
-        Args:
-            platform_id: Platform ID string extracted from JWT token (client_id claim)
-            platform_name: Platform name extracted from JWT token (client_name claim)
-
-        Returns:
-            List of dictionaries with flattened structure, each containing normalized metadata
-        """
-        return [
-            activity.to_service_dict(
-                platform_id=platform_id, platform_name=platform_name
-            )
-            for activity in self.activities
-        ]
-
-
 class AddressResponse(BaseModel):
     """Address composite schema for activity responses."""
 
@@ -407,23 +378,6 @@ class ActivityResponse(BaseModel):
         max_length=64,
         description="Activity name (optional, max 64 chars)",
     )  # Functional name
-    created_at: datetime = Field(
-        ..., alias="createdAt", description="Creation timestamp"
-    )  # Attribute
-    platform_id: str = Field(
-        ...,
-        alias="platformId",
-        min_length=1,
-        max_length=64,
-        pattern=r"^[a-z0-9-]+$",
-        description="Platform functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
-    )  # Attribute
-    platform_name: str | None = Field(
-        None,
-        alias="platformName",
-        max_length=64,
-        description="Platform name (optional, max 64 chars)",
-    )  # Attribute
     area_id: str = Field(
         ...,
         alias="areaId",
@@ -452,6 +406,23 @@ class ActivityResponse(BaseModel):
     temporal: TemporalResponse = Field(
         ..., description="Temporal composite"
     )  # Composite
+    platform_id: str = Field(
+        ...,
+        alias="platformId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z0-9-]+$",
+        description="Platform functional ID (lowercase alphanumeric with hyphens, max 64 chars)",
+    )  # Attribute
+    platform_name: str | None = Field(
+        None,
+        alias="platformName",
+        max_length=64,
+        description="Platform name (optional, max 64 chars)",
+    )  # Attribute
+    created_at: datetime = Field(
+        ..., alias="createdAt", description="Creation timestamp"
+    )  # Attribute
 
     @model_serializer(mode="wrap")
     def _serialize_model(self, serializer, info):
@@ -481,118 +452,3 @@ class ActivityCountResponse(BaseModel):
         description="Total number of activity records",
         examples=[42],
     )  # Attribute
-
-
-class ActivityErrorDetail(BaseModel):
-    """Error detail for a failed activity in processing."""
-
-    model_config = ConfigDict(
-        title="activity.ActivityErrorDetail",
-        populate_by_name=True,
-    )
-
-    loc: list[str | int] = Field(
-        default_factory=list,
-        description="Location of the error (field path)",
-        examples=[["activities", 0, "areaId"], ["activities", 1, "url"]],
-    )
-    msg: str = Field(
-        ...,
-        description="Error message describing what went wrong",
-        examples=[
-            "Competent authority with competent_authority_id 'invalid' not found",
-            "Activity with platformActivityId 'abc-123' already exists",
-        ],
-    )
-    type: str = Field(
-        ...,
-        description="Error type classification",
-        examples=["business_logic_error", "duplicate_resource", "integrity_error"],
-    )
-
-
-class FailedActivity(BaseModel):
-    """Represents a failed activity with its original request data and errors."""
-
-    model_config = ConfigDict(
-        title="activity.FailedActivity",
-        populate_by_name=True,
-    )
-
-    activityIndex: int = Field(
-        ...,
-        alias="activityIndex",
-        description="Index of the activity in the original request (0-based)",
-        examples=[0, 1, 2],
-    )
-    activity: ActivityRequest = Field(
-        ...,
-        description="Original activity request data that failed",
-    )
-    errors: list[ActivityErrorDetail] = Field(
-        ...,
-        description="List of errors that occurred for this activity",
-    )
-
-
-class SuccessfulActivity(BaseModel):
-    """Represents a successfully processed activity with its original request data (including generated ID)."""
-
-    model_config = ConfigDict(
-        title="activity.SuccessfulActivity",
-        populate_by_name=True,
-    )
-
-    activityIndex: int = Field(
-        ...,
-        alias="activityIndex",
-        description="Index of the activity in the original request (0-based)",
-        examples=[0, 1, 2],
-    )
-    activity: ActivityRequest = Field(
-        ...,
-        description="Original activity request data that succeeded (includes generated activityId)",
-    )
-
-
-class ActivityProcessingResponse(BaseModel):
-    """Response for activity processing with partial success/failure support."""
-
-    model_config = ConfigDict(
-        title="activity.ActivityProcessingResponse",
-        populate_by_name=True,
-    )
-
-    message: str = Field(
-        ...,
-        description="Summary message of the processing result",
-        examples=[
-            "Processed 10 activities: 8 succeeded, 2 failed",
-            "Processed 5 activities: 5 succeeded, 0 failed",
-            "Processed 3 activities: 0 succeeded, 3 failed",
-        ],
-    )
-    totalProcessed: int = Field(
-        ...,
-        alias="totalProcessed",
-        description="Total number of activities submitted",
-        examples=[10, 5, 3],
-    )
-    succeeded: int = Field(
-        ...,
-        description="Number of activities that succeeded",
-        examples=[8, 5, 0],
-    )
-    failed: int = Field(
-        ...,
-        description="Number of activities that failed",
-        examples=[2, 0, 3],
-    )
-    successes: list[SuccessfulActivity] = Field(
-        default_factory=list,
-        description="List of activities that succeeded (empty if all failed)",
-    )
-    failures: list[FailedActivity] = Field(
-        default_factory=list,
-        description="List of activities that failed (empty if all succeeded)",
-    )

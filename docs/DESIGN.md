@@ -18,77 +18,28 @@ https://stackoverflow.blog/2020/03/02/best-practices-for-rest-api-design/
 
 ## API
 
-For additional motivation [*], see the text below the table.
-
-| #               | Decision                                                     | Example                                                                                                                                                                              |
-| :-------------- | :----------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **API&nbsp;01** | Support OpenAPI 3.1.0 [*]                                    |                                                                                                                                                                                      |
-| **API&nbsp;02** | All endpoints are self-explanatory/well-documented           | See e.g. [`/str/activities`](https://sdep.gov.nl/api/v0/docs#/str/postActivity) endpoint                                                                                             |
-| **API&nbsp;03** | Use nouns instead of verbs [*]                               | See e.g. [`/str/areas`](https://sdep.gov.nl/api/v0/docs#/str/getAreas) endpoint                                                                                                      |
-| **API&nbsp;04** | Use plurals for resources                                    | See e.g. [`/str/areas`](https://sdep.gov.nl/api/v0/docs#/str/getAreas) endpoint                                                                                                      |
-| **API&nbsp;05** | Consistent datamodel [*]                                     | `Activity`, `Area`                                                                                                                                                                   |
-| **API&nbsp;06** | Consistent endpoints                                         | `/ca/areas`, `/ca/activities`, `/str/areas`,`/str/activities`                                                                                                                        |
-| **API&nbsp;07** | Consistent pagination                                        | `offset`, `limit`, all endpoints                                                                                                                                                     |
-| **API&nbsp;08** | Syntax validation                                            | `postal code`, ...                                                                                                                                                                   |
-| **API&nbsp;09** | Semantical validation                                        | `begin timestamp < end timestamp`                                                                                                                                                    |
-| **API&nbsp;10** | Integrity validation                                         | Can only submit activities for existing areas                                                                                                                                        |
-| **API&nbsp;11** | Transaction size constraints (POST)                          | Limit bulk updates to max 1000 [*]                                                                                                                                                   |
-| **API&nbsp;12** | Logical ordening => readability                              | See e.g. [`/str/areas`](https://sdep.gov.nl/api/v0/docs#/str/getAreas) endpoint                                                                                                      |
-| **API&nbsp;13** | Essentiality                                                 | E.g. only `areaId` (and competentAuthorityId) in [`/str/activities`](https://sdep.gov.nl/api/v0/docs#/str/postActivity) endpoint; `competentAuthorityName` is redundant/not required |
-| **API&nbsp;14** | Essentiality/security                                        | In POST, no need to include `competentAuthorityId` or `platformId` in the request)                                                                                                   |
-| **API&nbsp;15** | Consistent HTTP response codes                               | 200, 201, 400, 401, 403, 409, 422                                                                                                                                                    |
-| **API&nbsp;16** | Retrieve actual (current) areas on submitting activities [*] |                                                                                                                                                                                      |
-
-Motivation:
-
-**API 01**
-
-- Swagger 2.0 is legacy - https://swagger.io/specification/
-
-**API 03**
-
-- Best practice - https://restfulapi.net/resource-naming/, https://logius-standaarden.github.io/API-Design-Rules
-
-**API 05**
-
-- No code duplication** between `ca-area` and `str-area`, if CA requires activity subset, then filter out themselves (activities.activity.areaId)
-- Consistent use of Address
-
-**API 11**
-
-- To ensure predictable performance, limit transaction size, and improve reliability and error handling.
-
-**API 16**
-
-- When a platform submits new activities, the platform first has to retrieve the current areas
-- Because these may have changed over time
-- This way, activities can always be correlated to the areas at that moment in time => point-in-time consistency
+| #               | Decision                                               | Motivation/example                                                                                             |
+| :-------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
+| **API&nbsp;01** | Support OpenAPI 3.1.0                                  | Swagger 2.0 is legacy - https://swagger.io/specification/                                                      |
+| **API&nbsp;02** | All endpoints are self-explanatory/well-documented     |                                                                                                                |
+| **API&nbsp;03** | Use nouns instead of verbs                             | Best practice - https://logius-standaarden.github.io/API-Design-Rules/                                         |
+| **API&nbsp;04** | Use plurals for resources that affect collections      | Best practice - https://logius-standaarden.github.io/API-Design-Rules/                                         |
+| **API&nbsp;05** | Consistent datamodel [*]                               | Avoid code duplication, only have `Activity`, `Area`, add attribute to indicate "non-reporting records" for CA |
+| **API&nbsp;06** | Consistent endpoints                                   | Have POST/GET "mirrors" - `POST /ca/areas`, `GET /ca/activities` vs. `GET /str/areas`,` POST /str/activities`  |
+| **API&nbsp;07** | Consistent pagination                                  | Have `offset` and `limit` for all endpoints with (potential) many records                                      |
+| **API&nbsp;08** | Syntax validation                                      | Example: `postal code`                                                                                         |
+| **API&nbsp;09** | Semantical validation                                  | Example: `begin timestamp < end timestamp`                                                                     |
+| **API&nbsp;10** | Integrity validation                                   | Example: can only submit activities for existing areas                                                         |
+| **API&nbsp;11** | Single record POST                                     | To avoid transaction performance issues and to keep the endpoints simple (as opposes to bulk updates)          |
+| **API&nbsp;12** | Logical ordening => readability                        | For POST, request and response follow the same ordening, extra data in response is moved to the end            |
+| **API&nbsp;13** | Essentiality                                           | Example: in POST activities, only `areaId` and `competentAuthorityId`, but no `competentAuthorityName`         |
+| **API&nbsp;14** | Essentiality/security                                  | Example: in POST activities request, no need to include `platformId`                                           |
+| **API&nbsp;15** | Consistent HTTP response codes                         | 200, 201, 400, 401, 403, 409, 422                                                                              |
+| **API&nbsp;16** | When activitiees are submitted, first get actual areas | Because these may have changed over time                                                                       |
 
 ## Security
 
-For additional motivation [*], see the text below the table.
-
-| #               | Decision                                                                       | Example |
-| :-------------- | :----------------------------------------------------------------------------- | :------ |
-| **SEC&nbsp;01** | oAuth2 with JWT [*]                                                            |         |
-| **SEC&nbsp;02** | Client credentials grant (client credentials flow) [*]                         |         |
-| **SEC&nbsp;03** | Support for delegated API-invocation (smaller platforms via third-parties) [*] |         |
-
-Motivation:
-
-**SEC 01**
-
-- For trusted machine-to-machine (M2M) interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
-
-**SEC 02**
-
-- Only client credentials grant (client credentials flow)
-- Implicit flow (obtain access token directly, without backend secret) is deprecated
-
-**SEC 03**
-
-- Smaller platforms may deliver rental activities to third-parties (by mail, excel, ...)
-- API invocation to SDEP is in this case delegated to those third-parties
-- Third-party is registered as platform (STR) in SDEP => one STR registration per delegating platform
-- Communication between third party and SDEP happens via the regular SDEP API
-- STR data remains stored per platform
+| #               | Decision                                                       | Motivation/example                                                                                                           |
+| :-------------- | :------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| **SEC&nbsp;01** | oAuth2 with JWT [*]                                            | Is the standard for trusted machine-to-machine (M2M) interaction - https://datatracker.ietf.org/doc/html/rfc6749#section-4.4 |
+| **SEC&nbsp;02** | Smaller platforms can delegate API-invocation to third-parties | Platform arranges data submission with their party; the party becomes registered in SDEP                                                                                                                             |

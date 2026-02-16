@@ -36,7 +36,6 @@ SHELL := /bin/bash
 	@echo "✅ Area SQL file generated"
 
 .keycloak-wait: ## Wait until keycloak allows to authenticate
-	@echo "🚀 Waiting for keycloak ready..."
 	@./keycloak/wait.sh
 	@set -a && source .env && set +a && echo "✅ $$KC_BASE_URL"
 
@@ -176,17 +175,17 @@ postgres-logs: ## Show postgres logs
 ##@ Keycloak
 
 keycloak-up: postgres-up ## Start keycloak
-	@echo "🚀 Starting keycloak..."
+	@echo "🚀 Starting Keycloak..."
 	docker compose up -d keycloak
 	@echo "✅ Keycloak started!"
-	@echo "🚀 Configuring keycloak..."
+	@echo "🚀 Configuring Keycloak..."
 	@$(MAKE) --no-print-directory .keycloak-realm || echo Realm already added
 	@$(MAKE) --no-print-directory .keycloak-roles || echo Roles already added
 	@$(MAKE) --no-print-directory .keycloak-machine-clients || echo Machine clients already added
 	@echo "✅ Keycloak configured!"
 
 keycloak-down: ## Stop and remove keycloak (including volumes)
-	@echo "🛑 Stopping keycloak..."
+	@echo "🛑 Stopping Keycloak..."
 	docker compose stop keycloak
 	docker compose rm -f -v keycloak
 	@echo "✅ Keycloak stopped, removed, and volumes cleaned!"
@@ -220,7 +219,7 @@ up: .build .clean-stale ## Start
 	docker compose up -d
 	@echo "✅ Fullstack started!"
 
-	@echo "🚀 Configuring keycloak..."
+	@echo "🚀 Configuring Keycloak..."
 	@$(MAKE) --no-print-directory .keycloak-realm
 	@$(MAKE) --no-print-directory .keycloak-roles
 	@$(MAKE) --no-print-directory .keycloak-machine-clients

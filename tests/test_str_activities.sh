@@ -4,7 +4,7 @@
 # Expects BACKEND_BASE_URL environment variable to be set
 # Optionally accepts BEARER_TOKEN environment variable for authenticated requests
 # Optionally accepts API_VERSION environment variable (defaults to v0)
-# Tests POST /str/activities endpoint with valid activities
+# Tests POST /str/activities endpoint with single activity
 
 set -e
 
@@ -65,31 +65,25 @@ TIMESTAMP=$(date +%s)
 START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 END_TIME=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%M:%SZ")
 
-# Prepare JSON payload
+# Prepare JSON payload (single activity)
 read -r -d '' PAYLOAD <<EOF || true
 {
-  "metadata": {
+  "activityId": "sdep-test-activity-single-$TIMESTAMP",
+  "url": "http://sdep-test.example.com/amsterdam-myhouse-1",
+  "registrationNumber": "REG0002",
+  "address": {
+    "street": "Prinsengracht",
+    "number": 265,
+    "postalCode": "1016HV",
+    "city": "Amsterdam"
   },
-  "activities": [
-    {
-      "activityId": "sdep-test-activity-single-$TIMESTAMP",
-      "url": "http://sdep-test.example.com/amsterdam-myhouse-1",
-      "registrationNumber": "REG0002",
-      "address": {
-        "street": "Prinsengracht",
-        "number": 265,
-        "postalCode": "1016HV",
-        "city": "Amsterdam"
-      },
-      "temporal": {
-        "startDatetime": "$START_TIME",
-        "endDatetime": "$END_TIME"
-      },
-      "areaId": "$AREA_ID_1",
-      "countryOfGuests": ["NLD", "DEU", "BEL"],
-      "numberOfGuests": 4
-    }
-  ]
+  "temporal": {
+    "startDatetime": "$START_TIME",
+    "endDatetime": "$END_TIME"
+  },
+  "areaId": "$AREA_ID_1",
+  "countryOfGuests": ["NLD", "DEU", "BEL"],
+  "numberOfGuests": 4
 }
 EOF
 
@@ -116,14 +110,14 @@ echo "HTTP Status: $http_code"
 echo
 
 if [ "$http_code" -eq 201 ]; then
-    # Check for new response format with totalProcessed, succeeded, failed
-    if echo "$body" | grep -q '"totalProcessed":1' && \
-       echo "$body" | grep -q '"succeeded":1' && \
-       echo "$body" | grep -q '"failed":0'; then
+    # Check for ActivityResponse format with activityId and createdAt
+    if echo "$body" | grep -q '"activityId"' && \
+       echo "$body" | grep -q '"createdAt"' && \
+       echo "$body" | grep -q '"platformId"'; then
         echo "✅ Test 1 passed: Activity successfully submitted"
         PASSED_TESTS=$((PASSED_TESTS + 1))
     else
-        echo "❌ Test 1 failed: Expected success message in response"
+        echo "❌ Test 1 failed: Expected ActivityResponse format in response"
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 elif [ "$http_code" -eq 401 ] && [ -z "$BEARER_TOKEN" ]; then
@@ -136,140 +130,39 @@ fi
 
 echo
 
-# Test 2: POST multiple activities (rotterdam-myhouse-1, denhaag-myhouse-1)
-echo "Test 2: POST multiple activities (rotterdam-myhouse-1, denhaag-myhouse-1)"
+# Test 2: POST with optional activityId field
+echo "Test 2: POST with optional activityId field"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
-    # Generate dynamic timestamps for multiple activities
-    TIMESTAMP=$(date +%s)
-    START_TIME_1=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    END_TIME_1=$(date -u -d "+1 hour" +"%Y-%m-%dT%H:%M:%SZ")
-    START_TIME_2=$(date -u -d "+2 hours" +"%Y-%m-%dT%H:%M:%SZ")
-    END_TIME_2=$(date -u -d "+3 hours" +"%Y-%m-%dT%H:%M:%SZ")
-
-    # Prepare JSON payload with 2 activities similar to test data
-    read -r -d '' PAYLOAD_MULTI <<EOF || true
-{
-  "metadata": {
-  },
-  "activities": [
-    {
-      "activityId": "sdep-test-activity-multi-${TIMESTAMP}-1",
-      "url": "http://sdep-test.example.com/rotterdam-myhouse-1",
-      "registrationNumber": "REG0004",
-      "address": {
-        "street": "Witte de Withstraat",
-        "number": 32,
-        "postalCode": "3012BL",
-        "city": "Rotterdam"
-      },
-      "temporal": {
-        "startDatetime": "$START_TIME_1",
-        "endDatetime": "$END_TIME_1"
-      },
-      "areaId": "$AREA_ID_2",
-      "countryOfGuests": ["NLD", "GBR"],
-      "numberOfGuests": 2
-    },
-    {
-      "activityId": "sdep-test-activity-multi-${TIMESTAMP}-2",
-      "url": "http://sdep-test.example.com/denhaag-myhouse-1",
-      "registrationNumber": "REG0005",
-      "address": {
-        "street": "Noordeinde",
-        "number": 70,
-        "postalCode": "2514GK",
-        "city": "Den Haag"
-      },
-      "temporal": {
-        "startDatetime": "$START_TIME_2",
-        "endDatetime": "$END_TIME_2"
-      },
-      "areaId": "$AREA_ID_3",
-      "countryOfGuests": ["NLD", "FRA", "DEU"],
-      "numberOfGuests": 6
-    }
-  ]
-}
-EOF
-
-    response=$(curl -s -w "\n%{http_code}" \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        -d "$PAYLOAD_MULTI" \
-        "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
-
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | sed '$d')
-
-    echo "Response: $body"
-    echo "HTTP Status: $http_code"
-    echo
-
-    if [ "$http_code" -eq 201 ]; then
-        # Check for new response format
-        if echo "$body" | grep -q '"totalProcessed":2' && \
-           echo "$body" | grep -q '"succeeded":2' && \
-           echo "$body" | grep -q '"failed":0'; then
-            echo "✅ Test 2 passed: Multiple activities successfully submitted"
-            PASSED_TESTS=$((PASSED_TESTS + 1))
-        else
-            echo "❌ Test 2 failed: Expected message about 2 records"
-            FAILED_TESTS=$((FAILED_TESTS + 1))
-        fi
-    else
-        echo "❌ Test 2 failed: Unexpected HTTP status $http_code"
-        FAILED_TESTS=$((FAILED_TESTS + 1))
-    fi
-else
-    echo "⏭️  Skipping Test 2 (requires authentication)"
-fi
-
-echo
-
-# Test 3: POST with optional activityId field
-echo "Test 3: POST with optional activityId field"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-TOTAL_TESTS=$((TOTAL_TESTS + 1))
-
-# Only run if authenticated
-if [ -n "$BEARER_TOKEN" ]; then
-    # Generate dynamic timestamps with offset to avoid collisions with Test 1 and 2
-    START_TIME_3=$(date -u -d "+4 hours" +"%Y-%m-%dT%H:%M:%SZ")
-    END_TIME_3=$(date -u -d "+5 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    # Generate dynamic timestamps with offset to avoid collisions with Test 1
+    START_TIME_2=$(date -u -d "+4 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_2=$(date -u -d "+5 hours" +"%Y-%m-%dT%H:%M:%SZ")
 
     # Generate unique URL using epoch timestamp to ensure test idempotence
     UNIQUE_ID=$(date +%s%N | cut -b1-12)
 
-    # Prepare payload with activityId
+    # Prepare payload with activityId (single activity)
     read -r -d '' PAYLOAD_WITH_ID <<EOF || true
 {
-  "metadata": {
+  "activityId": "sdep-test-activity-custom-$UNIQUE_ID",
+  "url": "http://sdep-test.example.com/amsterdam-with-id-$UNIQUE_ID",
+  "registrationNumber": "REGID001",
+  "address": {
+    "street": "Prinsengracht",
+    "number": 267,
+    "postalCode": "1016HV",
+    "city": "Amsterdam"
   },
-  "activities": [
-    {
-      "activityId": "sdep-test-activity-custom-$UNIQUE_ID",
-      "url": "http://sdep-test.example.com/amsterdam-with-id-$UNIQUE_ID",
-      "registrationNumber": "REGID001",
-      "address": {
-        "street": "Prinsengracht",
-        "number": 267,
-        "postalCode": "1016HV",
-        "city": "Amsterdam"
-      },
-      "temporal": {
-        "startDatetime": "$START_TIME_3",
-        "endDatetime": "$END_TIME_3"
-      },
-      "areaId": "$AREA_ID_1",
-      "countryOfGuests": ["NLD"],
-      "numberOfGuests": 2
-    }
-  ]
+  "temporal": {
+    "startDatetime": "$START_TIME_2",
+    "endDatetime": "$END_TIME_2"
+  },
+  "areaId": "$AREA_ID_1",
+  "countryOfGuests": ["NLD"],
+  "numberOfGuests": 2
 }
 EOF
 
@@ -288,60 +181,54 @@ EOF
     echo
 
     if [ "$http_code" -eq 201 ]; then
-        # Check for new response format
-        if echo "$body" | grep -q '"totalProcessed":1' && \
-           echo "$body" | grep -q '"succeeded":1' && \
-           echo "$body" | grep -q '"failed":0'; then
-            echo "✅ Test 3 passed: Activity with custom activityId successfully submitted"
+        # Check for ActivityResponse format
+        if echo "$body" | grep -q '"activityId"' && \
+           echo "$body" | grep -q '"createdAt"' && \
+           echo "$body" | grep -q '"platformId"'; then
+            echo "✅ Test 2 passed: Activity with custom activityId successfully submitted"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
-            echo "❌ Test 3 failed: Expected success response format"
+            echo "❌ Test 2 failed: Expected ActivityResponse format"
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
     else
-        echo "❌ Test 3 failed: Expected 201 but got $http_code"
+        echo "❌ Test 2 failed: Expected 201 but got $http_code"
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 else
-    echo "⏭️  Skipping Test 3 (requires authentication)"
+    echo "⏭️  Skipping Test 2 (requires authentication)"
 fi
 
 echo
 
-# Test 4: POST with validation error (missing required field)
-echo "Test 4: POST with validation error (missing required field)"
+# Test 3: POST with validation error (missing required field)
+echo "Test 3: POST with validation error (missing required field)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
     # Generate dynamic timestamps with offset to avoid collisions
-    START_TIME_4=$(date -u -d "+6 hours" +"%Y-%m-%dT%H:%M:%SZ")
-    END_TIME_4=$(date -u -d "+7 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    START_TIME_3=$(date -u -d "+6 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_3=$(date -u -d "+7 hours" +"%Y-%m-%dT%H:%M:%SZ")
 
     # Prepare invalid payload (missing 'registrationNumber' required field)
     read -r -d '' PAYLOAD_INVALID <<EOF || true
 {
-  "metadata": {
+  "url": "http://sdep-test.example.com/amsterdam-invalid",
+  "address": {
+    "street": "Prinsengracht",
+    "number": 999,
+    "postalCode": "1016HV",
+    "city": "Amsterdam"
   },
-  "activities": [
-    {
-      "url": "http://sdep-test.example.com/amsterdam-invalid",
-      "address": {
-        "street": "Prinsengracht",
-        "number": 999,
-        "postalCode": "1016HV",
-        "city": "Amsterdam"
-      },
-      "temporal": {
-        "startDatetime": "$START_TIME_4",
-        "endDatetime": "$END_TIME_4"
-      },
-      "areaId": "$AREA_ID_1",
-      "countryOfGuests": ["NLD"],
-      "numberOfGuests": 2
-    }
-  ]
+  "temporal": {
+    "startDatetime": "$START_TIME_3",
+    "endDatetime": "$END_TIME_3"
+  },
+  "areaId": "$AREA_ID_1",
+  "countryOfGuests": ["NLD"],
+  "numberOfGuests": 2
 }
 EOF
 
@@ -360,79 +247,46 @@ EOF
     echo
 
     if [ "$http_code" -eq 422 ]; then
-        # Check for new response format - all failed
-        if echo "$body" | grep -q '"totalProcessed":1' && \
-           echo "$body" | grep -q '"succeeded":0' && \
-           echo "$body" | grep -q '"failed":1' && \
-           echo "$body" | grep -q '"failures"'; then
-            echo "✅ Test 4 passed: Validation error correctly returned (422) all submitted entries got validation errors"
-            PASSED_TESTS=$((PASSED_TESTS + 1))
-        else
-            echo "❌ Test 4 failed: Expected 422 with proper failure response format"
-            FAILED_TESTS=$((FAILED_TESTS + 1))
-        fi
+        echo "✅ Test 3 passed: Validation error correctly returned (422)"
+        PASSED_TESTS=$((PASSED_TESTS + 1))
     else
-        echo "❌ Test 4 failed: Expected 422 but got $http_code"
+        echo "❌ Test 3 failed: Expected 422 but got $http_code"
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 else
-    echo "⏭️  Skipping Test 4 (requires authentication)"
+    echo "⏭️  Skipping Test 3 (requires authentication)"
 fi
 
 echo
 
-# Test 5: POST with partial success (some succeed, some fail)
-echo "Test 5: POST with partial success (mix of valid and invalid)"
+# Test 4: POST with non-existent area
+echo "Test 4: POST with non-existent area (business logic error)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
 # Only run if authenticated
 if [ -n "$BEARER_TOKEN" ]; then
-    # Generate dynamic timestamps
-    START_TIME_5=$(date -u -d "+8 hours" +"%Y-%m-%dT%H:%M:%SZ")
-    END_TIME_5=$(date -u -d "+9 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    START_TIME_4=$(date -u -d "+8 hours" +"%Y-%m-%dT%H:%M:%SZ")
+    END_TIME_4=$(date -u -d "+9 hours" +"%Y-%m-%dT%H:%M:%SZ")
     UNIQUE_ID=$(date +%s%N | cut -b1-13)
 
-    # Prepare payload with 2 activities: 1 valid, 1 invalid area
-    read -r -d '' PAYLOAD_PARTIAL <<EOF || true
+    read -r -d '' PAYLOAD_BAD_AREA <<EOF || true
 {
-  "metadata": {},
-  "activities": [
-    {
-      "activityId": "sdep-test-activity-partial-valid-$UNIQUE_ID",
-      "url": "http://sdep-test.example.com/partial-valid-$UNIQUE_ID",
-      "registrationNumber": "REGPART001",
-      "address": {
-        "street": "Valid Street",
-        "number": 100,
-        "postalCode": "1000AA",
-        "city": "Amsterdam"
-      },
-      "temporal": {
-        "startDatetime": "$START_TIME_5",
-        "endDatetime": "$END_TIME_5"
-      },
-      "areaId": "$AREA_ID_1",
-      "numberOfGuests": 2
-    },
-    {
-      "activityId": "sdep-test-activity-partial-invalid-$UNIQUE_ID",
-      "url": "http://sdep-test.example.com/partial-invalid-area-$UNIQUE_ID",
-      "registrationNumber": "REGPART002",
-      "address": {
-        "street": "Invalid Area Street",
-        "number": 200,
-        "postalCode": "2000BB",
-        "city": "Nowhere"
-      },
-      "temporal": {
-        "startDatetime": "$START_TIME_5",
-        "endDatetime": "$END_TIME_5"
-      },
-      "areaId": "00000000-0000-0000-0000-000000000000",
-      "numberOfGuests": 3
-    }
-  ]
+  "activityId": "sdep-test-activity-bad-area-$UNIQUE_ID",
+  "url": "http://sdep-test.example.com/bad-area-$UNIQUE_ID",
+  "registrationNumber": "REGBAD001",
+  "address": {
+    "street": "Bad Area Street",
+    "number": 200,
+    "postalCode": "2000BB",
+    "city": "Nowhere"
+  },
+  "temporal": {
+    "startDatetime": "$START_TIME_4",
+    "endDatetime": "$END_TIME_4"
+  },
+  "areaId": "00000000-0000-0000-0000-000000000000",
+  "numberOfGuests": 3
 }
 EOF
 
@@ -440,7 +294,7 @@ EOF
         -X POST \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer ${BEARER_TOKEN}" \
-        -d "$PAYLOAD_PARTIAL" \
+        -d "$PAYLOAD_BAD_AREA" \
         "${BACKEND_BASE_URL}/api/${API_VERSION}/str/activities")
 
     http_code=$(echo "$response" | tail -n1)
@@ -450,26 +304,20 @@ EOF
     echo "HTTP Status: $http_code"
     echo
 
-    # Expect 200 OK (partial success)
-    if [ "$http_code" -eq 200 ]; then
-        # Check for partial success: 1 succeeded, 1 failed
-        if echo "$body" | grep -q '"totalProcessed":2' && \
-           echo "$body" | grep -q '"succeeded":1' && \
-           echo "$body" | grep -q '"failed":1' && \
-           echo "$body" | grep -q '"failures"'; then
-            echo "✅ Test 5 passed: Partial success correctly returned (200) - 1 succeeded, 1 failed"
+    if [ "$http_code" -eq 422 ]; then
+        if echo "$body" | grep -qi "area.*not found"; then
+            echo "✅ Test 4 passed: Non-existent area correctly returned 422 with area not found"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
-            echo "❌ Test 5 failed: Expected partial success response format"
-            echo "   Expected: totalProcessed=2, succeeded=1, failed=1 with failures list"
+            echo "❌ Test 4 failed: Expected area not found message in response"
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
     else
-        echo "❌ Test 5 failed: Expected 200 but got $http_code"
+        echo "❌ Test 4 failed: Expected 422 but got $http_code"
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 else
-    echo "⏭️  Skipping Test 5 (requires authentication)"
+    echo "⏭️  Skipping Test 4 (requires authentication)"
 fi
 
 echo

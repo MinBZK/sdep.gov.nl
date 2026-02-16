@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from app.api.v0.main import app_v0
 from app.crud import activity as activity_crud
-from app.db.config import get_async_db_manual_commit
+from app.db.config import get_async_db
 from app.security import verify_bearer_token
 from fastapi import status
 from httpx import ASGITransport, AsyncClient
@@ -32,39 +32,33 @@ class TestSTRActivitiesAPI:
     @pytest.fixture
     def setup_overrides(self, async_session: AsyncSession):
         """Setup dependency overrides for authenticated tests."""
-        # Override token verification
         app_v0.dependency_overrides[verify_bearer_token] = mock_verify_bearer_token
 
-        # Override database session with manual commit
-        async def override_get_db_manual():
+        async def override_get_db():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual
+        app_v0.dependency_overrides[get_async_db] = override_get_db
 
         yield
 
-        # Clean up overrides after test
         app_v0.dependency_overrides.clear()
 
     @pytest.fixture
     def setup_db_only(self, async_session: AsyncSession):
         """Setup database override only (no auth override)."""
 
-        # Override database session with manual commit
-        async def override_get_db_manual():
+        async def override_get_db():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db_manual
+        app_v0.dependency_overrides[get_async_db] = override_get_db
 
         yield
 
-        # Clean up overrides after test
         app_v0.dependency_overrides.clear()
 
     @pytest_asyncio.fixture
     async def test_areas(self, async_session: AsyncSession):
         """Create test areas for activities tests."""
-        # Get or create competent authority (may already exist from previous test)
         from app.crud import area as area_crud
         from app.crud import competent_authority as ca_crud
 
@@ -76,8 +70,6 @@ class TestSTRActivitiesAPI:
                 competent_authority_name="Test Authority",
             )
 
-        # Create areas with specific area_ids (UUIDs) needed by tests
-        # Use fixed UUIDs for predictable test data
         area_configs = [
             ("0363", "550e8400-e29b-41d4-a716-446655440001"),
             ("0344", "550e8400-e29b-41d4-a716-446655440002"),
@@ -85,16 +77,8 @@ class TestSTRActivitiesAPI:
             ("ceaba747-15ca", "550e8400-e29b-41d4-a716-446655440004"),
         ]
 
-        # Also create areas for transaction atomicity test (0000-0009)
-        for i in range(10):
-            area_configs.append(
-                (f"{i:04d}", f"550e8400-e29b-41d4-a716-44665544{i:04d}")
-            )
-
-        # Get or create areas (check if they exist first to avoid unique constraint violations)
         areas = {}
         for key, area_uuid in area_configs:
-            # Check if area already exists
             existing_area = await area_crud.get_by_area_id(async_session, area_uuid)
             if existing_area:
                 areas[key] = existing_area
@@ -113,22 +97,20 @@ class TestSTRActivitiesAPI:
 
     @pytest_asyncio.fixture(autouse=True)
     async def cleanup_activities(self, async_session: AsyncSession):
-        """Setup fixture for test isolation.
-
-        Note: With function-scoped async_engine, each test gets a fresh database.
-        Transaction rollback is handled automatically by conftest.py.
-        No manual cleanup is needed.
-        """
+        """Setup fixture for test isolation."""
         yield
 
-    async def test_post_activities_single(
+    async def test_post_activity_success(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activities with single activity."""
-        # Arrange
-        payload = {
-            "activities": [
-                {
+        """Test POST /str/activities with a single activity."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": test_areas["0363"].area_id,
                     "url": "http://example.com/listing-001",
                     "registrationNumber": "REG123456",
                     "address": {
@@ -141,32 +123,29 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD", "DEU", "BEL"],
                     "numberOfGuests": 4,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert "message" in data
-        assert "totalProcessed" in data
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 1
-        assert data["failed"] == 0
-        assert len(data["failures"]) == 0
+        assert "activityId" in data
+        assert "createdAt" in data
+        assert data["platformId"] == "str01"
+        assert data["platformName"] == "STR Platform 01"
+        assert data["areaId"] == test_areas["0363"].area_id
+        assert data["url"] == "http://example.com/listing-001"
+        assert data["registrationNumber"] == "REG123456"
+        assert data["address"]["street"] == "Turfmarkt"
+        assert data["address"]["number"] == 147
+        assert data["address"]["postalCode"] == "2500EA"
+        assert data["address"]["city"] == "Den Haag"
+        assert data["temporal"]["startDatetime"] is not None
+        assert data["temporal"]["endDatetime"] is not None
+        assert data["countryOfGuests"] == ["NLD", "DEU", "BEL"]
+        assert data["numberOfGuests"] == 4
 
         # Verify data was saved
         saved = await activity_crud.get_by_url(
@@ -175,16 +154,21 @@ class TestSTRActivitiesAPI:
         assert len(saved) == 1
         assert saved[0].registration_number == "REG123456"
 
-    async def test_post_activities_multiple(
+    async def test_post_activity_with_activity_id(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activities with multiple activities."""
-        # Arrange
-        payload = {
-            "activities": [
-                {
-                    "url": "http://example.com/listing-001",
-                    "registrationNumber": "REG001",
+        """Test POST /str/activities with optional activityId and activityName."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "activityId": "550e8400-e29b-41d4-a716-446655440999",
+                    "activityName": "Custom Activity Name",
+                    "areaId": test_areas["0363"].area_id,
+                    "url": "http://example.com/listing-with-id",
+                    "registrationNumber": "REG123456",
                     "address": {
                         "street": "Turfmarkt",
                         "number": 147,
@@ -195,61 +179,36 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].area_id,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                },
-                {
-                    "url": "http://example.com/listing-002",
-                    "registrationNumber": "REG002",
-                    "address": {
-                        "street": "Kalverstraat",
-                        "number": 123,
-                        "postalCode": "1000AA",
-                        "city": "Amsterdam",
-                        "letter": "A",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-02T15:00:00Z",
-                        "endDatetime": "2025-06-08T10:00:00Z",
-                    },
-                    "areaId": test_areas["0363"].area_id,
-                    "countryOfGuests": ["DEU", "BEL"],
+                    "countryOfGuests": ["NLD", "DEU", "BEL"],
                     "numberOfGuests": 4,
                 },
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["totalProcessed"] == 2
-        assert data["succeeded"] == 2
-        assert data["failed"] == 0
-        assert len(data["failures"]) == 0
+        assert data["activityId"] == "550e8400-e29b-41d4-a716-446655440999"
+        assert data["activityName"] == "Custom Activity Name"
 
-        # Verify both activities were saved
-        all_activities = await activity_crud.get_all(async_session)
-        assert len(all_activities) == 2
+        # Verify data was saved
+        saved = await activity_crud.get_by_url(
+            async_session, "http://example.com/listing-with-id"
+        )
+        assert len(saved) == 1
+        assert saved[0].activity_id == "550e8400-e29b-41d4-a716-446655440999"
+        assert saved[0].activity_name == "Custom Activity Name"
 
-    async def test_post_activities_with_optional_fields(
+    async def test_post_activity_with_optional_fields(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
         """Test POST /str/activities with all optional fields populated."""
-        # Arrange
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": test_areas["0344"].area_id,
                     "url": "http://example.com/listing-full",
                     "registrationNumber": "REGFULL",
                     "address": {
@@ -264,46 +223,28 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-07-01T14:00:00Z",
                         "endDatetime": "2025-07-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0344"].area_id,
                     "countryOfGuests": ["NLD", "DEU", "BEL", "FRA"],
                     "numberOfGuests": 8,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 1
-        assert data["failed"] == 0
+        assert data["address"]["letter"] == "B"
+        assert data["address"]["addition"] == "3rd floor"
 
-        # Verify optional fields were saved
-        saved = await activity_crud.get_by_url(
-            async_session, "http://example.com/listing-full"
-        )
-        assert len(saved) == 1
-        assert saved[0].address.letter == "B"
-        assert saved[0].address.addition == "3rd floor"
-
-    async def test_post_activities_without_authentication(
+    async def test_post_activity_without_authentication(
         self, async_session: AsyncSession, setup_db_only
     ):
         """Test POST /str/activities without authentication token."""
-        # Arrange
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
@@ -316,37 +257,22 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
+                },
+            )
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post("/str/activities", json=payload)
-
-        # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_post_activities_without_str_role(
+    async def test_post_activity_without_str_role(
         self, async_session: AsyncSession, test_areas
     ):
         """Test POST /str/activities without 'sdep_str' role returns 403."""
 
-        # Setup override with token missing 'sdep_str' role
         def mock_verify_bearer_token_without_str_role() -> dict[str, Any]:
-            """Mock token verification without str role."""
             return {
                 "sub": "test_user",
                 "client_id": "ca01",
                 "client_name": "CA 01",
-                "realm_access": {
-                    "roles": ["ca", "sdep_read"]  # Missing 'sdep_str' role
-                },
+                "realm_access": {"roles": ["ca", "sdep_read"]},
             }
 
         app_v0.dependency_overrides[verify_bearer_token] = (
@@ -356,12 +282,15 @@ class TestSTRActivitiesAPI:
         async def override_get_db():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db
+        app_v0.dependency_overrides[get_async_db] = override_get_db
 
-        # Arrange
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": test_areas["0363"].area_id,
                     "url": "http://example.com/test-no-role",
                     "registrationNumber": "REG123",
                     "address": {
@@ -374,24 +303,10 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].area_id,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == status.HTTP_403_FORBIDDEN
         data = response.json()
         assert "detail" in data
@@ -399,20 +314,16 @@ class TestSTRActivitiesAPI:
         assert "sdep_str" in detail_str
         assert "role" in detail_str
 
-        # Clean up overrides
         app_v0.dependency_overrides.clear()
 
-    async def test_post_activities_without_client_id_claim(
+    async def test_post_activity_without_client_id_claim(
         self, async_session: AsyncSession, test_areas
     ):
         """Test POST /str/activities without 'client_id' claim returns 401."""
 
-        # Setup override with token missing 'client_id' claim
         def mock_verify_bearer_token_without_client_id() -> dict[str, Any]:
-            """Mock token verification without client_id claim."""
             return {
                 "sub": "test_user",
-                # "client_id": "str01",  # Missing client_id!
                 "client_name": "STR Platform 01",
                 "realm_access": {"roles": ["sdep_str", "sdep_read", "sdep_write"]},
             }
@@ -424,12 +335,15 @@ class TestSTRActivitiesAPI:
         async def override_get_db():
             yield async_session
 
-        app_v0.dependency_overrides[get_async_db_manual_commit] = override_get_db
+        app_v0.dependency_overrides[get_async_db] = override_get_db
 
-        # Arrange
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": test_areas["0363"].area_id,
                     "url": "http://example.com/test-no-client-id",
                     "registrationNumber": "REG123",
                     "address": {
@@ -442,126 +356,58 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].area_id,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
         assert "detail" in data
         detail_str = str(data["detail"]).lower()
         assert "client_id" in detail_str
 
-        # Clean up overrides
         app_v0.dependency_overrides.clear()
 
-    async def test_post_activities_validation_error_missing_required_field(
-        self, async_session: AsyncSession, setup_overrides
-    ):
-        """Test POST /str/activities with missing required field."""
-        # Arrange - missing 'url' field
-        payload = {
-            "activities": [
-                {
-                    # "url": "http://example.com/test",  # Missing!
-                    "registrationNumber": "REG123",
-                    "address": {
-                        "street": "Street",
-                        "number": 1,
-                        "postalCode": "1000AA",
-                        "city": "City",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert
-        assert response.status_code == 422
-
-    async def test_post_activities_validation_error_postal_code_with_space(
+    async def test_post_activity_validation_error_postal_code_with_space(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with invalid postal code (contains space)."""
-        # Arrange
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
                         "street": "Street",
                         "number": 1,
-                        "postalCode": "2500 EA",  # Invalid - has space
+                        "postalCode": "2500 EA",
                         "city": "City",
                     },
                     "temporal": {
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
 
-    async def test_post_activities_validation_error_end_before_start(
+    async def test_post_activity_validation_error_end_before_start(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with end datetime before start datetime."""
-        # Arrange
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
@@ -572,183 +418,30 @@ class TestSTRActivitiesAPI:
                     },
                     "temporal": {
                         "startDatetime": "2025-06-07T14:00:00Z",
-                        "endDatetime": "2025-06-01T11:00:00Z",  # Before start!
+                        "endDatetime": "2025-06-01T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
 
-    async def test_post_activities_same_url_different_temporal(
-        self, async_session: AsyncSession, setup_overrides, test_areas
-    ):
-        """Test POST /str/activities with same URL but different temporal dates (should succeed)."""
-        # Arrange - same URL but different temporal periods
-        payload = {
-            "activities": [
-                {
-                    "url": "http://example.com/same-url",
-                    "registrationNumber": "REG001",
-                    "address": {
-                        "street": "Street One",
-                        "number": 1,
-                        "postalCode": "1000AA",
-                        "city": "City One",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": test_areas["0001"].area_id,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                },
-                {
-                    "url": "http://example.com/same-url",  # Same URL!
-                    "registrationNumber": "REG002",
-                    "address": {
-                        "street": "Street Two",
-                        "number": 2,
-                        "postalCode": "2000BB",
-                        "city": "City Two",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-08T14:00:00Z",  # Different temporal!
-                        "endDatetime": "2025-06-14T11:00:00Z",  # Different temporal!
-                    },
-                    "areaId": test_areas["0002"].area_id,
-                    "countryOfGuests": ["DEU"],
-                    "numberOfGuests": 4,
-                },
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert - should succeed because temporal dates are different
-        assert response.status_code == status.HTTP_201_CREATED
-        data = response.json()
-        assert data["totalProcessed"] == 2
-        assert data["succeeded"] == 2
-        assert data["failed"] == 0
-        assert len(data["failures"]) == 0
-
-        # Verify both activities were saved
-        saved = await activity_crud.get_by_url(
-            async_session, "http://example.com/same-url"
-        )
-        assert len(saved) == 2
-        # Verify they have different temporal periods
-        temporal_periods = {
-            (r.temporal_start_date_time, r.temporal_end_date_time) for r in saved
-        }
-        assert len(temporal_periods) == 2
-
-    async def test_post_activities_empty_list(
-        self, async_session: AsyncSession, setup_overrides
-    ):
-        """Test POST /str/activities with empty activities list."""
-        # Arrange
-        payload = {"activities": []}
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert - should fail validation (min 1 activity required)
-        assert response.status_code == 422
-
-    async def test_post_activities_transaction_atomicity(
-        self, async_session: AsyncSession, setup_overrides, test_areas
-    ):
-        """Test that all activities are processed atomically (all or nothing)."""
-        # Arrange - valid payload
-        payload = {
-            "activities": [
-                {
-                    "url": f"http://example.com/listing-{i:03d}",
-                    "registrationNumber": f"REG{i:03d}",
-                    "address": {
-                        "street": f"Street {i}",
-                        "number": i,
-                        "postalCode": f"{i:04d}AA",
-                        "city": f"City {i}",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": test_areas["0363"].area_id,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-                for i in range(1, 6)  # 5 activities
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert
-        assert response.status_code == status.HTTP_201_CREATED
-        data = response.json()
-        assert data["totalProcessed"] == 5
-        assert data["succeeded"] == 5
-        assert data["failed"] == 0
-
-        # Verify all 5 activities were saved
-        all_activities = await activity_crud.get_all(async_session)
-        assert len(all_activities) == 5
-
-    async def test_post_activities_validation_error_letter_instead_of_number(
+    async def test_post_activity_validation_error_letter_instead_of_number(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with letter instead of number for address.number field."""
-        # Arrange - address.number should be int, providing string instead
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
                         "street": "Main Street",
-                        "number": "ABC",  # Invalid: should be int, not string
+                        "number": "ABC",
                         "postalCode": "1000AA",
                         "city": "Amsterdam",
                     },
@@ -756,93 +449,29 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
-        assert isinstance(data["failures"], list)
 
-    async def test_post_activities_validation_error_number_instead_of_letter(
-        self, async_session: AsyncSession, setup_overrides
-    ):
-        """Test POST /str/activities with number instead of letter for address.letter field."""
-        # Arrange - address.letter should be str, providing int instead
-        payload = {
-            "activities": [
-                {
-                    "url": "http://example.com/test",
-                    "registrationNumber": "REG123",
-                    "address": {
-                        "street": "Main Street",
-                        "number": 123,
-                        "letter": 456,  # Invalid: should be str, not int
-                        "postalCode": "1000AA",
-                        "city": "Amsterdam",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert
-        assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
-        assert isinstance(data["failures"], list)
-
-    async def test_post_activities_validation_error_letter_numeric_string(
+    async def test_post_activity_validation_error_letter_numeric_string(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with numeric string for address.letter field."""
-        # Arrange - address.letter should be alphabetic only, providing numeric string
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
                         "street": "Main Street",
                         "number": 123,
-                        "letter": "6",  # Invalid: numeric string
+                        "letter": "6",
                         "postalCode": "1000AA",
                         "city": "Amsterdam",
                     },
@@ -850,46 +479,29 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
-        assert isinstance(data["failures"], list)
 
-    async def test_post_activities_validation_error_letter_special_char(
+    async def test_post_activity_validation_error_letter_special_char(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with special character for address.letter field."""
-        # Arrange - address.letter should be alphabetic only
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
                         "street": "Main Street",
                         "number": 123,
-                        "letter": "-",  # Invalid: special character
+                        "letter": "-",
                         "postalCode": "1000AA",
                         "city": "Amsterdam",
                     },
@@ -897,218 +509,52 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
 
-    async def test_post_activities_validation_error_postal_code_special_char(
+    async def test_post_activity_validation_error_postal_code_special_char(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with special character in postal code."""
-        # Arrange - postal code should be alphanumeric only
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
                         "street": "Main Street",
                         "number": 123,
-                        "postalCode": "1000-AA",  # Invalid: contains hyphen
+                        "postalCode": "1000-AA",
                         "city": "Amsterdam",
                     },
                     "temporal": {
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
 
-    async def test_post_activities_validation_error_competent_authority_area_id_uppercase(
-        self, async_session: AsyncSession, setup_overrides, test_areas
-    ):
-        """Test POST /str/activities - obsolete test (competentAuthorityId field removed)."""
-        # This test is now obsolete since competentAuthorityId was removed from Activity schema
-        # Keeping as a successful activity submission test
-        payload = {
-            "activities": [
-                {
-                    "url": "http://example.com/test-obsolete-uppercase",
-                    "registrationNumber": "REG123",
-                    "address": {
-                        "street": "Main Street",
-                        "number": 123,
-                        "postalCode": "1000AA",
-                        "city": "Amsterdam",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": test_areas["0363"].area_id,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert - now expects success since field was removed
-        assert response.status_code == 201
-        data = response.json()
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 1
-        assert data["failed"] == 0
-
-    async def test_post_activities_validation_error_competent_authority_area_id_non_alphanumeric_chars(
-        self, async_session: AsyncSession, setup_overrides, test_areas
-    ):
-        """Test POST /str/activities - obsolete test (competentAuthorityId field removed)."""
-        # This test is now obsolete since competentAuthorityId was removed from Activity schema
-        # Keeping as a successful activity submission test
-        payload = {
-            "activities": [
-                {
-                    "url": "http://example.com/test-obsolete-nonalpha",
-                    "registrationNumber": "REG123",
-                    "address": {
-                        "street": "Main Street",
-                        "number": 123,
-                        "postalCode": "1000AA",
-                        "city": "Amsterdam",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": test_areas["0363"].area_id,
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert - now expects success since field was removed
-        assert response.status_code == 201
-        data = response.json()
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 1
-        assert data["failed"] == 0
-
-    async def test_post_activities_validation_success_competent_authority_area_id_with_hyphens(
-        self, async_session: AsyncSession, setup_overrides, test_areas
-    ):
-        """Test POST /str/activities accepts valid alphanumeric competent_authority_area_id with hyphens."""
-        # Arrange - valid lowercase alphanumeric with hyphens should be accepted
-        payload = {
-            "activities": [
-                {
-                    "url": "http://example.com/test-hex-hyphens",
-                    "registrationNumber": "REG123",
-                    "address": {
-                        "street": "Main Street",
-                        "number": 123,
-                        "postalCode": "1000AA",
-                        "city": "Amsterdam",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": test_areas[
-                        "ceaba747-15ca-4d8a-81f7"
-                    ].area_id,  # Valid: alphanumeric with hyphens
-                    "countryOfGuests": ["NLD"],
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert
-        assert response.status_code == 201
-        data = response.json()
-        assert data["message"] == "Processed 1 activities: 1 succeeded, 0 failed"
-
-    async def test_post_activities_validation_error_country_code_lowercase(
+    async def test_post_activity_validation_error_country_code_lowercase(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with lowercase country code."""
-        # Arrange - country codes should be uppercase
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
@@ -1121,41 +567,24 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": [
-                        "nld"
-                    ],  # Invalid: lowercase (ISO 3166-1 alpha-3)
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                    "countryOfGuests": ["nld"],
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
 
-    async def test_post_activities_validation_error_country_code_too_short(
+    async def test_post_activity_validation_error_country_code_too_short(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with country code too short."""
-        # Arrange - country codes must be exactly 3 characters (ISO 3166-1 alpha-3)
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
@@ -1168,39 +597,24 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["NL"],  # Invalid: 2 characters instead of 3
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                    "countryOfGuests": ["NL"],
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
 
-    async def test_post_activities_validation_error_country_code_too_long(
+    async def test_post_activity_validation_error_country_code_too_long(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with country code too long."""
-        # Arrange - country codes must be exactly 3 characters (ISO 3166-1 alpha-3)
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
@@ -1213,39 +627,24 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["ABCD"],  # Invalid: 4 characters instead of 3
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                    "countryOfGuests": ["ABCD"],
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
 
-    async def test_post_activities_validation_error_country_code_with_numbers(
+    async def test_post_activity_validation_error_country_code_with_numbers(
         self, async_session: AsyncSession, setup_overrides
     ):
         """Test POST /str/activities with country code containing numbers."""
-        # Arrange - country codes should be alphabetic only
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
                     "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
@@ -1258,40 +657,25 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
-                    "countryOfGuests": ["N1D"],  # Invalid: contains number
-                    "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                    "countryOfGuests": ["N1D"],
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == 422
-        data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
 
-    async def test_post_activities_validation_success_country_codes_alpha3(
-        self, async_session: AsyncSession, setup_overrides, test_areas
+    async def test_post_activity_validation_error_start_year_before_2025(
+        self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activities accepts valid ISO 3166-1 alpha-3 country codes."""
-        # Arrange - valid 3-character country codes should be accepted
-        payload = {
-            "activities": [
-                {
-                    "url": "http://example.com/test-alpha3-countries",
+        """Test POST /str/activities with start year before 2025."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "some-area-id",
+                    "url": "http://example.com/test",
                     "registrationNumber": "REG123",
                     "address": {
                         "street": "Main Street",
@@ -1300,44 +684,26 @@ class TestSTRActivitiesAPI:
                         "city": "Amsterdam",
                     },
                     "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
+                        "startDatetime": "2024-12-31T23:59:59Z",
+                        "endDatetime": "2025-01-07T11:00:00Z",
                     },
-                    "areaId": test_areas["ceaba747-15ca"].area_id,
-                    "countryOfGuests": [
-                        "NLD",
-                        "USA",
-                        "DEU",
-                        "GBR",
-                    ],  # Valid: ISO 3166-1 alpha-3 codes
-                    "numberOfGuests": 4,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
-        assert response.status_code == 201
-        data = response.json()
-        assert data["message"] == "Processed 1 activities: 1 succeeded, 0 failed"
+        assert response.status_code == 422
 
-    async def test_post_activities_platform_from_token(
+    async def test_post_activity_platform_from_token(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
         """Test that platform is extracted from JWT token (client_id and client_name claims)."""
-        # Arrange
-        payload = {
-            "activities": [
-                {
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": test_areas["0363"].area_id,
                     "url": "http://example.com/test-platform-from-token",
                     "registrationNumber": "REGTOKEN",
                     "address": {
@@ -1350,53 +716,64 @@ class TestSTRActivitiesAPI:
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].area_id,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 1
-        assert data["failed"] == 0
+        assert data["platformId"] == "str01"
+        assert data["platformName"] == "STR Platform 01"
 
-        # Verify platform was extracted from token's client_id and client_name claims and created
-        saved = await activity_crud.get_by_url(
-            async_session, "http://example.com/test-platform-from-token"
-        )
-        assert len(saved) == 1
-        # Need to eagerly load the platform to avoid lazy loading issues
-        await async_session.refresh(saved[0], ["platform"])
-        assert (
-            saved[0].platform.platform_id == "str01"
-        )  # From mock token's client_id claim
-        assert (
-            saved[0].platform.platform_name == "STR Platform 01"
-        )  # From mock token's client_name claim
-
-    async def test_post_activities_validation_error_start_year_before_2025(
+    async def test_post_activity_nonexistent_area(
         self, async_session: AsyncSession, setup_overrides
     ):
-        """Test POST /str/activities with start year before 2025."""
-        # Arrange - start datetime year must be >= 2025
-        payload = {
-            "activities": [
-                {
-                    "url": "http://example.com/test",
+        """Test POST /str/activities with non-existent areaId returns 422."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": "99999999-9999-9999-9999-999999999999",
+                    "url": "http://example.com/test-nonexistent-area",
+                    "registrationNumber": "REG123",
+                    "address": {
+                        "street": "Street",
+                        "number": 1,
+                        "postalCode": "1000AA",
+                        "city": "City",
+                    },
+                    "temporal": {
+                        "startDatetime": "2025-06-01T14:00:00Z",
+                        "endDatetime": "2025-06-07T11:00:00Z",
+                    },
+                },
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert "detail" in data
+        # Check error message mentions area not found
+        detail_str = str(data["detail"]).lower()
+        assert "area" in detail_str
+        assert "not found" in detail_str
+
+    async def test_post_activity_area_id_with_hyphens(
+        self, async_session: AsyncSession, setup_overrides, test_areas
+    ):
+        """Test POST /str/activities accepts valid alphanumeric areaId with hyphens."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": test_areas["ceaba747-15ca-4d8a-81f7"].area_id,
+                    "url": "http://example.com/test-hex-hyphens",
                     "registrationNumber": "REG123",
                     "address": {
                         "street": "Main Street",
@@ -1405,265 +782,48 @@ class TestSTRActivitiesAPI:
                         "city": "Amsterdam",
                     },
                     "temporal": {
-                        "startDatetime": "2024-12-31T23:59:59Z",  # Invalid: year 2024
-                        "endDatetime": "2025-01-07T11:00:00Z",
+                        "startDatetime": "2025-06-01T14:00:00Z",
+                        "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": 1,
                     "countryOfGuests": ["NLD"],
                     "numberOfGuests": 2,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
+                },
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert
-        assert response.status_code == 422
+        assert response.status_code == 201
         data = response.json()
-        # Validation errors now return bulk processing format
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 0
-        assert data["failed"] == 1
+        assert data["areaId"] == test_areas["ceaba747-15ca-4d8a-81f7"].area_id
 
-    async def test_post_activities_with_activity_id(
+    async def test_post_activity_validation_success_country_codes_alpha3(
         self, async_session: AsyncSession, setup_overrides, test_areas
     ):
-        """Test POST /str/activities with optional activityId and activityName fields provided."""
-        # Arrange
-        payload = {
-            "activities": [
-                {
-                    "activityId": "550e8400-e29b-41d4-a716-446655440999",
-                    "activityName": "Custom Activity Name",
-                    "url": "http://example.com/listing-with-id",
-                    "registrationNumber": "REG123456",
+        """Test POST /str/activities accepts valid ISO 3166-1 alpha-3 country codes."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/str/activities",
+                json={
+                    "areaId": test_areas["ceaba747-15ca"].area_id,
+                    "url": "http://example.com/test-alpha3-countries",
+                    "registrationNumber": "REG123",
                     "address": {
-                        "street": "Turfmarkt",
-                        "number": 147,
-                        "postalCode": "2500EA",
-                        "city": "Den Haag",
+                        "street": "Main Street",
+                        "number": 123,
+                        "postalCode": "1000AA",
+                        "city": "Amsterdam",
                     },
                     "temporal": {
                         "startDatetime": "2025-06-01T14:00:00Z",
                         "endDatetime": "2025-06-07T11:00:00Z",
                     },
-                    "areaId": test_areas["0363"].area_id,
-                    "countryOfGuests": ["NLD", "DEU", "BEL"],
+                    "countryOfGuests": ["NLD", "USA", "DEU", "GBR"],
                     "numberOfGuests": 4,
-                }
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert
-        assert response.status_code == status.HTTP_201_CREATED
-        data = response.json()
-        assert "message" in data
-        assert data["totalProcessed"] == 1
-        assert data["succeeded"] == 1
-        assert data["failed"] == 0
-        assert len(data["failures"]) == 0
-
-        # Verify data was saved with the specified activity_id and activity_name
-        saved = await activity_crud.get_by_url(
-            async_session, "http://example.com/listing-with-id"
-        )
-        assert len(saved) == 1
-        assert saved[0].activity_id == "550e8400-e29b-41d4-a716-446655440999"
-        assert saved[0].activity_name == "Custom Activity Name"
-        assert saved[0].registration_number == "REG123456"
-
-    async def test_post_activities_all_succeed(
-        self, async_session: AsyncSession, setup_overrides, test_areas
-    ):
-        """Test POST /str/activities with 5 activities - all succeed (201 Created)."""
-        # Arrange - 5 unique activities
-        payload = {
-            "activities": [
-                {
-                    "url": f"http://example.com/all-succeed-{i}",
-                    "registrationNumber": f"REG{i:03d}",
-                    "address": {
-                        "street": f"Street {i}",
-                        "number": i,
-                        "postalCode": f"{i:04d}AA",
-                        "city": f"City {i}",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": test_areas["0363"].area_id,
-                    "numberOfGuests": 2,
-                }
-                for i in range(1, 6)
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert - 201 Created (all succeeded)
-        assert response.status_code == status.HTTP_201_CREATED
-        data = response.json()
-        assert data["totalProcessed"] == 5
-        assert data["succeeded"] == 5
-        assert data["failed"] == 0
-        assert len(data["failures"]) == 0
-
-        # Verify all 5 saved
-        all_activities = await activity_crud.get_all(async_session)
-        assert len(all_activities) == 5
-
-    async def test_post_activities_partial_success(
-        self, async_session: AsyncSession, setup_overrides, test_areas
-    ):
-        """Test POST /str/activities with partial success - some succeed, some fail (200 OK)."""
-        # Submit 2 activities: 1 valid, 1 invalid area
-        payload = {
-            "activities": [
-                # Activity 0: Valid - should succeed
-                {
-                    "url": "http://example.com/valid-1",
-                    "registrationNumber": "REG100",
-                    "address": {
-                        "street": "Valid Street",
-                        "number": 100,
-                        "postalCode": "1000BB",
-                        "city": "Valid City",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-07-01T14:00:00Z",
-                        "endDatetime": "2025-07-07T11:00:00Z",
-                    },
-                    "areaId": test_areas["0363"].area_id,
-                    "numberOfGuests": 3,
                 },
-                # Activity 1: Invalid area - should fail validation
-                {
-                    "url": "http://example.com/invalid-area",
-                    "registrationNumber": "REG200",
-                    "address": {
-                        "street": "Invalid Street",
-                        "number": 200,
-                        "postalCode": "2000CC",
-                        "city": "Invalid City",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-08-01T14:00:00Z",
-                        "endDatetime": "2025-08-07T11:00:00Z",
-                    },
-                    "areaId": "99999999-9999-9999-9999-999999999999",  # Non-existent UUID
-                    "numberOfGuests": 5,
-                },
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
                 headers={"Authorization": "Bearer test_token"},
             )
 
-        # Assert - 200 OK (partial success)
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == 201
         data = response.json()
-        assert data["totalProcessed"] == 2
-        assert data["succeeded"] == 1
-        assert data["failed"] == 1
-        assert len(data["failures"]) == 1
-
-        # Verify failure details
-        area_failure = data["failures"][0]
-        assert area_failure["activityIndex"] == 1
-        assert len(area_failure["errors"]) >= 1
-        assert any(
-            "area" in e["msg"].lower() and "not found" in e["msg"].lower()
-            for e in area_failure["errors"]
-        )
-
-        # Verify only 1 activity was saved
-        all_activities = await activity_crud.get_all(async_session)
-        assert len(all_activities) == 1
-
-    async def test_post_activities_all_fail(
-        self, async_session: AsyncSession, setup_overrides, test_areas
-    ):
-        """Test POST /str/activities with all failures - all fail (422 Unprocessable Entity)."""
-        # Arrange - All activities have invalid areas
-        payload = {
-            "activities": [
-                {
-                    "url": f"http://example.com/all-fail-{i}",
-                    "registrationNumber": f"REGFAIL{i:03d}",
-                    "address": {
-                        "street": f"Fail Street {i}",
-                        "number": i,
-                        "postalCode": f"{i:04d}FF",
-                        "city": f"Fail City {i}",
-                    },
-                    "temporal": {
-                        "startDatetime": "2025-06-01T14:00:00Z",
-                        "endDatetime": "2025-06-07T11:00:00Z",
-                    },
-                    "areaId": f"99999999-9999-9999-9999-99999999999{i}",  # Non-existent UUIDs
-                    "numberOfGuests": i,
-                }
-                for i in range(1, 4)
-            ],
-        }
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app_v0), base_url="http://test"
-        ) as client:
-            # Act
-            response = await client.post(
-                "/str/activities",
-                json=payload,
-                headers={"Authorization": "Bearer test_token"},
-            )
-
-        # Assert - 422 Unprocessable Entity (all failed)
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-        data = response.json()
-        assert data["totalProcessed"] == 3
-        assert data["succeeded"] == 0
-        assert data["failed"] == 3
-        assert len(data["failures"]) == 3
-
-        # Verify all failures have area errors
-        for failure in data["failures"]:
-            assert len(failure["errors"]) >= 1
-            assert any("area" in e["msg"].lower() for e in failure["errors"])
-
-        # Verify nothing was saved
-        all_activities = await activity_crud.get_all(async_session)
-        assert len(all_activities) == 0
+        assert data["countryOfGuests"] == ["NLD", "USA", "DEU", "GBR"]

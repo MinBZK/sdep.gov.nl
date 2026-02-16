@@ -96,27 +96,27 @@ See [../Makefile](../Makefile). Available targets:
 ### Competent Authority (CA) tests
 
 #### `test_ca_areas.sh`
-**Purpose:** Test area submission for competent authorities
+**Purpose:** Test single area submission for competent authorities
 
 **Tests:**
-- **Test 1:** POST single area with shapefile data
-- **Test 2:** POST multiple areas (2 areas in one request)
-- **Test 3:** POST with custom areaId field
-- **Test 4:** POST with validation error (missing required `filedata` field) - expects 422
-- **Test 5:** POST with partial success (1 valid + 1 invalid area) - expects 200
+- **Test 1:** POST single area with shapefile upload and areaId
+- **Test 2:** POST with custom areaId field
+- **Test 3:** POST without areaId (auto-generated UUID)
 
 **Endpoint:** `POST /api/{API_VERSION}/ca/areas`
 
+**Content-Type:** `multipart/form-data`
+
 **Authentication:** Requires CA client credentials (token loaded from `./tmp/.bearer_token`)
 
-**Payload:** Area definitions with base64-encoded shapefile data (uses `test-data/shapefiles/Amsterdam-dummy.zip`)
+**Payload:** Form fields: `file` (shapefile upload), `areaId` (optional), `areaName` (optional). Uses `test-data/shapefiles/Amsterdam-dummy.zip`.
 
 **HTTP Status Codes:**
-- `201 Created` - All areas succeeded
-- `200 OK` - Partial success (some succeeded, some failed)
-- `422 Unprocessable Entity` - All areas failed validation
+- `201 Created` - Area successfully created
+- `401 Unauthorized` - No/invalid authentication
+- `422 Unprocessable Content` - Validation error
 
-**Response format:** `{ totalProcessed, succeeded, failed, failures[] }`
+**Response format:** `{ areaId, areaName?, filename, competentAuthorityId, competentAuthorityName, createdAt }`
 
 #### `test_ca_activities.sh`
 **Purpose:** Comprehensive testing of activity query endpoints for competent authorities
@@ -168,27 +168,28 @@ See [../Makefile](../Makefile). Available targets:
 - Download endpoint: `application/octet-stream` with `Content-Disposition: attachment`
 
 #### `test_str_activities.sh`
-**Purpose:** Test activity submission for STR platforms
+**Purpose:** Test single activity submission for STR platforms
 
 **Setup:** Creates 3 fixture areas via `lib/create_fixture_areas.sh` before running tests.
 
 **Tests:**
 - **Test 1:** POST single activity with full payload (address, temporal, registrationNumber, areaId, countryOfGuests, numberOfGuests)
-- **Test 2:** POST multiple activities (2 activities in one request)
-- **Test 3:** POST with custom activityId field
-- **Test 4:** POST with validation error (missing required `registrationNumber` field) - expects 422
-- **Test 5:** POST with partial success (1 valid activity + 1 with non-existent areaId) - expects 200
+- **Test 2:** POST with custom activityId field
+- **Test 3:** POST with validation error (missing required `registrationNumber` field) - expects 422
+- **Test 4:** POST with non-existent areaId (business logic error) - expects 422
 
 **Endpoint:** `POST /api/{API_VERSION}/str/activities`
+
+**Content-Type:** `application/json`
 
 **Authentication:** Requires STR client credentials (token loaded from `./tmp/.bearer_token`)
 
 **HTTP Status Codes:**
-- `201 Created` - All activities succeeded
-- `200 OK` - Partial success (some succeeded, some failed)
-- `422 Unprocessable Entity` - All activities failed validation
+- `201 Created` - Activity successfully created
+- `401 Unauthorized` - No/invalid authentication
+- `422 Unprocessable Content` - Validation or business logic error
 
-**Response format:** `{ totalProcessed, succeeded, failed, failures[] }`
+**Response format:** `{ activityId, activityName?, areaId, url, address, registrationNumber, numberOfGuests, countryOfGuests, temporal, platformId, platformName, createdAt }`
 
 ---
 
@@ -201,8 +202,8 @@ See [../Makefile](../Makefile). Available targets:
 
 **What it does:**
 - Authenticates using CA client credentials (`CA_CLIENT_ID`, `CA_CLIENT_SECRET`)
-- Creates `count` areas (default: 3) with `prefix`-prefixed IDs via `POST /ca/areas`
-- Uses `test-data/shapefiles/Amsterdam-dummy.zip` as shapefile data
+- Creates `count` areas (default: 3) with `prefix`-prefixed IDs via individual `POST /ca/areas` requests
+- Uploads `test-data/shapefiles/Amsterdam-dummy.zip` as multipart/form-data for each area
 - Outputs created area IDs to stdout (one per line), errors to stderr
 - Does not modify `./tmp/.bearer_token` (uses a local token variable)
 

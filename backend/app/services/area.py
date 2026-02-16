@@ -21,7 +21,6 @@ Exception Handling:
 """
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -110,60 +109,33 @@ async def get_area_by_id(session: AsyncSession, area_id: str) -> dict | None:
     }
 
 
-async def validate_area(
-    session: AsyncSession, area: dict, area_index: int
-) -> list[dict]:
+async def create_area(
+    session: AsyncSession,
+    area_id: str | None,
+    area_name: str | None,
+    filename: str,
+    filedata: bytes,
+    competent_authority_id_str: str,
+    competent_authority_name: str,
+) -> Area:
     """
-    Validate a single area (business logic validation only).
+    Create a single area.
 
-    Phase 1 validation: Check if any custom validations are needed.
-    Does NOT attempt to save to database.
-
-    For areas, CompetentAuthority is auto-created if it doesn't exist,
-    so no validation is needed here. This function is kept for consistency
-    with the str_activities pattern and for future extensions.
+    Looks up or creates the CompetentAuthority, then creates the Area.
 
     Args:
         session: Async database session
-        area: Area dictionary (validated by Pydantic)
-        area_index: Index of area in original request (0-based)
+        area_id: Optional functional ID (auto-generated UUID if None)
+        area_name: Optional human-readable name
+        filename: Filename of the uploaded file
+        filedata: Binary file data
+        competent_authority_id_str: Competent authority ID from JWT token
+        competent_authority_name: Competent authority name from JWT token
 
     Returns:
-        List of error dictionaries (empty if valid). Each error has:
-        - loc: ["areas", index, field_name]
-        - msg: Error message
-        - type: Error type ("business_logic_error")
-    """
-    errors = []
-
-    # For areas, we auto-create CompetentAuthority if it doesn't exist,
-    # so no validation is needed here.
-    # Add any future business logic validation here.
-
-    return errors
-
-
-async def process_single_area(session: AsyncSession, area: dict) -> Area:
-    """
-    Process and save a single area (assumes validation already passed).
-
-    Called within a savepoint context. Raises exceptions on database errors.
-
-    Args:
-        session: Async database session (within savepoint)
-        area: Area dictionary (already validated)
-
-    Returns:
-        Created Area object with generated ID
-
-    Raises:
-        IntegrityError: Database constraint violation
-        Any other database error
+        Created Area object
     """
     # Look up or create CompetentAuthority
-    competent_authority_id_str = area["competent_authority_id_str"]
-    competent_authority_name = area["competent_authority_name"]
-
     competent_authority = await competent_authority_crud.get_by_competent_authority_id(
         session, competent_authority_id_str
     )
@@ -178,210 +150,11 @@ async def process_single_area(session: AsyncSession, area: dict) -> Area:
     # Save area (CRUD only flushes)
     area_obj = await area_crud.create(
         session=session,
-        area_id=area.get("area_id"),  # Can be None (auto-generated UUID)
-        area_name=area.get("area_name"),  # Optional name
-        filename=area["filename"],
-        filedata=area["filedata"],
+        area_id=area_id,
+        area_name=area_name,
+        filename=filename,
+        filedata=filedata,
         competent_authority_id=competent_authority.id,  # Use the FK (int)
     )
 
     return area_obj
-
-
-async def process_area_list(
-    session: AsyncSession,
-    areas: list[dict],
-    pydantic_errors_by_index: dict[int, list[dict]] | None = None,
-) -> dict:
-    """
-    Process and save a list of areas using three-phase approach with nested transactions.
-
-    Phase 0: Collect Pydantic validation errors (from API layer)
-    Phase 1: Validate all areas (business logic: any custom validations)
-    Phase 2: Process valid areas using savepoints (each area independently)
-
-    Transaction Management:
-    - Transaction is managed by the API layer (manual commit required)
-    - Service uses nested transactions (savepoints) for each area
-    - Each area can succeed or fail independently
-    - Overall transaction commits at API layer after all processing
-
-    System Crash Behavior (Before API Commit):
-    - Savepoints protect against individual area failures during processing
-    - Savepoints do NOT protect against system crashes before final commit
-    - If system crashes after this function returns but before API commits:
-      * ALL changes are lost (including areas that "succeeded" in savepoints)
-      * PostgreSQL automatically rolls back uncommitted transactions on connection loss
-      * Example: 7 areas, 5 processed (2 succeeded, 3 failed), crash → ALL 5 rolled back
-    - This is PostgreSQL's ACID guarantee: uncommitted work is never persisted
-
-    Args:
-        session: Async database session (manual commit mode)
-        areas: List of area dictionaries (may include invalid ones), each containing:
-            - area_id: Optional functional ID, auto-generated if None)
-            - area_name: Optional human-readable name
-            - filename: Filename (64 characters max)
-            - filedata: Binary file data
-            - competent_authority_id_str: Competent authority ID from JWT token
-            - competent_authority_name: Competent authority name from JWT token
-        pydantic_errors_by_index: Dict mapping area index to Pydantic validation errors
-
-    Returns:
-        Dictionary with processing results:
-        {
-            "total_processed": int,
-            "succeeded": int,
-            "failed": int,
-            "successes": [
-                {
-                    "area_index": int,
-                    "area_id": str,
-                    "area": dict
-                }
-            ],
-            "failures": [
-                {
-                    "area_index": int,
-                    "area": dict,
-                    "errors": [{"loc": [...], "msg": str, "type": str}]
-                }
-            ]
-        }
-    """
-    if pydantic_errors_by_index is None:
-        pydantic_errors_by_index = {}
-
-    total_processed = len(areas)
-    succeeded = 0
-    failed = 0
-    successes = []
-    failures = []
-
-    # PHASE 0: Handle Pydantic validation failures
-    # These areas failed schema validation and cannot be processed
-    pydantic_failures = []
-    for idx, errors in pydantic_errors_by_index.items():
-        area = areas[idx]
-        pydantic_failures.append(
-            {
-                "area_index": idx,
-                "area": area,
-                "errors": errors,
-            }
-        )
-
-    # PHASE 1: Validate all areas (business logic validation)
-    # Skip areas that already failed Pydantic validation
-    # Collect all validation errors without stopping
-    validation_failures = []
-    valid_indices = []
-
-    for idx, area in enumerate(areas):
-        # Skip if already failed Pydantic validation
-        if idx in pydantic_errors_by_index:
-            continue
-
-        # Skip if marked as Pydantic validation failed
-        if area.get("_pydantic_validation_failed"):
-            continue
-
-        errors = await validate_area(session, area, idx)
-        if errors:
-            validation_failures.append(
-                {
-                    "area_index": idx,
-                    "area": area,
-                    "errors": errors,
-                }
-            )
-        else:
-            valid_indices.append(idx)
-
-    # PHASE 2: Process valid areas, typically using nested transactions (savepoints)
-    # Each area processes in its own savepoint
-    # NOTE: Savepoints only protect against individual area failures.
-    # If system crashes before API commit, ALL savepoints are rolled back.
-    for idx in valid_indices:
-        area = areas[idx]
-
-        # Create savepoint for this area
-        savepoint = await session.begin_nested()
-
-        try:
-            # Process the area
-            area_obj = await process_single_area(session, area)
-
-            # Flush to detect database errors within savepoint
-            await session.flush()
-
-            # Success - track it
-            successes.append(
-                {
-                    "area_index": idx,
-                    "area_id": area_obj.area_id,
-                    "area": area,
-                }
-            )
-            succeeded += 1
-
-        except IntegrityError as e:
-            # Rollback this savepoint only
-            await savepoint.rollback()
-
-            # Classify error type
-            error_message = str(e).lower()
-            if "unique constraint" in error_message or "duplicate" in error_message:
-                error_type = "duplicate_resource"
-                area_id = area.get("area_id", "auto-generated")
-                msg = f"Area with areaId '{area_id}' and timestamp already exists (versioning constraint violated)"
-            else:
-                error_type = "integrity_error"
-                msg = f"Database constraint violation: {e!s}"
-
-            failures.append(
-                {
-                    "area_index": idx,
-                    "area": area,
-                    "errors": [
-                        {
-                            "loc": ["areas", idx],
-                            "msg": msg,
-                            "type": error_type,
-                        }
-                    ],
-                }
-            )
-            failed += 1
-
-        except Exception as e:
-            # Rollback this savepoint only
-            await savepoint.rollback()
-
-            # Other errors
-            failures.append(
-                {
-                    "area_index": idx,
-                    "area": area,
-                    "errors": [
-                        {
-                            "loc": ["areas", idx],
-                            "msg": f"Unexpected error: {e!s}",
-                            "type": "processing_error",
-                        }
-                    ],
-                }
-            )
-            failed += 1
-
-    # Combine all failures
-    failures.extend(pydantic_failures)
-    failures.extend(validation_failures)
-    failed += len(pydantic_failures) + len(validation_failures)
-
-    return {
-        "total_processed": total_processed,
-        "succeeded": succeeded,
-        "failed": failed,
-        "successes": successes,
-        "failures": failures,
-    }

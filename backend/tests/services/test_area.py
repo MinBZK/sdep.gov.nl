@@ -304,92 +304,94 @@ class TestAreaService:
         # Assert
         assert result == 5
 
-    # Tests for process_area_list
+    # Tests for create_area
 
-    async def test_process_area_list_single_area(self, async_session: AsyncSession):
-        """Test processing a single area in a list"""
-        # Arrange
-        areas_list = [
-            {
-                "competent_authority_area_id": "list-area001",
-                "filename": "ListArea001.zip",
-                "filedata": b"data1",
-                "competent_authority_id_str": "0363",
-                "competent_authority_name": "Gemeente Amsterdam",
-            }
-        ]
-
+    async def test_create_area_success(self, async_session: AsyncSession):
+        """Test creating a single area"""
         # Act
-        await area.process_area_list(async_session, areas_list)
+        area_obj = await area.create_area(
+            session=async_session,
+            area_id="test-area-001",
+            area_name="Test Area",
+            filename="TestArea.zip",
+            filedata=b"data1",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
 
         # Assert
+        assert area_obj.area_id == "test-area-001"
+        assert area_obj.area_name == "Test Area"
+        assert area_obj.filename == "TestArea.zip"
+        assert area_obj.filedata == b"data1"
+
         count = await area.count_areas(async_session)
         assert count == 1
 
-    async def test_process_area_list_multiple_areas(self, async_session: AsyncSession):
-        """Test processing multiple areas in a list"""
-        # Arrange
-        areas_list = [
-            {
-                "competent_authority_area_id": f"area-{i:03d}",
-                "filename": f"Area{i:03d}.zip",
-                "filedata": f"data{i}".encode(),
-                "competent_authority_id_str": "0363",
-                "competent_authority_name": "Gemeente Amsterdam",
-            }
-            for i in range(1, 6)
-        ]
-
+    async def test_create_area_auto_generates_id(self, async_session: AsyncSession):
+        """Test that area_id is auto-generated when None"""
         # Act
-        await area.process_area_list(async_session, areas_list)
+        area_obj = await area.create_area(
+            session=async_session,
+            area_id=None,
+            area_name=None,
+            filename="AutoId.zip",
+            filedata=b"data",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
 
         # Assert
-        count = await area.count_areas(async_session)
-        assert count == 5
+        assert area_obj.area_id is not None
+        assert len(area_obj.area_id) == 36  # UUID format
 
-    async def test_process_area_list_creates_competent_authority_if_not_exists(
+    async def test_create_area_creates_competent_authority(
         self, async_session: AsyncSession
     ):
         """Test that competent authority is created if it doesn't exist"""
-        # Arrange
-        areas_list = [
-            {
-                "competent_authority_area_id": "new-ca-area001",
-                "filename": "NewCA001.zip",
-                "filedata": b"data1",
-                "competent_authority_id_str": "8888",
-                "competent_authority_name": "Test Authority",
-            }
-        ]
-
         # Act
-        await area.process_area_list(async_session, areas_list)
+        await area.create_area(
+            session=async_session,
+            area_id="new-ca-area",
+            area_name=None,
+            filename="NewCA.zip",
+            filedata=b"data",
+            competent_authority_id_str="8888",
+            competent_authority_name="Test Authority",
+        )
 
-        # Assert - verify competent authority was created
+        # Assert
         from app.crud import competent_authority as ca_crud
 
         ca = await ca_crud.get_by_competent_authority_id(async_session, "8888")
         assert ca is not None
         assert ca.competent_authority_name == "Test Authority"
 
-    async def test_process_area_list_multiple_areas_same_authority(
+    async def test_create_area_reuses_existing_competent_authority(
         self, async_session: AsyncSession
     ):
-        """Test processing multiple areas from the same competent authority"""
-        # Arrange
-        areas_list = [
-            {
-                "competent_authority_area_id": f"amsterdam-{i}",
-                "filename": f"Amsterdam{i}.zip",
-                "filedata": f"data{i}".encode(),
-                "competent_authority_id_str": "0363",
-                "competent_authority_name": "Gemeente Amsterdam",
-            }
-            for i in range(1, 4)
-        ]
+        """Test that existing competent authority is reused"""
+        # Arrange - create first area (creates CA)
+        await area.create_area(
+            session=async_session,
+            area_id="area-1",
+            area_name=None,
+            filename="Area1.zip",
+            filedata=b"data1",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
 
-        # Act
-        await area.process_area_list(async_session, areas_list)
+        # Act - create second area (should reuse CA)
+        await area.create_area(
+            session=async_session,
+            area_id="area-2",
+            area_name=None,
+            filename="Area2.zip",
+            filedata=b"data2",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
 
         # Assert
         from app.models.competent_authority import CompetentAuthority
@@ -397,104 +399,7 @@ class TestAreaService:
 
         cas = await async_session.execute(select(CompetentAuthority))
         ca_count = len(cas.scalars().all())
-        assert ca_count == 1  # Only one CA should be created
+        assert ca_count == 1  # Only one CA should exist
 
         area_count = await area.count_areas(async_session)
-        assert area_count == 3  # But three areas
-
-    # Tests for three-phase processing with savepoints
-
-    async def test_process_area_list_returns_result_dict(
-        self, async_session: AsyncSession
-    ):
-        """Test that process_area_list returns a result dictionary."""
-        # Arrange
-        areas_list = [
-            {
-                "competent_authority_area_id": "result-test-001",
-                "filename": "Result001.zip",
-                "filedata": b"data1",
-                "competent_authority_id_str": "0363",
-                "competent_authority_name": "Gemeente Amsterdam",
-            }
-        ]
-
-        # Act
-        result = await area.process_area_list(async_session, areas_list)
-
-        # Assert
-        assert isinstance(result, dict)
-        assert "total_processed" in result
-        assert "succeeded" in result
-        assert "failed" in result
-        assert "failures" in result
-        assert result["total_processed"] == 1
-        assert result["succeeded"] == 1
-        assert result["failed"] == 0
-        assert len(result["failures"]) == 0
-
-    async def test_process_area_list_all_succeed(self, async_session: AsyncSession):
-        """Test process_area_list when all areas succeed."""
-        # Arrange
-        areas_list = [
-            {
-                "competent_authority_area_id": f"success-{i}",
-                "filename": f"Success{i}.zip",
-                "filedata": f"data{i}".encode(),
-                "competent_authority_id_str": "0363",
-                "competent_authority_name": "Gemeente Amsterdam",
-            }
-            for i in range(1, 4)
-        ]
-
-        # Act
-        result = await area.process_area_list(async_session, areas_list)
-
-        # Assert
-        assert result["total_processed"] == 3
-        assert result["succeeded"] == 3
-        assert result["failed"] == 0
-        assert len(result["failures"]) == 0
-
-    async def test_process_area_list_with_pydantic_errors(
-        self, async_session: AsyncSession
-    ):
-        """Test process_area_list with Pydantic validation errors."""
-        # Arrange - Include Pydantic errors
-        areas_list = [
-            {
-                "competent_authority_area_id": "valid-area",
-                "filename": "Valid.zip",
-                "filedata": b"data",
-                "competent_authority_id_str": "0363",
-                "competent_authority_name": "Gemeente Amsterdam",
-            },
-            {
-                "_pydantic_validation_failed": True,
-                "_raw_data": {"areaId": "invalid"},
-                "competent_authority_id_str": "0363",
-                "competent_authority_name": "Gemeente Amsterdam",
-            },
-        ]
-
-        pydantic_errors_by_index = {
-            1: [
-                {
-                    "loc": ["areas", 1, "filename"],
-                    "msg": "Field required",
-                    "type": "missing",
-                }
-            ]
-        }
-
-        # Act
-        result = await area.process_area_list(
-            async_session, areas_list, pydantic_errors_by_index
-        )
-
-        # Assert
-        assert result["total_processed"] == 2
-        assert result["succeeded"] == 1
-        assert result["failed"] == 1
-        assert len(result["failures"]) == 1
-        assert result["failures"][0]["area_index"] == 1
+        assert area_count == 2  # But two areas
