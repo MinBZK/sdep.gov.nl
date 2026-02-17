@@ -4,7 +4,7 @@ SDEP Netherlands:
 
 - https://sdep.gov.nl/api/v0/docs
 
-**DISCLAIMER** - API endpoints are work in progress => yet subject to change (without versioning)
+**DISCLAIMER** - API endpoints are work in progress => subject to change (yet without versioning)
 
 Overview:
 

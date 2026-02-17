@@ -26,10 +26,10 @@ API-clients should ONLY look at the external view.
 
 ![](./DATAMODEL.svg)
 
-- **CompetentAuthority** defines many **Areas**
-- **Platform** submits many **Activities**
-- **Activity** references one **Area** (geographic location)
-- **Activity** embeds one **Address** (rental location details)
+- **CompetentAuthority** defines many **Areas** (demanding regulation)
+- **Platform** submits many **Activities** (subject to regulation)
+- **Activity** references one **Area** (subject to regulation)
+- **Activity** embeds one **Address** (rental location)
 - **Activity** embeds one **Temporal** (rental time period)
 - Activities are routed to CompetentAuthorities based on the referenced Area
 

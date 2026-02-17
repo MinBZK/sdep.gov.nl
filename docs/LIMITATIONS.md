@@ -1,3 +1,3 @@
 <h1>Known limitations</h1>
 
-- Implement **DELETE endpoints** (soft-delete)
+- **DELETE endpoints** are yet to be implemented (soft-delete)
