@@ -8,37 +8,43 @@ API-clients should ONLY look at the external view.
 
 <h2>Table of Contents</h2>
 
-- [Classes and associations](#classes-and-associations)
+- [Classes](#classes)
   - [Competent Authority](#competent-authority)
   - [Platform](#platform)
   - [Area](#area)
   - [Activity](#activity)
   - [Address (Composite)](#address-composite)
   - [Temporal (Composite)](#temporal-composite)
-- [Associations](#associations)
 - [Key Patterns](#key-patterns)
   - [OLTP](#oltp)
   - [ID Management](#id-management)
   - [Versioning](#versioning)
-  - [Bulk Processing](#bulk-processing)
+  - [Soft-Delete Guard](#soft-delete-guard)
   - [Authorization](#authorization)
 
-## Classes and associations
+## Classes
 
 ![](./DATAMODEL.svg)
 
+- **CompetentAuthority** defines many **Areas**
+- **Platform** submits many **Activities**
+- **Activity** references one **Area** (geographic location)
+- **Activity** embeds one **Address** (rental location details)
+- **Activity** embeds one **Temporal** (rental time period)
+- Activities are routed to CompetentAuthorities based on the referenced Area
+
 ### Competent Authority
 
-**Purpose:** Regulates short-term rental in specific geographic areas
+**Purpose:** Regulates short-term rental in required geographic areas
 
-| Attribute                  | Type      | Constraints                                                                                                                                       |
-| :------------------------- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **id**                     | int       | is technical id, mandatory                                                                                                                        |
-| **competentAuthorityId**   | string    | is functional id, mandatory, unique, length <= 64, lowercase alphanumeric, is auto-provisioned when receiving first POST from competent authority |
-| **competentAuthorityName** | string    | optional, length <= 64, e.g. "Gemeente Amsterdam"                                                                                                 |
-| **createdAt**              | datetime  | mandatory, UTC                                                                                                                                    |
-| **endedAt**                | datetime  | optional, UTC                                                                                                                                     |
-| **areas**                  | reference | optional, references Area                                                                                                                         |
+| Attribute                  | Type      | Constraints                                                                                           |
+| :------------------------- | :-------- | :---------------------------------------------------------------------------------------------------- |
+| **id**                     | int       | is technical id, mandatory                                                                            |
+| **competentAuthorityId**   | string    | is functional id, mandatory, length <= 64, lowercase alphanumeric, is auto-provisioned from JWT claim |
+| **competentAuthorityName** | string    | optional, length <= 64, e.g. "Gemeente Amsterdam"                                                     |
+| **createdAt**              | datetime  | mandatory, UTC                                                                                        |
+| **endedAt**                | datetime  | optional, UTC                                                                                         |
+| **areas**                  | reference | optional, references Area                                                                             |
 
 **Class Constraints:** UNIQUE (competentAuthorityId, createdAt)
 
@@ -48,14 +54,14 @@ API-clients should ONLY look at the external view.
 
 **Purpose:** Delivers rental activities to competent authorities
 
-| Attribute        | Type      | Constraints                                                                                                  |
-| :--------------- | :-------- | :----------------------------------------------------------------------------------------------------------- |
-| **id**           | int       | is technical id, mandatory                                                                                   |
-| **platformId**   | string    | is functional id, mandatory, length <= 64, lowercase alphanumeric, is supplied or auto-provisioned otherwise |
-| **platformName** | string    | optional, length <= 64, e.g. "Example platform"                                                              |
-| **createdAt**    | datetime  | mandatory, UTC                                                                                               |
-| **endedAt**      | datetime  | optional, UTC                                                                                                |
-| **activities**   | reference | optional, references many Activity                                                                                |
+| Attribute        | Type      | Constraints                                                                                           |
+| :--------------- | :-------- | :---------------------------------------------------------------------------------------------------- |
+| **id**           | int       | is technical id, mandatory                                                                            |
+| **platformId**   | string    | is functional id, mandatory, length <= 64, lowercase alphanumeric, is auto-provisioned from JWT claim |
+| **platformName** | string    | optional, length <= 64, e.g. "Example platform"                                                       |
+| **createdAt**    | datetime  | mandatory, UTC                                                                                        |
+| **endedAt**      | datetime  | optional, UTC                                                                                         |
+| **activities**   | reference | optional, references many Activity                                                                    |
 
 **Class Constraints:** UNIQUE (platformId, createdAt)
 
@@ -80,9 +86,8 @@ API-clients should ONLY look at the external view.
 **Class Constraints:** UNIQUE (areaId, competentAuthority, createdAt)
 
 **Notes:**
-- Same `areaId` can be resubmitted to create new versions with different timestamps
-- Filedata contains shapefiles, these define geographic boundaries for regulatory purposes
-- Retrieved as binary octet-stream via GET `/str/areas/{areaId}`
+- The same `areaId` (business identifier, optional) can be resubmitted to create new versions with different timestamps
+- The UNIQUE class constraint allows the same `areaId` to be used (owned) by multiple comnpetent authorities
 
 ---
 
@@ -109,7 +114,8 @@ API-clients should ONLY look at the external view.
 **Class Constraints:** UNIQUE (activityId, platform, createdAt)
 
 **Notes:**
-- Same `activityId` can be resubmitted to create new versions with different timestamps
+- The same `activityId` (business identifier, optional) can be resubmitted to create new versions with different timestamps
+- The UNIQUE class constraint allows the same `activityId` to be used (owned) by multiple platforms
 - Each activity must reference an existing area
 
 ---
@@ -140,19 +146,10 @@ API-clients should ONLY look at the external view.
 
 **Constraint:** startDatetime < endDatetime
 
-## Associations
-
-- **CompetentAuthority** defines many **Areas**
-- **Platform** submits many **Activities**
-- **Activity** references one **Area** (geographic location)
-- **Activity** embeds one **Address** (rental location details)
-- **Activity** embeds one **Temporal** (rental time period)
-- Activities are routed to CompetentAuthorities based on the referenced Area
-
 ## Key Patterns
 
 ### OLTP
-- Bulk updates
+- Single POST
 - Single concurrency (no optimistic locking)
 
 ### ID Management
@@ -163,16 +160,11 @@ Technical IDs
 
 Functional IDs
 - Represent business identifiers, on the **“outside”**
-- Are client-provided (optional), or auto-generated otherwise (RFC 9562 UUIDs, except for `platformId` and `competentAuthorityId`, which are supplied by the authorization provider)
+- Are client-provided (optional), or auto-provisioned otherwise (RFC 9562 UUIDs)
+  - Exception: `platformId` and `competentAuthorityId` (these are auto-provisioned from JWT-claim)
 - After a POST, functional IDs are always returned/made visible
 - This allows them to be reused in subsequent submissions
 - Functional IDs enable versioning (in combination with a timstamp)
-
-Soft-Delete Guard
-- When all versions of a functional ID have `endedAt` set (no current version), the entity is considered **deactivated**
-- Creating a new version with a deactivated functional ID is rejected (HTTP 422)
-- This prevents "resurrecting" soft-deleted entities
-- The guard applies to: `competentAuthorityId`, `platformId`, `areaId`, and `activityId`
 
 https://datatracker.ietf.org/doc/rfc9562/
 
@@ -182,11 +174,11 @@ https://datatracker.ietf.org/doc/rfc9562/
 - Same functional ID can be resubmitted with new timestamp for versioning
 - Enables historical tracking and updates without losing previous versions
 
-### Bulk Processing
-- All POST endpoints support bulk operations (1-1000 records per request)
-- Independent processing with savepoints (nested transactions)
-- Partial success/failure support - some records can succeed while others fail
-- Response includes detailed success/failure breakdown with indices
+### Soft-Delete Guard
+- When all versions of a functional ID have `endedAt` set (no current version), the entity is considered **deactivated**
+- Creating a new version with a deactivated functional ID is rejected (HTTP 422)
+- This prevents "resurrecting" soft-deleted entities
+- The guard applies to: `competentAuthorityId`, `platformId`, `areaId`, and `activityId`
 
 ### Authorization
 - **Platforms:** Require `sdep_str` role
