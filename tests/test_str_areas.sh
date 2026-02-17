@@ -314,7 +314,7 @@ elif [ "$http_code" -eq 200 ]; then
     echo "Content-Type: $content_type"
     echo "Content-Disposition: ${content_disposition:0:100}..."
 
-    if echo "$content_type" | grep -q "application/octet-stream"; then
+    if echo "$content_type" | grep -q "application/zip"; then
         if echo "$content_disposition" | grep -q "attachment"; then
             echo "✅ Test 5 passed: Retrieved area with correct headers"
             PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -323,7 +323,7 @@ elif [ "$http_code" -eq 200 ]; then
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
     else
-        echo "❌ Test 5 failed: Expected Content-Type application/octet-stream"
+        echo "❌ Test 5 failed: Expected Content-Type application/zip"
         FAILED_TESTS=$((FAILED_TESTS + 1))
     fi
 elif [ "$http_code" -eq 401 ] && [ -z "$BEARER_TOKEN" ]; then
@@ -356,11 +356,11 @@ if [ -n "$BEARER_TOKEN" ] && [ -n "$SECOND_AREA_ID" ]; then
         # Check Content-Type header
         content_type=$(echo "$headers" | grep -i "content-type:" | head -n1 | cut -d' ' -f2- | tr -d '\r')
 
-        if echo "$content_type" | grep -q "application/octet-stream"; then
+        if echo "$content_type" | grep -q "application/zip"; then
             echo "✅ Test 6 passed: Retrieved area"
             PASSED_TESTS=$((PASSED_TESTS + 1))
         else
-            echo "❌ Test 6 failed: Expected Content-Type application/octet-stream"
+            echo "❌ Test 6 failed: Expected Content-Type application/zip"
             FAILED_TESTS=$((FAILED_TESTS + 1))
         fi
     else

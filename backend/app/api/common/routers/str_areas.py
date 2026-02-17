@@ -176,7 +176,7 @@ async def count_areas(
     operation_id="getArea",
     responses={
         "200": {
-            "content": {"application/octet-stream": {}},
+            "content": {"application/zip": {}},
             "description": "Binary area",
         },
         "400": {
@@ -239,6 +239,6 @@ async def get_area(
 
     return Response(
         content=binary_data,
-        media_type="application/octet-stream",
+        media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

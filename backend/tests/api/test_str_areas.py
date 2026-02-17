@@ -650,7 +650,7 @@ class TestStrAreaAPI:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         assert response.content == test_data
-        assert response.headers["content-type"] == "application/octet-stream"
+        assert response.headers["content-type"] == "application/zip"
         assert f'filename="{test_filename}"' in response.headers.get(
             "content-disposition", ""
         )
@@ -726,7 +726,7 @@ class TestStrAreaAPI:
         assert response.status_code == status.HTTP_200_OK
         assert response.content == large_data
         assert len(response.content) == 10000
-        assert response.headers["content-type"] == "application/octet-stream"
+        assert response.headers["content-type"] == "application/zip"
 
     async def test_get_area_multiple_areas_correct_isolation(
         self, async_session: AsyncSession, setup_overrides, competent_authority
@@ -764,7 +764,7 @@ class TestStrAreaAPI:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         assert response.content == b"data2"
-        assert response.headers["content-type"] == "application/octet-stream"
+        assert response.headers["content-type"] == "application/zip"
 
     async def test_get_areas_response_does_not_contain_ended_at(
         self, async_session: AsyncSession, setup_overrides, competent_authority

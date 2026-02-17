@@ -3,6 +3,7 @@
 ## 260217
 
 - Improved (consistency) in endpoint documentation and payload ordering
+- Use standard MIME type (application/zip) for area shapefile download endpoint
 
 ## 260216
 

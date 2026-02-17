@@ -163,7 +163,7 @@ See [../Makefile](../Makefile). Available targets:
 - **Test 2:** GET all areas and extract area IDs for subsequent tests
 - **Test 3:** GET areas with pagination (offset=0, limit=1) - expects exactly 1 result
 - **Test 4:** Verify response structure (areaId, competentAuthorityId, competentAuthorityName, filename, createdAt)
-- **Test 5:** GET specific area by areaId (returns shapefile as `application/octet-stream` with `Content-Disposition: attachment`)
+- **Test 5:** GET specific area by areaId (returns shapefile as `application/zip` with `Content-Disposition: attachment`)
 - **Test 6:** GET another area by areaId
 - **Test 7:** GET non-existent area (should return 404)
 - **Test 8:** Verify Content-Disposition header contains filename
@@ -176,7 +176,7 @@ See [../Makefile](../Makefile). Available targets:
 
 **Response Formats:**
 - List endpoints: `application/json`
-- Download endpoint: `application/octet-stream` with `Content-Disposition: attachment`
+- Download endpoint: `application/zip` with `Content-Disposition: attachment`
 
 #### `test_str_activities.sh`
 **Purpose:** Test single activity submission for STR platforms
