@@ -160,7 +160,7 @@ Technical IDs
 
 Functional IDs
 - Represent business identifiers, on the **“outside”**
-- Are client-provided (optional), or auto-provisioned otherwise (RFC 9562 UUIDs)
+- Are client-provided (optional), or auto-provisioned otherwise (RFC 9562/4122 UUIDv4)
   - Exception: `platformId` and `competentAuthorityId` (these are auto-provisioned from JWT-claim)
 - After a POST, functional IDs are always returned/made visible
 - This allows them to be reused in subsequent submissions

@@ -12,9 +12,9 @@ Pattern:
 """
 
 import logging
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,16 +44,39 @@ router = APIRouter(tags=["str"])
 
 **ID Pattern:**
 - `activityId`: provided by platform as business identifier (optional), otherwise generated as UUID (RFC 9562 compliant)
-- `activityName` (optional): human-readable name (max 64 chars)
-- `areaId` (required): Functional ID referencing existing area
 
 **Versioning:**
 - Same `activityId` can be resubmitted → creates new version with different timestamp
-- Unique constraint: (activityId, createdAt)
+- Unique constraint: (activityId, createdAt, platform)
+
+**The request contains:**
+- `activityId`: Functional ID identifying this activity (optional, auto-generated UUID if not provided)
+- `activityName`: Optional human-readable name for this activity (max 64 chars)
+- `areaId`: Functional ID referencing the area where this activity took place (required)
+- `url`: URL of the advertisement (optional)
+- `address`: Address composite (`street`, `number`, `letter`, `addition`, `postalCode`, `city`)
+- `registrationNumber`: Registration number for the address
+- `numberOfGuests`: Number of guests (optional)
+- `countryOfGuests`: Array of country codes of guests (optional, ISO 3166-1 alpha-3)
+- `temporal`: Temporal composite (`startDatetime`, `endDatetime`)
+
+**The response contains:**
+- `activityId`: Functional ID identifying this activity
+- `activityName`: Optional human-readable name for this activity
+- `areaId`: Functional ID referencing the area where this activity took place
+- `url`: URL of the advertisement (optional)
+- `address`: Address composite (`street`, `number`, `letter`, `addition`, `postalCode`, `city`)
+- `registrationNumber`: Registration number for the address
+- `numberOfGuests`: Number of guests (optional)
+- `countryOfGuests`: Array of country codes of guests (optional)
+- `temporal`: Temporal composite (`startDatetime`, `endDatetime`)
+- `platformId`: Functional ID identifying the platform that submitted this activity (convenience)
+- `platformName`: Display name of the platform (convenience)
+- `createdAt`: Timestamp when this activity version was created (UTC)
 
 **Response Codes:**
-- **201 Created:** Activity processed successfully
-- **401 Unauthorized:** Invalid or missing authentication token
+- **201 Created:** Activity created successfully
+- **401 Unauthorized:** Invalid or missing token
 - **403 Forbidden:** Missing required authorization roles
 - **422 Unprocessable Entity:** Validation error
 """,
@@ -86,7 +109,7 @@ async def post_activity(
     Submit a single rental activity.
 
     Authorization:
-    - Requires valid bearer token with "sdep_str" and "sdep_write" roles
+    - Requires valid bearer token with "sdep_str" and "sdep_write" roles in realm_access
     - Platform ID extracted from token's "client_id" claim
     - Platform name extracted from token's "client_name" claim
     """
@@ -137,9 +160,6 @@ async def post_activity(
     response = ActivityResponse(
         activityId=activity_obj.activity_id,
         activityName=activity_obj.activity_name,
-        createdAt=activity_obj.created_at,
-        platformId=activity_obj.platform.platform_id,
-        platformName=activity_obj.platform.platform_name,
         areaId=activity_obj.area.area_id,
         url=activity_obj.url,
         address=AddressResponse(
@@ -157,6 +177,9 @@ async def post_activity(
             startDatetime=activity_obj.temporal_start_date_time,
             endDatetime=activity_obj.temporal_end_date_time,
         ),
+        platformId=activity_obj.platform.platform_id,
+        platformName=activity_obj.platform.platform_name,
+        createdAt=activity_obj.created_at,
     )
 
     return JSONResponse(
@@ -168,18 +191,30 @@ async def post_activity(
 @router.get(
     "/str/activities",
     summary="Get activities for the current authenticated platform",
-    description="""Get all activities submitted by the current authenticated platform.
+    description="""Get all activities submitted by the current authenticated platform. By default, returns all activities (unlimited). Use optional pagination parameters to limit results.
 
 **Scoping:**
 - Only returns activities belonging to the authenticated STR platform (based on JWT client_id)
 
+**Each activity contains:**
+- `activityId`: Functional ID identifying this activity
+- `activityName`: Optional human-readable name for this activity
+- `areaId`: Functional ID referencing the area where this activity took place
+- `url`: URL of the advertisement (optional)
+- `address`: Address composite (`street`, `number`, `letter`, `addition`, `postalCode`, `city`)
+- `registrationNumber`: Registration number for the address
+- `numberOfGuests`: Number of guests (optional)
+- `countryOfGuests`: Array of country codes of guests (optional)
+- `temporal`: Temporal composite (`startDatetime`, `endDatetime`)
+- `createdAt`: Timestamp when this activity version was created (UTC)
+
 **Pagination:**
 - `offset`: Number of records to skip (default: 0)
-- `limit`: Maximum number of records to return (default: no limit)
+- `limit`: Maximum number of records to return (default: unlimited)
 
 **Response Codes:**
 - **200 OK:** Activities retrieved successfully
-- **401 Unauthorized:** Invalid or missing authentication token
+- **401 Unauthorized:** Invalid or missing token
 - **403 Forbidden:** Missing required authorization roles
 """,
     operation_id="getOwnActivities",
@@ -202,14 +237,23 @@ async def post_activity(
 async def get_own_activities(
     session: AsyncSession = Depends(get_async_db),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
-    offset: int = 0,
-    limit: int | None = None,
+    offset: Annotated[
+        int, Query(ge=0, description="Number of records to skip (default: 0)")
+    ] = 0,
+    limit: Annotated[
+        int | None,
+        Query(
+            ge=1,
+            le=1000,
+            description="Maximum number of records to return (default: unlimited, max: 1000 when specified)",
+        ),
+    ] = None,
 ) -> Response:
     """
     Get activities for the current authenticated platform.
 
     Authorization:
-    - Requires valid bearer token with "sdep_str" and "sdep_read" roles
+    - Requires valid bearer token with "sdep_str" and "sdep_read" roles in realm_access
     - Platform ID extracted from token's "client_id" claim
     """
 
@@ -285,8 +329,8 @@ async def get_own_activities(
     "/str/activities/count",
     response_model=ActivityCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get activities count for the current authenticated platform.",
-    description="Get activities count for the current authenticated platform.",
+    summary="Get activities count for the current authenticated platform (optional, to support pagination)",
+    description="Get activities count for the current authenticated platform (optional, to support pagination)",
     operation_id="countOwnActivities",
     responses={
         "401": {
@@ -307,7 +351,7 @@ async def count_own_activities(
 
     Authorization:
     - Requires valid bearer token with "sdep_str" and "sdep_read" roles in realm_access
-    - Platform ID is extracted from token's "client_id" claim
+    - Platform ID extracted from token's "client_id" claim
 
     Returns:
     - count: Total number of activities for the given platform

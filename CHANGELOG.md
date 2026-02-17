@@ -1,9 +1,13 @@
 # Changelog
 
+## 260217
+
+- Improved (consistency) in endpoint documentation and payload ordering
+
 ## 260216
 
 - Changed POST endpoints to accept single records only
-- Changed POST endpoints to have request/response with the same ordening => additional id/name/createdAt are now moved to the end
+- Changed POST endpoints to have request/response with the same ordening: additional id/name/createdAt are now moved to the end
 - Removed redundant indexes on primary keys
 - Added `endedAt` next to `createdAt` (for stacking purposes)
 - Extended unique constraints on Area  (because CAs may use the same business identifiers)

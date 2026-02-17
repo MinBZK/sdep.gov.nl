@@ -27,7 +27,7 @@ async def check_database_available() -> str:
 
 @router.get(
     "/health",
-    summary="Health check on application incl. database)",
+    summary="Health check on application (incl. database)",
     description="Health check endpoint to verify if application (incl. database) is available",
     operation_id="health",
     include_in_schema=False,

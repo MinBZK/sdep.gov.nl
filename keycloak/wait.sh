@@ -11,7 +11,7 @@ if [ -f "$ENV_FILE" ]; then
     set +a
 fi
 
-echo "⏳ Waiting for Keycloak to be ready..."
+echo "⏳ Waiting for Keycloak to be ready (may take some time to complete)..."
 
 # Keep waits bounded so startup issues fail fast with clear diagnostics
 POLL_SECONDS="${KC_WAIT_POLL_SECONDS:-2}"

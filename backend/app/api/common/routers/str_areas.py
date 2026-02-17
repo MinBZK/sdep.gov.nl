@@ -25,13 +25,13 @@ router = APIRouter(tags=["str"])
     status_code=status.HTTP_200_OK,
     summary="Get all areas",
     description="Get all areas. By default, returns all areas (unlimited). Use optional pagination parameters to limit results.\n\n"
-    "Each area contains:\n"
-    "- areaId: Functional ID identifying this area\n"
-    "- areaName: Optional human-readable name for this area\n"
-    "- createdAt: Timestamp when this area version was created (UTC); used for versioning or filtering\n"
-    "- competentAuthorityId: Functional ID identifying the competent authority that submitted this area\n"
-    "- competentAuthorityName: Display name of the competent authority\n"
-    "- filename: Name of the shapefile (e.g., 'area.zip')",
+    "**Each area contains:**\n"
+    "- `areaId`: Functional ID identifying this area\n"
+    "- `areaName`: Optional human-readable name for this area\n"
+    "- `filename`: Name of the shapefile (e.g., 'area.zip')\n"
+    "- `competentAuthorityId`: Functional ID identifying the competent authority that submitted this area\n"
+    "- `competentAuthorityName`: Display name of the competent authority\n"
+    "- `createdAt`: Timestamp when this area version was created (UTC)",
     operation_id="getAreas",
     responses={
         "400": {
@@ -71,10 +71,10 @@ async def get_areas(
     Returns a list of areas, each containing:
     - areaId: Functional ID - enables retrieval of area shapefile
     - areaName: Optional human-readable name
-    - createdAt: Timestamp when the area was created
+    - filename: Name of the shapefile
     - competentAuthorityId: Competent authority functional ID who submitted the area
     - competentAuthorityName: Competent authority name who submitted the area
-    - filename: Name of the shapefile
+    - createdAt: Timestamp when the area was created
 
     Pagination parameters:
     - offset: Number of records to skip (default: 0)
@@ -104,10 +104,10 @@ async def get_areas(
         AreaResponse(
             areaId=area_dict["areaId"],
             areaName=area_dict["areaName"],
+            filename=area_dict["filename"],
             competentAuthorityId=area_dict["competentAuthorityId"],
             competentAuthorityName=area_dict["competentAuthorityName"],
             createdAt=area_dict["createdAt"],
-            filename=area_dict["filename"],
         )
         for area_dict in areas_data
     ]
@@ -119,8 +119,8 @@ async def get_areas(
     "/str/areas/count",
     response_model=AreasCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get total count of all areas",
-    description="Get total count of all areas.",
+    summary="Get areas count (optional, to support pagination)",
+    description="Get areas count (optional, to support pagination)",
     operation_id="countAreas",
     responses={
         "401": {
@@ -172,7 +172,7 @@ async def count_areas(
     response_class=Response,
     status_code=status.HTTP_200_OK,
     summary="Get area (shapefile)",
-    description="Get area (shapefile) based on functional ID.",
+    description="Get area (shapefile) based on functional ID",
     operation_id="getArea",
     responses={
         "200": {

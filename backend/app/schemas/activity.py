@@ -179,7 +179,7 @@ class ActivityRequest(BaseModel):
     - Validates all syntax constraints (lengths, ranges, types)
 
     Constraints (enforced at database level):
-    - Unique constraint: (activityId, createdAt) for versioning support
+    - Unique constraint: (activityId, createdAt, platform) for versioning support
     """
 
     model_config = ConfigDict(

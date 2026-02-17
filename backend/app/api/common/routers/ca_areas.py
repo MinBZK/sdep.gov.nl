@@ -13,7 +13,7 @@ Pattern:
 
 import logging
 import re
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import (
     APIRouter,
@@ -21,6 +21,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Query,
     Response,
     UploadFile,
     status,
@@ -54,19 +55,31 @@ MAX_FILE_SIZE = 1048576  # 1 MiB
 
 **ID Pattern:**
 - `areaId`: provided by competent authority as business identifier (optional), otherwise generated as UUID (RFC 9562 compliant)
-- `areaName` (optional): human-readable name (max 64 chars)
 
 **Versioning:**
 - Same `areaId` can be resubmitted → creates new version with different timestamp
-- Unique constraint: (areaId, createdAt)
+- Unique constraint: (areaId, createdAt, competent authority)
 
 **Limiting:**
 - Max. 1 MiB (1,048,576 bytes) per file
-- This to ensure predictable performance, reduce abuse risk, and improve overall reliability
+- This is to ensure predictable performance, reduce abuse risk, and improve overall reliability
+
+**The request contains (multipart/form-data):**
+- `areaId`: Functional ID identifying this area (optional, auto-generated UUID if not provided)
+- `areaName`: Optional human-readable name for this area (max 64 chars)
+- `file`: Shapefile upload (required)
+
+**The response contains:**
+- `areaId`: Functional ID identifying this area
+- `areaName`: Optional human-readable name for this area
+- `filename`: Name of the shapefile (e.g., 'area.zip')
+- `competentAuthorityId`: Functional ID identifying the competent authority that submitted this area (convenience)
+- `competentAuthorityName`: Display name of the competent authority (convenience)
+- `createdAt`: Timestamp when this area version was created (UTC)
 
 **Response Codes:**
-- **201 Created:** Area processed successfully
-- **401 Unauthorized:** Invalid or missing authentication token
+- **201 Created:** Area created successfully
+- **401 Unauthorized:** Invalid or missing token
 - **403 Forbidden:** Missing required authorization roles
 - **422 Unprocessable Entity:** Validation error
 """,
@@ -93,15 +106,15 @@ MAX_FILE_SIZE = 1048576  # 1 MiB
 async def post_area(
     session: AsyncSession = Depends(get_async_db),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
-    file: UploadFile = File(...),
     areaId: str | None = Form(None),
     areaName: str | None = Form(None),
+    file: UploadFile = File(...),
 ) -> Response:
     """
     Submit a single area with file upload.
 
     Authorization:
-    - Requires valid bearer token with "sdep_ca" and "sdep_write" roles
+    - Requires valid bearer token with "sdep_ca" and "sdep_write" roles in realm_access
     - Competent authority ID extracted from token's "client_id" claim
     - Competent authority name extracted from token's "client_name" claim
     """
@@ -190,10 +203,10 @@ async def post_area(
     response = AreaResponse(
         areaId=area_obj.area_id,
         areaName=area_obj.area_name,
-        createdAt=area_obj.created_at,
+        filename=area_obj.filename,
         competentAuthorityId=area_obj.competent_authority.competent_authority_id,
         competentAuthorityName=area_obj.competent_authority.competent_authority_name,
-        filename=area_obj.filename,
+        createdAt=area_obj.created_at,
     )
 
     return JSONResponse(
@@ -205,18 +218,24 @@ async def post_area(
 @router.get(
     "/ca/areas",
     summary="Get areas for the current authenticated competent authority",
-    description="""Get all areas submitted by the current authenticated competent authority.
+    description="""Get all areas submitted by the current authenticated competent authority. By default, returns all areas (unlimited). Use optional pagination parameters to limit results.
 
 **Scoping:**
 - Only returns areas belonging to the authenticated CA (based on JWT client_id)
 
+**Each area contains:**
+- `areaId`: Functional ID identifying this area
+- `areaName`: Optional human-readable name for this area
+- `filename`: Name of the shapefile (e.g., 'area.zip')
+- `createdAt`: Timestamp when this area version was created (UTC)
+
 **Pagination:**
 - `offset`: Number of records to skip (default: 0)
-- `limit`: Maximum number of records to return (default: no limit)
+- `limit`: Maximum number of records to return (default: unlimited)
 
 **Response Codes:**
 - **200 OK:** Areas retrieved successfully
-- **401 Unauthorized:** Invalid or missing authentication token
+- **401 Unauthorized:** Invalid or missing token
 - **403 Forbidden:** Missing required authorization roles
 """,
     operation_id="getOwnAreas",
@@ -239,14 +258,23 @@ async def post_area(
 async def get_own_areas(
     session: AsyncSession = Depends(get_async_db),
     token_payload: dict[str, Any] = Depends(verify_bearer_token),
-    offset: int = 0,
-    limit: int | None = None,
+    offset: Annotated[
+        int, Query(ge=0, description="Number of records to skip (default: 0)")
+    ] = 0,
+    limit: Annotated[
+        int | None,
+        Query(
+            ge=1,
+            le=1000,
+            description="Maximum number of records to return (default: unlimited, max: 1000 when specified)",
+        ),
+    ] = None,
 ) -> Response:
     """
     Get areas for the current authenticated competent authority.
 
     Authorization:
-    - Requires valid bearer token with "sdep_ca" and "sdep_read" roles
+    - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
     - Competent authority ID extracted from token's "client_id" claim
     """
 
@@ -306,8 +334,8 @@ async def get_own_areas(
     "/ca/areas/count",
     response_model=AreasCountResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get areas count for the current authenticated competent authority.",
-    description="Get areas count for the current authenticated competent authority.",
+    summary="Get areas count for the current authenticated competent authority (optional, to support pagination)",
+    description="Get areas count for the current authenticated competent authority (optional, to support pagination)",
     operation_id="countOwnAreas",
     responses={
         "401": {
@@ -328,7 +356,7 @@ async def count_own_areas(
 
     Authorization:
     - Requires valid bearer token with "sdep_ca" and "sdep_read" roles in realm_access
-    - Competent authority ID is extracted from token's "client_id" claim
+    - Competent authority ID extracted from token's "client_id" claim
 
     Returns:
     - count: Total number of areas for the given competent authority
