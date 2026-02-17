@@ -169,13 +169,16 @@ Functional IDs
 https://datatracker.ietf.org/doc/rfc9562/
 
 ### Versioning
-- Stacking (new occurrences)
-- Entities use `(functionalId, createdAt)` as unique constraint
 - Same functional ID can be resubmitted with new timestamp for versioning
+  - Entities use `(functionalId, createdAt)` as unique constraint
+- Stacking
+  - Last becomes current (empty `endedAt`)
+  - Previous becomes ended (`endedAt`)
 - Enables historical tracking and updates without losing previous versions
+- Standard retrieve only yields the current
 
 ### Soft-Delete Guard
-- When all versions of a functional ID have `endedAt` set (no current version), the entity is considered **deactivated**
+- When all versions of a functional ID have `endedAt` set, the entity is considered **deactivated**
 - Creating a new version with a deactivated functional ID is rejected (HTTP 422)
 - This prevents "resurrecting" soft-deleted entities
 - The guard applies to: `competentAuthorityId`, `platformId`, `areaId`, and `activityId`
