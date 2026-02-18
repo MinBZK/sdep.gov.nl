@@ -1,10 +1,10 @@
 <h1>Data Model</h1>
 
-This UML datamodel represents the SDEP implementation (**internal view**).
+This class model represents the SDEP **internal view** (implementation).
 
-It is reflected in the OpenAPI/Swagger datamodel (**external view**).
+The OpenAPI/Swagger API docs expose this model as the **external view**.
 
-API-clients should ONLY look at the external view.
+**Machine clients** should ONLY look at the **external view.**
 
 <h2>Table of Contents</h2>
 
@@ -19,7 +19,7 @@ API-clients should ONLY look at the external view.
   - [OLTP](#oltp)
   - [ID Management](#id-management)
   - [Versioning](#versioning)
-  - [Soft-Delete Guard](#soft-delete-guard)
+  - [Soft-Delete](#soft-delete)
   - [Authorization](#authorization)
 
 ## Classes
@@ -46,7 +46,9 @@ API-clients should ONLY look at the external view.
 | **endedAt**                | datetime  | optional, UTC                                                                                         |
 | **areas**                  | reference | optional, references Area                                                                             |
 
-**Class Constraints:** UNIQUE (competentAuthorityId, createdAt)
+**Class Constraints:**
+
+- UNIQUE (competentAuthorityId, createdAt)
 
 ---
 
@@ -63,7 +65,9 @@ API-clients should ONLY look at the external view.
 | **endedAt**      | datetime  | optional, UTC                                                                                         |
 | **activities**   | reference | optional, references many Activity                                                                    |
 
-**Class Constraints:** UNIQUE (platformId, createdAt)
+**Class Constraints:**
+
+- UNIQUE (platformId, createdAt)
 
 ---
 
@@ -83,7 +87,9 @@ API-clients should ONLY look at the external view.
 | **filedata**           | largeBinary | mandatory, max size 1MiB, e.g. a .zip with a collection of ESRI shapefile files                                         |
 | **activities**         | reference   | optional, references many Activity                                                                                           |
 
-**Class Constraints:** UNIQUE (areaId, competentAuthority, createdAt)
+**Class Constraints:**
+
+- UNIQUE (areaId, competentAuthority, createdAt)
 
 **Notes:**
 - The same `areaId` (business identifier, optional) can be resubmitted to create new versions with different timestamps
@@ -111,7 +117,9 @@ API-clients should ONLY look at the external view.
 | **countryOfGuests**    | array of string | optional, min 1, max 1024, each ISO 3166-1 alpha-3                                                                      |
 | **temporal**           | reference       | mandatory, references single Temporal composite                                                                                |
 
-**Class Constraints:** UNIQUE (activityId, platform, createdAt)
+**Class Constraints:**
+
+- UNIQUE (activityId, platform, createdAt)
 
 **Notes:**
 - The same `activityId` (business identifier, optional) can be resubmitted to create new versions with different timestamps
@@ -144,7 +152,9 @@ API-clients should ONLY look at the external view.
 | **startDatetime** | datetime | mandatory, year must be >= 2025 |
 | **endDatetime**   | datetime | mandatory                       |
 
-**Constraint:** startDatetime < endDatetime
+**Class Constraints:**
+
+- CHECK (startDatetime < endDatetime)
 
 ## Key Patterns
 
@@ -177,7 +187,7 @@ https://datatracker.ietf.org/doc/rfc9562/
 - Enables historical tracking and updates without losing previous versions
 - Standard retrieve only yields the current
 
-### Soft-Delete Guard
+### Soft-Delete
 - When all versions of a functional ID have `endedAt` set, the entity is considered **deactivated**
 - Creating a new version with a deactivated functional ID is rejected (HTTP 422)
 - This prevents "resurrecting" soft-deleted entities
