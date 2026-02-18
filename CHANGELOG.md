@@ -1,5 +1,9 @@
 # Changelog
 
+## 260218
+
+- Added DELETE area endpoint
+
 ## 260217
 
 - Improved (consistency) in endpoint documentation and payload ordering

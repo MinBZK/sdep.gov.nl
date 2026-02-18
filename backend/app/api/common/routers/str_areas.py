@@ -31,7 +31,11 @@ router = APIRouter(tags=["str"])
     "- `filename`: Name of the shapefile (e.g., 'area.zip')\n"
     "- `competentAuthorityId`: Functional ID identifying the competent authority that submitted this area\n"
     "- `competentAuthorityName`: Display name of the competent authority\n"
-    "- `createdAt`: Timestamp when this area version was created (UTC)",
+    "- `createdAt`: Timestamp when this area version was created (UTC)\n\n"
+    "**Response Codes:**\n"
+    "- **200 OK:** Areas retrieved successfully\n"
+    "- **401 Unauthorized:** Invalid or missing token\n"
+    "- **403 Forbidden:** Missing required authorization roles",
     operation_id="getAreas",
     responses={
         "400": {
@@ -120,7 +124,11 @@ async def get_areas(
     response_model=AreasCountResponse,
     status_code=status.HTTP_200_OK,
     summary="Get areas count (optional, to support pagination)",
-    description="Get areas count (optional, to support pagination)",
+    description="Get areas count (optional, to support pagination)\n\n"
+    "**Response Codes:**\n"
+    "- **200 OK:** Count retrieved successfully\n"
+    "- **401 Unauthorized:** Invalid or missing token\n"
+    "- **403 Forbidden:** Missing required authorization roles",
     operation_id="countAreas",
     responses={
         "401": {
@@ -172,7 +180,12 @@ async def count_areas(
     response_class=Response,
     status_code=status.HTTP_200_OK,
     summary="Get area (shapefile)",
-    description="Get area (shapefile) based on functional ID",
+    description="Get area (shapefile) based on functional ID\n\n"
+    "**Response Codes:**\n"
+    "- **200 OK:** Area shapefile returned successfully\n"
+    "- **401 Unauthorized:** Invalid or missing token\n"
+    "- **403 Forbidden:** Missing required authorization roles\n"
+    "- **404 Not Found:** Area not found",
     operation_id="getArea",
     responses={
         "200": {

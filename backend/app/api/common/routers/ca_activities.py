@@ -39,7 +39,11 @@ router = APIRouter(tags=["ca"])
     "- `temporal`: Temporal composite (`startDatetime`, `endDatetime`)\n"
     "- `platformId`: Functional ID identifying the platform that submitted this activity\n"
     "- `platformName`: Display name of the platform\n"
-    "- `createdAt`: Timestamp when this activity version was created (UTC)",
+    "- `createdAt`: Timestamp when this activity version was created (UTC)\n\n"
+    "**Response Codes:**\n"
+    "- **200 OK:** Activities retrieved successfully\n"
+    "- **401 Unauthorized:** Invalid or missing token\n"
+    "- **403 Forbidden:** Missing required authorization roles",
     operation_id="getActivityByCompetentAuthority",
     responses={
         "400": {
@@ -227,7 +231,11 @@ async def get_activities(
     response_model=ActivityCountResponse,
     status_code=status.HTTP_200_OK,
     summary="Get activities count for the current authenticated competent authority (optional, to support pagination)",
-    description="Get activities count for the current authenticated competent authority (optional, to support pagination)",
+    description="Get activities count for the current authenticated competent authority (optional, to support pagination)\n\n"
+    "**Response Codes:**\n"
+    "- **200 OK:** Count retrieved successfully\n"
+    "- **401 Unauthorized:** Invalid or missing token\n"
+    "- **403 Forbidden:** Missing required authorization roles",
     operation_id="countActivities",
     responses={
         "401": {

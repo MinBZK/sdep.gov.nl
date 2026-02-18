@@ -445,6 +445,137 @@ class TestCAAreaAPI:
         data = response.json()
         assert data["count"] == 2
 
+    # Tests for DELETE /ca/areas/{areaId}
+
+    async def test_delete_area_success(
+        self, async_session: AsyncSession, setup_overrides
+    ):
+        """Test DELETE /ca/areas/{areaId} soft-deletes the area (204)."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            # Create an area first
+            post_response = await client.post(
+                "/ca/areas",
+                files={"file": ("Area.zip", b"zipdata", "application/zip")},
+                data={"areaId": "delete-test-area"},
+                headers={"Authorization": "Bearer test_token"},
+            )
+            assert post_response.status_code == status.HTTP_201_CREATED
+
+            # Delete the area
+            delete_response = await client.delete(
+                "/ca/areas/delete-test-area",
+                headers={"Authorization": "Bearer test_token"},
+            )
+            assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+            # Verify the area is gone from GET
+            get_response = await client.get(
+                "/ca/areas",
+                headers={"Authorization": "Bearer test_token"},
+            )
+            assert get_response.status_code == status.HTTP_200_OK
+            assert get_response.json()["areas"] == []
+
+    async def test_delete_area_not_found(
+        self, async_session: AsyncSession, setup_overrides
+    ):
+        """Test DELETE /ca/areas/{areaId} for nonexistent area returns 404."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.delete(
+                "/ca/areas/nonexistent-area",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    async def test_delete_area_forbidden_missing_write_role(
+        self, async_session: AsyncSession
+    ):
+        """Test DELETE /ca/areas/{areaId} with missing sdep_write role returns 403."""
+
+        def mock_token_without_write_role():
+            return {
+                "sub": "test_user",
+                "client_id": "0363",
+                "client_name": "Gemeente Amsterdam",
+                "realm_access": {
+                    "roles": ["sdep_ca", "sdep_read"]
+                },  # Missing sdep_write
+            }
+
+        app_v0.dependency_overrides[verify_bearer_token] = mock_token_without_write_role
+
+        async def override_get_db():
+            yield async_session
+
+        app_v0.dependency_overrides[get_async_db] = override_get_db
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.delete(
+                "/ca/areas/some-area",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "sdep_write" in response.json()["detail"][0]["msg"]
+
+    async def test_delete_area_unauthorized_no_token(
+        self, async_session: AsyncSession, setup_db_only
+    ):
+        """Test DELETE /ca/areas/{areaId} without authentication token returns 401."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.delete(
+                "/ca/areas/some-area",
+            )
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    async def test_delete_area_invalid_area_id_pattern(
+        self, async_session: AsyncSession, setup_overrides
+    ):
+        """Test DELETE /ca/areas/{areaId} with invalid areaId pattern returns 422."""
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.delete(
+                "/ca/areas/INVALID_ID",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    async def test_delete_area_other_ca(
+        self, async_session: AsyncSession, setup_overrides
+    ):
+        """Test DELETE /ca/areas/{areaId} for area from different CA returns 404."""
+        from tests.fixtures.factories import AreaFactory
+
+        # Create area for another CA directly
+        await AreaFactory.create_async(
+            async_session,
+            area_id="other-ca-area",
+            competent_authority_id="9999",
+            competent_authority_name="Other Authority",
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app_v0), base_url="http://test"
+        ) as client:
+            response = await client.delete(
+                "/ca/areas/other-ca-area",
+                headers={"Authorization": "Bearer test_token"},
+            )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
     async def test_count_own_areas_does_not_count_other_ca_areas(
         self, async_session: AsyncSession, setup_overrides
     ):

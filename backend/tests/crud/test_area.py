@@ -354,6 +354,87 @@ class TestAreaCRUD:
         # Assert
         assert total == 0
 
+    async def test_get_by_area_id_and_competent_authority_id_str(
+        self, async_session: AsyncSession
+    ):
+        """Test getting area by functional area_id and CA functional ID."""
+        # Arrange
+        ca = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        a = await AreaFactory.create_async(
+            async_session,
+            area_id="test-area-lookup",
+            competent_authority_id=ca.id,
+            filename="test.zip",
+            filedata=b"test_data",
+        )
+
+        # Act
+        result = await area.get_by_area_id_and_competent_authority_id_str(
+            async_session, "test-area-lookup", "0363"
+        )
+
+        # Assert
+        assert result is not None
+        assert result.id == a.id
+        assert result.area_id == "test-area-lookup"
+
+    async def test_get_by_area_id_and_competent_authority_id_str_not_found(
+        self, async_session: AsyncSession
+    ):
+        """Test getting area by area_id with wrong CA returns None."""
+        # Arrange
+        ca = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        await AreaFactory.create_async(
+            async_session,
+            area_id="test-area-wrong-ca",
+            competent_authority_id=ca.id,
+            filename="test.zip",
+            filedata=b"test_data",
+        )
+
+        # Act
+        result = await area.get_by_area_id_and_competent_authority_id_str(
+            async_session, "test-area-wrong-ca", "9999"
+        )
+
+        # Assert
+        assert result is None
+
+    async def test_get_by_area_id_and_competent_authority_id_str_ended(
+        self, async_session: AsyncSession
+    ):
+        """Test getting ended area returns None."""
+        # Arrange
+        ca = await CompetentAuthorityFactory.create_async(
+            async_session,
+            competent_authority_id="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        await AreaFactory.create_async(
+            async_session,
+            area_id="test-area-ended",
+            competent_authority_id=ca.id,
+            filename="test.zip",
+            filedata=b"test_data",
+        )
+        await area.mark_as_ended(async_session, "test-area-ended", ca.id)
+
+        # Act
+        result = await area.get_by_area_id_and_competent_authority_id_str(
+            async_session, "test-area-ended", "0363"
+        )
+
+        # Assert
+        assert result is None
+
     async def test_unique_constraint_area_id_competent_authority_id_created_at(
         self, async_session: AsyncSession
     ):

@@ -110,11 +110,14 @@ See [../Makefile](../Makefile). Available targets:
 - **Test 5:** GET own areas count (`GET /ca/areas/count`)
 - **Test 6:** GET own areas does not contain endedAt
 - **Test 7:** Versioning - submit same areaId twice
+- **Test 8:** DELETE area (soft-delete) → 204
+- **Test 9:** DELETE nonexistent area → 404
 
 **Endpoints:**
 - `POST /api/{API_VERSION}/ca/areas`
 - `GET /api/{API_VERSION}/ca/areas`
 - `GET /api/{API_VERSION}/ca/areas/count`
+- `DELETE /api/{API_VERSION}/ca/areas/{areaId}`
 
 **Content-Type:** `multipart/form-data` (POST)
 
@@ -124,10 +127,12 @@ See [../Makefile](../Makefile). Available targets:
 
 **HTTP Status Codes:**
 - `201 Created` - Area successfully created
+- `204 No Content` - Area successfully deleted (soft-deleted)
 - `401 Unauthorized` - No/invalid authentication
+- `404 Not Found` - Area not found (DELETE)
 - `422 Unprocessable Content` - Validation error
 
-**Response format:** `{ areaId, areaName?, filename, competentAuthorityId, competentAuthorityName, createdAt }`
+**Response format:** `{ areaId, areaName?, filename, competentAuthorityId, competentAuthorityName, createdAt }` (POST/GET); no body (DELETE)
 
 #### `test_ca_activities.sh`
 **Purpose:** Comprehensive testing of activity query endpoints for competent authorities

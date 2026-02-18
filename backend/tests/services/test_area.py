@@ -1,7 +1,7 @@
 """Tests for Area business service"""
 
 import pytest
-from app.exceptions.business import InvalidOperationError
+from app.exceptions.business import InvalidOperationError, ResourceNotFoundError
 from app.services import area
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -523,6 +523,74 @@ class TestAreaService:
                 competent_authority_id_str="9999",
                 competent_authority_name="New Authority",
             )
+
+    # Tests for delete_area
+
+    async def test_delete_area_success(self, async_session: AsyncSession):
+        """Test soft-deleting an area sets ended_at and removes from count"""
+        # Arrange
+        await area.create_area(
+            session=async_session,
+            area_id="delete-me",
+            area_name=None,
+            filename="DeleteMe.zip",
+            filedata=b"data",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        assert await area.count_areas_by_competent_authority(async_session, "0363") == 1
+
+        # Act
+        await area.delete_area(async_session, "delete-me", "0363")
+
+        # Assert
+        assert await area.count_areas_by_competent_authority(async_session, "0363") == 0
+
+    async def test_delete_area_not_found(self, async_session: AsyncSession):
+        """Test deleting non-existent area raises ResourceNotFoundError"""
+        with pytest.raises(
+            ResourceNotFoundError, match=r"Area 'nonexistent' not found"
+        ):
+            await area.delete_area(async_session, "nonexistent", "0363")
+
+    async def test_delete_area_already_ended(self, async_session: AsyncSession):
+        """Test deleting already-ended area raises ResourceNotFoundError"""
+        # Arrange
+        await area.create_area(
+            session=async_session,
+            area_id="already-ended",
+            area_name=None,
+            filename="Ended.zip",
+            filedata=b"data",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+        await area.delete_area(async_session, "already-ended", "0363")
+
+        # Act & Assert
+        with pytest.raises(
+            ResourceNotFoundError, match=r"Area 'already-ended' not found"
+        ):
+            await area.delete_area(async_session, "already-ended", "0363")
+
+    async def test_delete_area_wrong_ca(self, async_session: AsyncSession):
+        """Test deleting area belonging to different CA raises ResourceNotFoundError"""
+        # Arrange
+        await area.create_area(
+            session=async_session,
+            area_id="other-ca-area",
+            area_name=None,
+            filename="OtherCA.zip",
+            filedata=b"data",
+            competent_authority_id_str="0363",
+            competent_authority_name="Gemeente Amsterdam",
+        )
+
+        # Act & Assert - try to delete with wrong CA
+        with pytest.raises(
+            ResourceNotFoundError, match=r"Area 'other-ca-area' not found"
+        ):
+            await area.delete_area(async_session, "other-ca-area", "9999")
 
     async def test_get_areas_by_competent_authority(self, async_session: AsyncSession):
         """Test getting areas scoped to a competent authority"""

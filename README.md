@@ -120,5 +120,4 @@ The tests can also be re-used/run against real deployments (TST, ACC, PRE, PRD; 
 ## Discussion
 
 - [Approach](./docs/APPROACH.md)
-- [Limitations](./docs/LIMITATIONS.md)
 - [Issues](https://github.com/MinBZK/sdep.gov.nl/issues)

@@ -292,6 +292,35 @@ async def exists_any_by_area_id(
     return result.scalar_one() > 0
 
 
+async def get_by_area_id_and_competent_authority_id_str(
+    session: AsyncSession,
+    area_id: str,
+    competent_authority_id_str: str,
+) -> Area | None:
+    """
+    Get current area by functional ID and competent authority functional ID.
+
+    Args:
+        session: Async database session
+        area_id: Area functional ID
+        competent_authority_id_str: Competent authority functional ID string (e.g., "0363")
+
+    Returns:
+        Current Area instance or None if not found
+    """
+    stmt = (
+        select(Area)
+        .join(CompetentAuthority, Area.competent_authority_id == CompetentAuthority.id)
+        .where(
+            Area.area_id == area_id,
+            CompetentAuthority.competent_authority_id == competent_authority_id_str,
+            Area.ended_at.is_(None),
+        )
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def mark_as_ended(
     session: AsyncSession,
     area_id: str,

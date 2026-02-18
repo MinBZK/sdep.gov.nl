@@ -26,7 +26,7 @@ from sqlalchemy.orm import selectinload
 
 from app.crud import area as area_crud
 from app.crud import competent_authority as competent_authority_crud
-from app.exceptions.business import InvalidOperationError
+from app.exceptions.business import InvalidOperationError, ResourceNotFoundError
 from app.models.area import Area
 
 
@@ -244,3 +244,30 @@ async def get_areas_by_competent_authority(
         }
         for area in areas
     ]
+
+
+async def delete_area(
+    session: AsyncSession,
+    area_id: str,
+    competent_authority_id_str: str,
+) -> None:
+    """
+    Soft-delete an area by setting ended_at = now().
+
+    Args:
+        session: Async database session
+        area_id: Area functional ID
+        competent_authority_id_str: Competent authority functional ID from JWT token
+
+    Raises:
+        ResourceNotFoundError: If the area doesn't exist, is already ended,
+            or belongs to a different CA
+    """
+    area_obj = await area_crud.get_by_area_id_and_competent_authority_id_str(
+        session, area_id, competent_authority_id_str
+    )
+
+    if area_obj is None:
+        raise ResourceNotFoundError(f"Area '{area_id}' not found")
+
+    await area_crud.mark_as_ended(session, area_id, area_obj.competent_authority_id)

@@ -335,7 +335,11 @@ async def get_own_areas(
     response_model=AreasCountResponse,
     status_code=status.HTTP_200_OK,
     summary="Get areas count for the current authenticated competent authority (optional, to support pagination)",
-    description="Get areas count for the current authenticated competent authority (optional, to support pagination)",
+    description="Get areas count for the current authenticated competent authority (optional, to support pagination)\n\n"
+    "**Response Codes:**\n"
+    "- **200 OK:** Count retrieved successfully\n"
+    "- **401 Unauthorized:** Invalid or missing token\n"
+    "- **403 Forbidden:** Missing required authorization roles",
     operation_id="countOwnAreas",
     responses={
         "401": {
@@ -392,3 +396,101 @@ async def count_own_areas(
     )
 
     return AreasCountResponse(count=total_count)
+
+
+@router.delete(
+    "/ca/areas/{areaId}",
+    summary="Delete (deactivate) an area for the current authenticated competent authority",
+    description="""Delete (soft-delete) an area by marking it as ended (now, UTC).
+
+**Behavior:**
+- Soft-deletes the current version of the area (marks it as ended (now, UTC)
+- The area will no longer appear in area listings
+- Deleting an already-deleted area returns 404
+
+**Response Codes:**
+- **204 No Content:** Area successfully deleted (soft-deleted)
+- **401 Unauthorized:** Invalid or missing token
+- **403 Forbidden:** Missing required authorization roles
+- **404 Not Found:** Area not found, already deleted, or belongs to a different CA
+- **422 Unprocessable Entity:** Invalid areaId format
+""",
+    operation_id="deleteOwnArea",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        "204": {
+            "description": "Area successfully deleted (soft-deleted)",
+        },
+        "401": {
+            "model": UnauthorizedError,
+            "description": "Unauthorized - Invalid or missing token",
+        },
+        "403": {
+            "description": "Forbidden - Missing required authorization roles",
+        },
+        "404": {
+            "description": "Not Found - Area not found, already deleted, or belongs to a different CA",
+        },
+        "422": {
+            "description": "Unprocessable Entity - Invalid areaId format",
+        },
+    },
+)
+async def delete_area(
+    areaId: str,
+    session: AsyncSession = Depends(get_async_db),
+    token_payload: dict[str, Any] = Depends(verify_bearer_token),
+) -> Response:
+    """
+    Delete (soft-delete) an area for the current authenticated competent authority.
+
+    Authorization:
+    - Requires valid bearer token with "sdep_ca" and "sdep_write" roles in realm_access
+    - Competent authority ID extracted from token's "client_id" claim
+    """
+
+    # Authorization check: Verify user has "sdep_ca" and "sdep_write" roles
+    realm_access = token_payload.get("realm_access", {})
+    roles = realm_access.get("roles", [])
+
+    if "sdep_ca" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_ca' role required",
+        )
+
+    if "sdep_write" not in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: 'sdep_write' role required",
+        )
+
+    # Extract competent authority ID from token
+    competent_authority_id = token_payload.get("client_id")
+    if not competent_authority_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token: missing 'client_id' claim",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Validate areaId format
+    if len(areaId) > 64:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="areaId must be at most 64 characters.",
+        )
+    if not AREA_ID_PATTERN.match(areaId):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="areaId must match pattern ^[a-z0-9-]+$ (lowercase alphanumeric with hyphens).",
+        )
+
+    # Delete the area (soft-delete)
+    await area_service.delete_area(
+        session=session,
+        area_id=areaId,
+        competent_authority_id_str=competent_authority_id,
+    )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
